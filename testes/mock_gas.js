@@ -21,7 +21,7 @@ class Sheet { constructor(n,ss){this.n=n;this.d=[];this.ss=ss; return encadeavel
   deleteRows(i,n){this.d.splice(i-1,n);} clear(){this.d=[]; return this;} clearContents(){this.d=[]; return this;} getSheetId(){return 1;} getParent(){return this.ss;}
   getFrozenRows(){return 1;} isSheetHidden(){return false;} copyTo(){return this;} setName(n){ delete this.ss.s[this.n]; this.n=n; this.ss.s[n]=this; return this;} getRange(r,c,nr,nc){return new Range(this,r,c,nr,nc);} getLastRow(){return this.d.length;}
   setFrozenRows(){} setColumnWidth(){} appendRow(r){this.d.push(r);} }
-class SS { constructor(){this.s={};} getSheetByName(n){return this.s[n]||null;} insertSheet(n){return this.s[n]=new Sheet(n,this);} getSheets(){return Object.values(this.s);} getId(){return 'id-teste';} getUrl(){return 'https://planilha-teste';} setSpreadsheetLocale(){} getSpreadsheetTimeZone(){return 'America/Sao_Paulo';} deleteSheet(sh){ delete this.s[sh.n]; } toast(){} }
+class SS { constructor(){this.s={};} getSheetByName(n){return this.s[n]||null;} insertSheet(n){return this.s[n]=new Sheet(n,this);} getSheets(){return Object.values(this.s);} getId(){return 'id-teste';} getName(){return 'Planilha teste';} getUrl(){return 'https://planilha-teste';} setSpreadsheetLocale(){} getSpreadsheetTimeZone(){return 'America/Sao_Paulo';} deleteSheet(sh){ delete this.s[sh.n]; } toast(){} }
 function criar(arquivos){
   const ss = new SS(); const cache={}; const props={};
   const ctx = {
@@ -33,7 +33,13 @@ function criar(arquivos){
     Logger:{ log(){} },
     Session:{ getScriptTimeZone:()=>'America/Sao_Paulo', getActiveUser:()=>({getEmail:()=>'teste@estacio.br'}), getEffectiveUser:()=>({getEmail:()=>'teste@estacio.br'}) },
     MailApp:{ sendEmail(){ ctx._emails=(ctx._emails||0)+1; }, getRemainingDailyQuota:()=>100 }, GmailApp:{ sendEmail(){ ctx._emails=(ctx._emails||0)+1; } },
-    UrlFetchApp:{ fetch(){ throw new Error('sem rede no teste'); } }, DriveApp:{ getFilesByName(){ return {hasNext:()=>false}; }, getFoldersByName(){ return {hasNext:()=>false}; } },
+    UrlFetchApp:{ fetch(){ throw new Error('sem rede no teste'); } }, DriveApp:(function(){ const pastas={}; let seq=0;
+      function iter(a){ let i=0; return {hasNext:()=>i<a.length, next:()=>a[i++]}; }
+      function Pasta(nome){ const id='pasta'+(++seq); const arqs=[]; const p={ id, nome, arqs, getId:()=>id, getName:()=>nome,
+        getFilesByName:(n)=>iter(arqs.filter(f=>f.nome===n&&!f.lixo)),
+        createFile:(n,c)=>{ const f={nome:n,c:String(c),lixo:false,setTrashed(v){this.lixo=v;},getBlob(){const f2=this;return{getDataAsString:()=>f2.c};},getName(){return this.nome;},setContent(c){this.c=c;}}; arqs.push(f); return f; } };
+        pastas[id]=p; return p; }
+      return { createFolder:(n)=>Pasta(n), getFolderById:(id)=>{ if(!pastas[id]) throw new Error('não achou'); return pastas[id]; }, getFoldersByName:(n)=>iter(Object.values(pastas).filter(p=>p.nome===n)), getFilesByName:()=>iter([]), _pastas:pastas }; })(),
     ScriptApp:{ getProjectTriggers:()=>[], newTrigger(){ const b={timeBased(){return b},onWeekDay(){return b},atHour(){return b},nearMinute(){return b},inTimezone(){return b},everyMinutes(){return b},create(){return {}}}; return b; }, WeekDay:{MONDAY:1,TUESDAY:2,WEDNESDAY:3,THURSDAY:4,FRIDAY:5,SATURDAY:6,SUNDAY:7} },
     Utilities:{
       DigestAlgorithm:{SHA_256:'sha256'}, Charset:{UTF_8:'utf8'},

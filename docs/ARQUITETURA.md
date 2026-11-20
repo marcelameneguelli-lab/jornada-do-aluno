@@ -52,6 +52,8 @@ Com um sistema aberto, o menu da Jornada fica compacto (só ícones) e abre por 
 
 Na Renovação, os perfis são os mesmos do RenovaVR (admin, coordenador, atendente, apoio) e as regras de cada tela continuam as do código original. A gestão de usuários do RenovaVR leva para Usuários e perfis da Jornada.
 
+No Engajamento, as regras de perfil são as do EngajaVR (Importar só admin e coordenador, aba Admin só admin, sem o PIN, que deixou de ser necessário). O servidor agora exige login e confere o perfil nas ações de importação (gestão) e nas destrutivas ou de manutenção (admin). Os dados do teste ficam numa pasta própria do Drive (Jornada_Engajamento_Storage) e em propriedades com prefixo engajamento_.
+
 No Formandos, admin e coordenador entram como "admin" do painel (importar, limpar, trocar semestre). Atendente e apoio entram como "atendente". Hospedagem igual à atual (GitHub Pages e Cloudflare Workers).
 
 ## Backend (Google Apps Script)

@@ -68,78 +68,80 @@ Verificado em 20/11/2026 no ambiente simulado: 14 testes de backend (importaçã
 
 ## EngajaVR: telas
 
-- [ ] admin: Todos os atendentes
-- [ ] admin: 🔐 Admin
-- [ ] calendario: 🗓️ Calendário
-- [ ] dashboard: Dashboard
-- [ ] estagio: 🎓 Estágio
-- [ ] evasao: 🚪 Evasão
-- [ ] financeiro: (local._ts||0)) { mapaLocal[e.id] = e;
-- [ ] financeiro: 💰 Financeiro
-- [ ] followup: 0) {
+- [x] admin: Todos os atendentes
+- [x] admin: 🔐 Admin
+- [x] calendario: 🗓️ Calendário
+- [x] dashboard: Dashboard
+- [x] estagio: 🎓 Estágio
+- [x] evasao: 🚪 Evasão
+- [x] financeiro: (local._ts||0)) { mapaLocal[e.id] = e;
+- [x] financeiro: 💰 Financeiro
+- [x] followup: 0) {
       ATENDENTES = ATENDENTES.conc
-- [ ] followup: 📅 Follow-up
-- [ ] importar: Importar
-- [ ] painel: 0) {
+- [x] followup: 📅 Follow-up
+- [x] importar: Importar
+- [x] painel: 0) {
     document.querySelectorAll('.pi
-- [ ] painel: Painel
-- [ ] painel: ❌ Erro ao processar: ' + err.message + '
-- [ ] polo: 📝 Provas
-- [ ] produtividade: Produtividade
-- [ ] tarefas: ✅ Tarefas
-- [ ] tutoriais: 📚 Tutoriais
+- [x] painel: Painel
+- [x] painel: ❌ Erro ao processar: ' + err.message + '
+- [x] polo: 📝 Provas
+- [x] produtividade: Produtividade
+- [x] tarefas: ✅ Tarefas
+- [x] tutoriais: 📚 Tutoriais
 
 ## EngajaVR: ações do servidor (GAS v6)
 
-- [ ] carregarBase
-- [ ] clearAll
-- [ ] diagnostico
-- [ ] getAtendentes
-- [ ] getBasePublicada
-- [ ] getBaseTipo
-- [ ] getContacts
-- [ ] getEvasaoData
-- [ ] getEventos
-- [ ] getFollowups
-- [ ] getHistory
-- [ ] getModelos
-- [ ] getSharePointCSV
-- [ ] getSnaps
-- [ ] getTCEData
-- [ ] getTarefas
-- [ ] getTutoriais
-- [ ] getUsuarios
-- [ ] importarCSVSharePoint
-- [ ] mergeEvasaoData
-- [ ] ping
-- [ ] publicarBase
-- [ ] reconstruirHistory
-- [ ] renameAtendente
-- [ ] restaurarDeAbas
-- [ ] salvarBase
-- [ ] saveAction
-- [ ] saveActionLote
-- [ ] saveAtendentes
-- [ ] saveContact
-- [ ] saveEvasaoData
-- [ ] saveEventos
-- [ ] saveFollowup
-- [ ] saveHistoryFull
-- [ ] saveModelos
-- [ ] saveRelatEmail
-- [ ] saveSnaps
-- [ ] saveTCEData
-- [ ] saveTarefas
-- [ ] saveTutoriais
-- [ ] saveUsuarios
-- [ ] sendEmail
-- [ ] sendEmailLote
-- [ ] uploadAppHTML
+- [x] carregarBase
+- [x] clearAll
+- [x] diagnostico
+- [x] getAtendentes
+- [x] getBasePublicada
+- [x] getBaseTipo
+- [x] getContacts
+- [x] getEvasaoData
+- [x] getEventos
+- [x] getFollowups
+- [x] getHistory
+- [x] getModelos
+- [x] getSharePointCSV
+- [x] getSnaps
+- [x] getTCEData
+- [x] getTarefas
+- [x] getTutoriais
+- [x] getUsuarios (desativada: usuários no núcleo)
+- [x] importarCSVSharePoint
+- [x] mergeEvasaoData
+- [x] ping
+- [x] publicarBase
+- [x] reconstruirHistory
+- [x] renameAtendente
+- [x] restaurarDeAbas
+- [x] salvarBase
+- [x] saveAction
+- [x] saveActionLote
+- [x] saveAtendentes
+- [x] saveContact
+- [x] saveEvasaoData
+- [x] saveEventos
+- [x] saveFollowup
+- [x] saveHistoryFull
+- [x] saveModelos
+- [x] saveRelatEmail
+- [x] saveSnaps
+- [x] saveTCEData
+- [x] saveTarefas
+- [x] saveTutoriais
+- [x] saveUsuarios (desativada: usuários no núcleo)
+- [x] sendEmail
+- [x] sendEmailLote
+- [x] uploadAppHTML (desativada: app publicado pela Jornada)
 
 ## EngajaVR: ações chamadas pelo front que NÃO existem no servidor
 
-- [ ] loadPoloData (criar no backend unificado)
-- [ ] savePoloData (criar no backend unificado)
+- [x] loadPoloData (criada no 12_Engajamento.gs)
+- [x] savePoloData (criada no 12_Engajamento.gs)
+
+Verificado em 20/11/2026 no ambiente simulado: 13 testes de backend (sem login o servidor recusa, bases Ímpar/Par/Técnico separadas, importação só gestão, limpar só admin, Provas no servidor, pasta e propriedades isoladas) e 8 passos no navegador (11 páginas abrem).
 
 ## Painel Formandos: abas
 

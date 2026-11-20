@@ -7,7 +7,7 @@ window.JORNADA = {
   gasUrl: 'https://script.google.com/macros/s/AKfycby-J1CZXGCFVRALueDrP_GS2cVaSN-KuZB5y5RI3llchFtcsPaiZcrE5yMxjEBCzdt1/exec',
   sistemas: [
     { id: 'renovacao',   nome: 'Renovação',   icone: '🔄', descricao: 'Renovação de matrícula, ciclos ímpar e par', etapa: 3, pronto: true },
-    { id: 'engajamento', nome: 'Engajamento', icone: '🤝', descricao: 'Acompanhamento e engajamento dos alunos', etapa: 4 },
+    { id: 'engajamento', nome: 'Engajamento', icone: '🤝', descricao: 'Acompanhamento e engajamento dos alunos (bases Ímpar, Par e Técnico)', etapa: 4, pronto: true },
     { id: 'provas',      nome: 'Provas',      icone: '📝', descricao: 'AV, AVS, SM e simulados', etapa: 5 },
     { id: 'estagio',     nome: 'Estágio',     icone: '💼', descricao: 'Elegíveis, TCE e documentos', etapa: 5 },
     { id: 'financeiro',  nome: 'Financeiro',  icone: '💰', descricao: 'Vencimentos e inadimplência', etapa: 5 },

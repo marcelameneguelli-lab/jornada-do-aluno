@@ -21,7 +21,8 @@
   };
 
   function url() {
-    const u = (window.JORNADA.gasUrl || '').trim() || (localStorage.getItem('jornada_gas_url') || '').trim();
+    // 'jornada_gas_url' no navegador: endereço de teste (tem prioridade só quando existe)
+    const u = (localStorage.getItem('jornada_gas_url') || '').trim() || (window.JORNADA.gasUrl || '').trim();
     if (!u) throw Object.assign(new Error('Endereço do servidor não configurado.'), { config: true });
     return u;
   }
