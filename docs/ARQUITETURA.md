@@ -11,6 +11,7 @@ CRM único que reúne o RenovaVR, o EngajaVR e o Painel Formandos, com login ún
 5. Um relatório diário único às 20h cobrindo todos os sistemas.
 6. Cores Estácio mantidas (#003B71 e #8DC63F). Nome a definir, ligado à ideia de jornada acadêmica.
 7. Projeto criado no computador, na Área de Trabalho.
+9. Engajamento enxuto (20/11/2026): Estágio, Provas e Financeiro saem de dentro dele (viram sistemas próprios). Calendário, Tarefas e Tutoriais viram Ferramentas da equipe, fora dos sistemas, para todos os usuários. Dentro do Engajamento ficam Painel, Dashboard, Produtividade, Follow-up, Evasão, Importar e Admin.
 8. Dois sistemas novos (20/11/2026): Financiamentos (ProUni, FIES, Pravaler, Ficou Fácil), com acompanhamento do aproveitamento acadêmico e da assinatura dos termos, e NPS, com a base exportada do Medallia para trabalhar promotores, neutros e detratores.
 
 ## Sistemas (módulos)
@@ -27,6 +28,10 @@ CRM único que reúne o RenovaVR, o EngajaVR e o Painel Formandos, com login ún
 | Formandos | Painel Formandos | base de formandos do semestre |
 
 Cada sistema tem: lista de alunos, modal de acionamento, follow-up, produtividade, dashboard e, quando já existia, Evasão e telas próprias.
+
+## Ferramentas da equipe
+
+Calendário, Tarefas e Tutoriais aparecem no menu e no Início para todos os usuários logados, sem depender dos sistemas liberados. Usam as telas e os dados do EngajaVR (mesmo armazenamento), abertas em "modo ferramenta" (sem abas, bases nem contador de alunos). No servidor, ficam em 13_Ferramentas.gs (ações ferramentas.*).
 
 ## Central de Bases
 

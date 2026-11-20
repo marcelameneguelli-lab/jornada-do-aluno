@@ -31,3 +31,10 @@ t('pasta do Drive própria (não a de produção)', ()=>{ const nomes=Object.val
 t('propriedades com prefixo engajamento_', ()=>{ const k=Object.keys(g.PropertiesService.getScriptProperties().getProperties()); assert(k.some(x=>x.startsWith('engajamento_'))); assert(!k.some(x=>/^(HistoryJSON|_drive_folder_id|PoloData)/.test(x)), k.join(',')); });
 t('follow-ups e tarefas continuam', ()=>{ assert(post({acao:'engajamento.saveFollowup',token:tF,base:'impar',followups:{a:1}}).ok); assert.equal(post({acao:'engajamento.getFollowups',token:tF,base:'impar'}).data.a,1); assert(post({acao:'engajamento.getTarefas',token:tF}).ok!==false); });
 console.log(`\n${ok} testes do Engajamento passaram`);
+t('ferramentas da equipe valem para quem não tem Engajamento', ()=>{
+  const r=post({acao:'ferramentas.saveTarefas',token:tA,tarefas:[{id:'t1',titulo:'Ligar formandos'}]}); assert(r.ok!==false, JSON.stringify(r));
+  const g2=post({acao:'ferramentas.getTarefas',token:tF}); assert(JSON.stringify(g2).includes('Ligar formandos'), JSON.stringify(g2));
+  assert(post({acao:'ferramentas.getEventos',token:tA}).ok!==false); assert(post({acao:'ferramentas.getTutoriais',token:tA}).ok!==false);
+  assert.match(post({acao:'ferramentas.getHistory',token:tA}).erro||'',/desconhecida/); });
+t('ferramentas exigem login', ()=>{ assert.equal(post({acao:'ferramentas.getTarefas'}).auth,false); });
+console.log(`${ok} testes do Engajamento e das ferramentas passaram`);

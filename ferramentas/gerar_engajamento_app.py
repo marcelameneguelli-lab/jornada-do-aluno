@@ -15,6 +15,7 @@ s=troca(s,'<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.
   <script>
   /* Jornada do Aluno: login, avisos e sessão ficam na tela base */
   window.App = (window.parent && window.parent !== window) ? window.parent.App : null;
+  window.JORNADA_FERRAMENTA = (function () { var f = new URLSearchParams(location.search).get('ferramenta'); return ['calendario', 'tarefas', 'tutoriais'].indexOf(f) >= 0 ? f : ''; })();
   (function () {
     try {
       var j = Api.Sessao.ler();
@@ -37,8 +38,10 @@ s=s[:a]+'''async function gasCall(action, body={}) {
   // Jornada do Aluno: conexão pelo núcleo (login único). Mesmo formato de resposta do EngajaVR.
   if (!GAS_URL) return null;
   try {
-    const r = await Api.chamar('engajamento.' + action, Object.assign({}, body), { timeout: 30000 });
-    if (r && r.permissao === false) { showToast('⚠️ ' + (r.erro || 'Seu perfil não pode fazer isso.')); return Object.assign(r, { ok: false, error: r.erro, msg: r.erro }); }
+    const FERR = ['getEventos', 'saveEventos', 'getTarefas', 'saveTarefas', 'getTutoriais', 'saveTutoriais', 'getAtendentes'];
+    const sistema = FERR.indexOf(action) >= 0 ? 'ferramentas.' : 'engajamento.';
+    const r = await Api.chamar(sistema + action, Object.assign({}, body), { timeout: 30000 });
+    if (r && r.permissao === false) { if (!window.JORNADA_FERRAMENTA) showToast('⚠️ ' + (r.erro || 'Seu perfil não pode fazer isso.')); return Object.assign(r, { ok: false, error: r.erro, msg: r.erro }); }
     if (r && r.ok === false && r.erro && !r.error) { r.error = r.erro; if (!r.msg) r.msg = r.erro; }
     return r;
   } catch (e) {
@@ -81,8 +84,32 @@ s=troca(s,"""  if (!_verificarSessaoApp()) {
       if (el) el.focus();
     }, 100);
   } else {
-    _concluirLogin(_usuarioLogado); // Jornada: inclui a busca da base no servidor
+    if (window.JORNADA_FERRAMENTA) {
+      // Jornada: ferramenta da equipe (Calendário, Tarefas ou Tutoriais), sem a base de alunos
+      var _nomes = { calendario: '🗓️ Calendário', tarefas: '✅ Tarefas', tutoriais: '📚 Tutoriais' };
+      document.body.classList.add('modo-ferramenta');
+      var _lt = document.getElementById('logo-titulo'); if (_lt) _lt.textContent = _nomes[window.JORNADA_FERRAMENTA];
+      document.querySelectorAll('h2').forEach(function (h) { if (h.textContent.indexOf('Tarefas de Engajamento') >= 0) h.textContent = '✅ Tarefas da equipe'; });
+      init().catch(function(){}).then(function () { showPage(window.JORNADA_FERRAMENTA); });
+      setTimeout(function () { showPage(window.JORNADA_FERRAMENTA); }, 50);
+    } else {
+      _concluirLogin(_usuarioLogado); // Jornada: inclui a busca da base no servidor
+    }
   }""")
+# 4c. menu do Engajamento sem as telas que saíram (decisão de 20/11/2026):
+#     Calendário, Tarefas e Tutoriais viram ferramentas da equipe; Financeiro, Estágio e Provas viram sistemas próprios.
+for linha in ['    <button class="tab" onclick="showPage(\'calendario\')">🗓️ Calendário</button>\n',
+              '    <button class="tab" id="tab-tarefas" onclick="showPage(\'tarefas\')">✅ Tarefas</button>\n',
+              '    <button class="tab" onclick="showPage(\'tutoriais\')">📚 Tutoriais</button>\n',
+              '    <button class="tab" onclick="showPage(\'financeiro\')">💰 Financeiro</button>\n',
+              '    <button class="tab" onclick="showPage(\'estagio\')">🎓 Estágio</button>\n',
+              '    <button class="tab" onclick="showPage(\'polo\')">📝 Provas</button>\n']:
+    s=troca(s,linha,'')
+s=troca(s,'</style>','''  /* Jornada: modo ferramenta (Calendário, Tarefas, Tutoriais) sem abas, bases, contador de alunos e rodapé do EngajaVR */
+  body.modo-ferramenta .tab-bar, body.modo-ferramenta .base-selector, body.modo-ferramenta #priority-bar,
+  body.modo-ferramenta #top-count, body.modo-ferramenta .status-dot, body.modo-ferramenta .rodape-engajavr { display: none !important; }
+</style>''')
+s=troca(s,'<div style="text-align:center;padding:10px;font-size:11px;color:var(--text3);border-top:1px solid var(--border);background:var(--surface)">\n  Desenvolvido por','<div class="rodape-engajavr" style="text-align:center;padding:10px;font-size:11px;color:var(--text3);border-top:1px solid var(--border);background:var(--surface)">\n  Desenvolvido por')
 # 5. service worker é o da Jornada
 s=troca(s,"if ('serviceWorker' in navigator && location.protocol === 'https:') {","if (false) { // Jornada: service worker único na tela base")
 os.makedirs(os.path.join(RAIZ,'app/modulos/engajamento'),exist_ok=True)

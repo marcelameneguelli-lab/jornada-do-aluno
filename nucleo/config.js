@@ -15,4 +15,10 @@ window.JORNADA = {
     { id: 'nps',         nome: 'NPS',         icone: '⭐', descricao: 'Base do Medallia: promotores, neutros e detratores', etapa: 6 },
     { id: 'formandos',   nome: 'Formandos',   icone: '🎓', descricao: 'Prováveis formandos e colação de grau', etapa: 2, pronto: true },
   ],
+  // Ferramentas da equipe: valem para todos os usuários, fora dos sistemas (decisão de 20/11/2026)
+  ferramentas: [
+    { id: 'calendario', nome: 'Calendário', icone: '🗓️', descricao: 'Eventos e datas importantes da equipe' },
+    { id: 'tarefas',    nome: 'Tarefas',    icone: '✅', descricao: 'Tarefas atribuídas, prazos e andamento' },
+    { id: 'tutoriais',  nome: 'Tutoriais',  icone: '📚', descricao: 'Materiais de apoio e modelos' },
+  ],
 };

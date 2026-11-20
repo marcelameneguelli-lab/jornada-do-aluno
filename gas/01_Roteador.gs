@@ -47,6 +47,7 @@ function separarAcao_(acao) {
 /** Módulo de cada sistema: função global Modulo_<sistema>() que devolve { acoes, gestao, admin }. */
 function obterModulo_(sis) {
   if (sis === 'nucleo') return Modulo_nucleo();
+  if (sis === 'ferramentas') return Modulo_ferramentas();
   if (SISTEMAS.indexOf(sis) < 0) return null;
   const f = globalThis['Modulo_' + sis];
   return typeof f === 'function' ? f() : null;
@@ -61,7 +62,8 @@ function processar_(acao, d) {
     if (ACOES_PUBLICAS.indexOf(chave) < 0) {
       eu = autenticar_(d.token, chave === 'nucleo.trocar_senha');
       if (eu.erro) return { ok: false, auth: false, erro: eu.erro };
-      if (sis !== 'nucleo' && !podeSistema_(eu, sis)) {
+      // núcleo e ferramentas da equipe (Calendário, Tarefas, Tutoriais) valem para todos os logados
+      if (sis !== 'nucleo' && sis !== 'ferramentas' && !podeSistema_(eu, sis)) {
         return { ok: false, permissao: false, erro: 'Seu perfil não tem acesso a este sistema.' };
       }
     }

@@ -94,6 +94,8 @@
     $('#usuario-perfil').textContent = NOMES_PERFIL[me.perfil] || me.perfil;
     let h = '<a href="#/inicio" data-rota="inicio" title="Início"><span>🏠</span>Início</a><div class="menu-grupo">Sistemas</div>';
     sistemasLiberados().forEach(s => { h += `<a href="#/s/${s.id}" data-rota="s/${s.id}" title="${esc(s.nome)}"><span>${s.icone}</span>${esc(s.nome)}</a>`; });
+    h += '<div class="menu-grupo">Ferramentas da equipe</div>';
+    JORNADA.ferramentas.forEach(f => { h += `<a href="#/f/${f.id}" data-rota="f/${f.id}" title="${esc(f.nome)}"><span>${f.icone}</span>${esc(f.nome)}</a>`; });
     if (me.gestao || me.admin) {
       h += '<div class="menu-grupo">Gestão</div>';
       if (me.gestao) h += '<a href="#/bases" data-rota="bases" title="Central de Bases"><span>🗂️</span>Central de Bases</a>';
@@ -112,6 +114,11 @@
     if (r === 'inicio') return telaInicio(area);
     if (r === 'usuarios' && me.admin) return telaUsuarios(area);
     if (r === 'bases' && me.gestao) return telaBases(area);
+    const mf = r.match(/^f\/([a-z]+)/);
+    if (mf) {
+      const ferr = JORNADA.ferramentas.filter(f => f.id === mf[1])[0];
+      if (ferr) return abrirFerramenta(area, ferr);
+    }
     const m = r.match(/^s\/([a-z]+)/);
     if (m) {
       const sis = sistemasLiberados().filter(s => s.id === m[1])[0];
@@ -130,7 +137,14 @@
       </a>`).join('');
     area.innerHTML = `
       <div class="cabecalho-tela"><h1>Olá, ${esc(me.nome.split(' ')[0])}</h1><p>Escolha o sistema em que vai trabalhar.</p></div>
-      <div class="grade-sistemas">${cards || '<p class="vazio">Nenhum sistema liberado para o seu usuário. Fale com a coordenação.</p>'}</div>`;
+      <div class="grade-sistemas">${cards || '<p class="vazio">Nenhum sistema liberado para o seu usuário. Fale com a coordenação.</p>'}</div>
+      <h2 class="titulo-secao">Ferramentas da equipe</h2>
+      <div class="grade-sistemas">${JORNADA.ferramentas.map(f => `
+        <a class="card-sistema ferramenta" href="#/f/${f.id}">
+          <div class="cs-icone">${f.icone}</div>
+          <div class="cs-nome">${esc(f.nome)}</div>
+          <div class="cs-desc">${esc(f.descricao)}</div>
+        </a>`).join('')}</div>`;
   }
 
   /** Abre o sistema numa moldura própria (cada sistema mantém o visual e os scripts dele, sem conflito). */
@@ -138,6 +152,12 @@
     if (!sis.pronto) return emMigracao(area, sis);
     document.body.classList.add('com-sistema');
     area.innerHTML = `<iframe class="moldura-sistema" title="${esc(sis.nome)}" src="modulos/${sis.id}/index.html?v=${JORNADA.versao}"></iframe>`;
+  }
+
+  /** Calendário, Tarefas e Tutoriais: as telas do EngajaVR em modo ferramenta, para toda a equipe. */
+  function abrirFerramenta(area, f) {
+    document.body.classList.add('com-sistema');
+    area.innerHTML = `<iframe class="moldura-sistema" title="${esc(f.nome)}" src="modulos/engajamento/index.html?ferramenta=${f.id}&v=${JORNADA.versao}"></iframe>`;
   }
 
   function emMigracao(area, sis) {

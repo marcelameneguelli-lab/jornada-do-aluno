@@ -119,3 +119,6 @@ body.com-sistema #lateral:not(:hover) .marca { justify-content: center; padding:
 body.com-sistema #lateral:not(:hover) #menu a { font-size: 0; justify-content: center; padding: 11px 0; }
 body.com-sistema #lateral:not(:hover) #menu a span { font-size: 18px; }
 @media (max-width: 820px) { body.com-sistema #lateral, body.com-sistema #lateral:hover { width: 240px; margin-right: 0; } }
+
+.titulo-secao { margin: 28px 0 12px; font-size: 16px; }
+.card-sistema.ferramenta { border-top-color: var(--verde); }
