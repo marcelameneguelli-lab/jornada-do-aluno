@@ -1,0 +1,47 @@
+import json, sys
+from playwright.sync_api import sync_playwright
+prov=json.load(open('/tmp/prov.json'))
+B='http://localhost:8765/'
+erros=[]; passos=0
+def ok(n): 
+    global passos; passos+=1; print('ok ',n)
+with sync_playwright() as p:
+    br=p.chromium.launch(executable_path='/usr/bin/google-chrome', args=['--no-sandbox'])
+    pg=br.new_page(viewport={'width':1280,'height':800})
+    pg.on('pageerror', lambda e: erros.append(str(e)))
+    pg.on('console', lambda m: erros.append(m.text) if m.type=='error' else None)
+    pg.add_init_script("window.__URL='http://localhost:8765/exec'; localStorage.setItem('jornada_gas_url','http://localhost:8765/exec')")
+    pg.goto(B); pg.wait_for_selector('#form-login'); ok('tela de login aparece')
+    pg.fill('#login-email','angelica@estacio.br'); pg.fill('#login-senha','errada'); pg.click('#btn-entrar')
+    pg.wait_for_function("document.querySelector('#login-erro').textContent.length>0")
+    assert 'incorretos' in pg.text_content('#login-erro'); ok('senha errada mostra mensagem')
+    pg.fill('#login-senha',prov['atend']); pg.click('#btn-entrar')
+    pg.wait_for_selector('#form-troca:not([hidden])'); ok('primeiro acesso pede nova senha')
+    pg.fill('#troca-atual',prov['atend']); pg.fill('#troca-nova','Teste2026a'); pg.fill('#troca-conf','Teste2026a')
+    pg.click('#form-troca button.primario')
+    try: pg.wait_for_function("document.body.dataset.tela==='app'", timeout=8000)
+    except Exception:
+        print('FALHA', repr(pg.text_content('#troca-erro')), pg.evaluate('document.body.dataset.tela'), pg.evaluate("localStorage.getItem('jornada_sessao')")[:80]); pg.screenshot(path='/tmp/falha.png'); raise
+    cards=pg.locator('.card-sistema').all_text_contents(); assert len(cards)==2 and 'Renovação' in cards[0], cards; ok('atendente vê só Renovação e Formandos')
+    assert pg.locator('#menu a[href="#/usuarios"]').count()==0; ok('atendente não vê Usuários')
+    pg.screenshot(path='/home/claude/testes/tela_inicio_atendente.png')
+    pg.goto(B+'#/usuarios'); pg.wait_for_timeout(300); assert pg.url.endswith('#/inicio'); ok('rota de admin bloqueada para atendente')
+    pg.click('.card-sistema >> nth=0'); pg.wait_for_selector('iframe.moldura-sistema'); ok('sistema já migrado abre na moldura')
+    pg.hover('#lateral'); pg.wait_for_timeout(250); pg.click('#btn-sair'); pg.mouse.move(1000,450); pg.wait_for_selector('#form-login')
+    pg.fill('#login-email','marques.marcela@estacio.br'); pg.fill('#login-senha',prov['admin']); pg.click('#btn-entrar')
+    pg.wait_for_selector('#form-troca:not([hidden])'); pg.fill('#troca-atual',prov['admin']); pg.fill('#troca-nova','Admin2026b'); pg.fill('#troca-conf','Admin2026b'); pg.click('#form-troca button.primario')
+    pg.wait_for_function("document.body.dataset.tela==='app' && document.querySelectorAll('.card-sistema').length>0"); assert pg.locator('.card-sistema').count()==8; ok('admin vê os 8 sistemas')
+    pg.goto(B+'#/s/engajamento'); pg.wait_for_selector('.aviso-migracao'); ok('sistema ainda não migrado mostra aviso')
+    pg.hover('#lateral'); pg.wait_for_timeout(250); pg.click('#menu a[href="#/usuarios"]'); pg.mouse.move(1000,450); pg.wait_for_selector('#tab-usuarios tbody tr td:not(.vazio)'); ok('lista de usuários carrega')
+    pg.click('#btn-novo-usuario'); pg.fill('#form-usuario [name=nome]','Felipe Teste'); pg.fill('#form-usuario [name=email]','felipe@estacio.br')
+    pg.select_option('#form-usuario [name=perfil]','coordenador')
+    for c in pg.locator('#form-usuario [name=sis]').all(): c.uncheck()
+    pg.check('#form-usuario [name=sis][value=engajamento]'); pg.check('#form-usuario [name=sis][value=provas]')
+    pg.click('#form-usuario button.primario'); pg.wait_for_selector('.senha-prov'); senha=pg.text_content('.senha-prov'); assert len(senha)==8; ok('novo usuário recebe senha provisória')
+    pg.screenshot(path='/home/claude/testes/tela_provisoria.png')
+    pg.click('[data-fechar]'); pg.wait_for_selector('text=Felipe Teste'); pg.wait_for_timeout(400)
+    pg.screenshot(path='/home/claude/testes/tela_usuarios.png', full_page=True)
+    linha=pg.locator('tr', has_text='Felipe Teste').inner_text(); assert 'Coordenador' in linha and 'Engajamento, Provas' in linha and '1º acesso' in linha, linha; ok('usuário aparece com perfil e sistemas certos')
+    pg.set_viewport_size({'width':390,'height':800}); pg.goto(B+'#/inicio'); pg.wait_for_timeout(300); pg.screenshot(path='/home/claude/testes/tela_celular.png'); ok('layout de celular')
+    br.close()
+print(f'{passos} passos ok'); print('erros no console:', erros or 'nenhum')

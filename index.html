@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Jornada do Aluno · Secretaria Acadêmica VR</title>
+<meta name="theme-color" content="#003B71">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" href="icones/icon-192.png">
+<link rel="stylesheet" href="nucleo/estilo.css?v=1.0.0">
+</head>
+<body data-tela="login">
+
+<!-- LOGIN -->
+<section id="tela-login">
+  <div class="caixa-login">
+    <div class="marca"><div class="marca-icone">🧭</div><div><b id="nome-sistema">Jornada do Aluno</b><small id="sub-sistema"></small></div></div>
+
+    <form id="form-login" autocomplete="on">
+      <label>E-mail institucional<input id="login-email" type="email" autocomplete="username" required></label>
+      <label>Senha<input id="login-senha" type="password" autocomplete="current-password" required></label>
+      <p class="erro" id="login-erro"></p>
+      <button class="btn primario largo" id="btn-entrar">Entrar</button>
+      <p class="dica centro">Esqueceu a senha? Peça uma senha provisória à coordenação.</p>
+    </form>
+
+    <form id="form-troca" hidden>
+      <h2 id="troca-titulo">Crie a sua senha</h2>
+      <label>Senha atual (ou provisória)<input id="troca-atual" type="password" autocomplete="current-password" required></label>
+      <label>Nova senha<input id="troca-nova" type="password" autocomplete="new-password" required></label>
+      <label>Repita a nova senha<input id="troca-conf" type="password" autocomplete="new-password" required></label>
+      <p class="dica">Pelo menos 8 caracteres, com letras e números.</p>
+      <p class="erro" id="troca-erro"></p>
+      <button class="btn primario largo">Salvar senha</button>
+      <button type="button" class="btn largo" id="btn-voltar-app">Voltar</button>
+    </form>
+  </div>
+</section>
+
+<!-- APLICATIVO -->
+<section id="tela-app">
+  <aside id="lateral">
+    <div class="marca"><div class="marca-icone">🧭</div><div><b>Jornada do Aluno</b><small>Secretaria Acadêmica VR</small></div></div>
+    <nav id="menu"></nav>
+    <div class="usuario">
+      <div><b id="usuario-nome"></b><small id="usuario-perfil"></small></div>
+      <button class="btn mini claro" id="btn-trocar-senha">Trocar senha</button>
+      <button class="btn mini claro" id="btn-sair">Sair</button>
+    </div>
+  </aside>
+  <main>
+    <header class="topo-celular"><button class="btn mini" id="btn-menu">☰ Menu</button><b>Jornada do Aluno</b></header>
+    <div id="conteudo"></div>
+    <footer class="rodape">Jornada do Aluno · Secretaria Acadêmica VR · Desenvolvido por Marcela Meneguelli</footer>
+  </main>
+</section>
+
+<div id="modal" hidden><div class="modal-caixa" id="modal-corpo"></div></div>
+<div id="avisos"></div>
+
+<script src="nucleo/config.js?v=1.0.0"></script>
+<script src="nucleo/api.js?v=1.0.0"></script>
+<script src="nucleo/app.js?v=1.0.0"></script>
+</body>
+</html>
