@@ -191,7 +191,7 @@
       h += card('🤝', 'Engajamento ' + nomesEng[b], `<b>${n(e.total)}</b> alunos<br>Última importação: ${fmtData(e.ts)}<br><small>Também usada por Provas, Estágio, Financeiro e Financiamentos</small>`, btn('s/engajamento?tela=importar', 'Importar no Engajamento'));
     });
     h += card('🎓', 'Formandos', r.formandos ? `<b>${n(r.formandos.total)}</b> alunos no painel` : 'Sem informação', btn('s/formandos', 'Abrir Formandos'));
-    h += card('⭐', 'NPS (Medallia)', 'Aguardando o modelo da exportação do Medallia para criar o sistema.', '');
+    h += card('⭐', 'NPS (Medallia)', r.nps && r.nps.total ? `<b>${n(r.nps.total)}</b> respostas<br>Respostas até ${esc((r.nps.ate || '').split('-').reverse().join('/'))}<br>Última importação: ${fmtData(r.nps.ultima)}` : 'Nenhuma resposta importada', btn('s/nps', 'Importar no NPS'));
     $('#cards-bases').innerHTML = h + (r.erros && r.erros.length ? `<p class="erro">Não foi possível ler: ${esc(r.erros.join(' | '))}</p>` : '');
   }
 

@@ -30,7 +30,7 @@ t('admin entra, troca senha e lista usuários sem expor hash', ()=>{ let r=post(
 t('admin cria usuário com provisória', ()=>{ const r=post({acao:'nucleo.usuario_salvar',token:tokM,usuario:{nome:'Yasmin',email:'yasmin@estacio.br',perfil:'coordenador',sistemas:['formandos']}}); assert(r.ok && r.provisoria.length===8);
   const e=post({acao:'nucleo.entrar',email:'yasmin@estacio.br',senha:r.provisoria}); assert(e.ok && e.trocar && e.me.gestao); });
 t('admin não tira o próprio acesso', ()=>{ const r=post({acao:'nucleo.usuario_salvar',token:tokM,usuario:{nome:'Marcela',email:'marques.marcela@estacio.br',perfil:'atendente'}}); assert.equal(r.ok,false); });
-t('sistema sem módulo ainda responde com aviso', ()=>{ const r=post({acao:'nps.listar',token:tokM}); assert.match(r.erro,/não disponível/); });
+t('sistema inexistente responde com aviso', ()=>{ const r=post({acao:'inexistente.listar',token:tokM}); assert.match(r.erro,/não disponível/); });
 t('bloqueio após 5 erros', ()=>{ for(let i=0;i<5;i++) post({acao:'nucleo.entrar',email:'angelica@estacio.br',senha:'errada'}); const r=post({acao:'nucleo.entrar',email:'angelica@estacio.br',senha:'Renova2026x'}); assert.equal(r.erro,'bloqueado'); });
 t('JSONP devolve callback', ()=>{ const o=g.doGet({parameter:{acao:'nucleo.ping',callback:'cb_1'}}); assert(o.t.startsWith('cb_1(') && o.m==='js'); });
 t('JSONP recusa callback malicioso', ()=>{ const o=g.doGet({parameter:{acao:'nucleo.ping',callback:'alert(1)//'}}); assert(o.t.startsWith('{')); });

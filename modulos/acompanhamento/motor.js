@@ -31,19 +31,23 @@
   }
 
   /* ── dados ── */
-  const mat = (r) => String(r.COD_MATRICULA || r.MATRICULA || '').trim();
+  const mat = (r) => CFG && CFG.chave ? String(CFG.chave(r)) : String(r.COD_MATRICULA || r.MATRICULA || '').trim();
+  const matVis = (r) => CFG && CFG.matriculaVisivel ? CFG.matriculaVisivel(r) : mat(r);
+  const unidade = () => (CFG && CFG.unidade) || 'alunos';
+  const nomeBase = () => (CFG && CFG.fonte) ? CFG.nomeFonte : 'base ' + NOMES_BASE[E.base];
   const regsDoAluno = (m) => Object.values(E.regs).filter((x) => x.matricula === m && (!x.base || x.base === E.base)).sort((a, b) => b.criado - a.criado);
   const fichaDe = (m) => (E.fichas[m] && E.fichas[m].dados) || {};
 
   async function carregarBase() {
-    $('#area').innerHTML = `<div class="carregando-base">Carregando a base ${NOMES_BASE[E.base]} do Engajamento...</div>`;
+    $('#area').innerHTML = `<div class="carregando-base">Carregando ${CFG.fonte ? CFG.nomeFonte : 'a base ' + NOMES_BASE[E.base] + ' do Engajamento'}...</div>`;
     try {
-      const r = await chamar('carregarBase', { base: E.base });
-      const dados = (r && r.dados) || [];
+      const r = CFG.fonte ? await chamar(CFG.fonte, {}) : await chamar('carregarBase', { base: E.base });
+      let dados = (r && r.dados) || [];
+      if (CFG.ordenar) dados = dados.slice().sort(CFG.ordenar);
       E.todos = dados.length;
       E.alunos = dados.filter((x) => { try { return CFG.elegivel(x); } catch (e) { return false; } });
       E.pagina = 1;
-      if (!dados.length) aviso(`A base ${NOMES_BASE[E.base]} ainda não foi importada no Engajamento.`);
+      if (!dados.length) aviso(CFG.fonte ? CFG.semDados : `A base ${NOMES_BASE[E.base]} ainda não foi importada no Engajamento.`);
     } catch (e) {
       if (!e.auth) aviso(e.message, 'erro');
       E.alunos = []; E.todos = 0;
@@ -73,7 +77,7 @@
     const extra = (CFG.filtros || []).filter((x) => x.id === f.extra)[0];
     return E.alunos.filter((r) => {
       const m = mat(r);
-      if (busca && (String(r.NOM_ALUNO || '').toLowerCase().indexOf(busca) < 0) && m.indexOf(busca) < 0) return false;
+      if (busca && (String(r.NOM_ALUNO || '').toLowerCase().indexOf(busca) < 0) && m.indexOf(busca) < 0 && String(matVis(r)).indexOf(busca) < 0) return false;
       if (f.curso && r.NOM_CURSO !== f.curso) return false;
       if (f.mod && (r.MODALIDADE_PP_PC || r.MODALIDADE || '') !== f.mod) return false;
       if (f.programa && CFG.filtroPrograma && CFG.filtroPrograma(r) !== f.programa) return false;
@@ -109,7 +113,7 @@
         <input type="search" id="f-busca" placeholder="Buscar por nome ou matrícula" value="${esc(f.busca)}">
         <select id="f-curso">${opc(unicos(E.alunos, (r) => r.NOM_CURSO), f.curso, 'Todos os cursos')}</select>
         <select id="f-mod">${opc(unicos(E.alunos, (r) => r.MODALIDADE_PP_PC || r.MODALIDADE), f.mod, 'Todas as modalidades')}</select>
-        ${CFG.filtroPrograma ? `<select id="f-programa">${opc(unicos(E.alunos, CFG.filtroPrograma), f.programa, 'Todos os programas')}</select>` : ''}
+        ${CFG.filtroPrograma ? `<select id="f-programa">${opc(unicos(E.alunos, CFG.filtroPrograma), f.programa, CFG.filtroProgramaRotulo || 'Todos os programas')}</select>` : ''}
         <select id="f-extra"><option value="">Todos</option>${(CFG.filtros || []).map((x) => `<option value="${x.id}" ${x.id === f.extra ? 'selected' : ''}>${esc(x.t)}</option>`).join('')}</select>
         <select id="f-situacao">
           <option value="">Qualquer situação</option>
@@ -118,7 +122,8 @@
           <option value="fu" ${f.situacao === 'fu' ? 'selected' : ''}>Com follow-up pendente</option>
         </select>
         <button class="btn mini" id="f-exportar">Exportar CSV</button>
-        <span class="total">${lista.length.toLocaleString('pt-BR')} de ${E.alunos.length.toLocaleString('pt-BR')} alunos</span>
+        ${CFG.importar && eu().gestao ? `<button class="btn mini primario" id="f-importar">${esc(CFG.importar.rotulo)}</button><input type="file" id="f-arquivo" accept=".xlsx,.xls,.csv" hidden>` : ''}
+        <span class="total">${lista.length.toLocaleString('pt-BR')} de ${E.alunos.length.toLocaleString('pt-BR')} ${unidade()}</span>
       </div>
       <div class="painel"><table class="tabela"><thead><tr>
         <th>Aluno</th><th>Curso</th><th>Modalidade</th>${cols.map((c) => `<th>${esc(c.t)}</th>`).join('')}<th>Último contato</th><th>Follow-up</th>
@@ -126,12 +131,12 @@
         const m = mat(r), rs = regsDoAluno(m), ult = rs[0];
         const fu = rs.filter((x) => x.fu_status === 'pendente').map((x) => x.fu_data).sort()[0];
         return `<tr class="clicavel" data-mat="${esc(m)}">
-          <td class="nome"><b>${esc(r.NOM_ALUNO)}</b><small>${esc(m)}</small></td>
+          <td class="nome"><b>${esc(r.NOM_ALUNO)}</b><small>${esc(matVis(r))}</small></td>
           <td>${esc(r.NOM_CURSO)}</td><td>${esc(r.MODALIDADE_PP_PC || r.MODALIDADE || '')}</td>
           ${cols.map((c) => { let v = ''; try { v = c.v(r); } catch (e) {} const al = c.alerta && c.alerta(r); return `<td class="${al ? 'alerta' : ''}">${esc(v)}${al ? ' ⚠️' : ''}</td>`; }).join('')}
           <td>${ult ? `${esc(dataCurta(ult.criado))}<br><small>${esc(ult.resultado || ult.canal)}</small>` : '<span class="selo cinza">Sem contato</span>'}</td>
           <td>${fu ? esc(dataBR(fu)) : ''}</td></tr>`;
-      }).join('') || `<tr><td colspan="${cols.length + 5}" class="vazio">${E.todos ? 'Nenhum aluno com esses filtros.' : 'A base ' + NOMES_BASE[E.base] + ' ainda não foi importada no Engajamento.'}</td></tr>`}</tbody></table></div>
+      }).join('') || `<tr><td colspan="${cols.length + 5}" class="vazio">${E.todos ? 'Nenhum registro com esses filtros.' : (CFG.fonte ? CFG.semDados : 'A base ' + NOMES_BASE[E.base] + ' ainda não foi importada no Engajamento.')}</td></tr>`}</tbody></table></div>
       <div class="paginas"><button class="btn mini" id="p-ant" ${E.pagina <= 1 ? 'disabled' : ''}>Anterior</button> Página ${E.pagina} de ${paginas} <button class="btn mini" id="p-prox" ${E.pagina >= paginas ? 'disabled' : ''}>Próxima</button></div>`;
     const reaplicar = (campo, el) => { E.filtro[campo] = el.value; E.pagina = 1; telaAlunos(); };
     let t; $('#f-busca').oninput = (ev) => { clearTimeout(t); t = setTimeout(() => { reaplicar('busca', ev.target); const i = $('#f-busca'); i.focus(); i.setSelectionRange(i.value.length, i.value.length); }, 250); };
@@ -139,6 +144,7 @@
     $('#p-ant').onclick = () => { E.pagina--; telaAlunos(); };
     $('#p-prox').onclick = () => { E.pagina++; telaAlunos(); };
     $('#f-exportar').onclick = () => exportar(lista);
+    if ($('#f-importar')) { $('#f-importar').onclick = () => $('#f-arquivo').click(); $('#f-arquivo').onchange = (ev) => importarArquivo(ev.target.files[0]); }
     document.querySelectorAll('tr[data-mat]').forEach((tr) => { tr.onclick = () => abrirAluno(tr.dataset.mat); });
   }
 
@@ -147,7 +153,7 @@
     const cab = ['Matrícula', 'Nome', 'Curso', 'Modalidade', 'Telefone', 'E-mail'].concat(cols.map((c) => c.t), ['Último contato', 'Resultado', 'Atendente', 'Follow-up']);
     const linhas = lista.map((r) => {
       const m = mat(r), ult = regsDoAluno(m)[0];
-      return [m, r.NOM_ALUNO, r.NOM_CURSO, r.MODALIDADE_PP_PC || r.MODALIDADE, r.NUM_TELEF_CELULAR || r.NUM_TELEFONE, r.END_EMAIL]
+      return [matVis(r), r.NOM_ALUNO, r.NOM_CURSO, r.MODALIDADE_PP_PC || r.MODALIDADE, r.NUM_TELEF_CELULAR || r.NUM_TELEFONE, r.END_EMAIL]
         .concat(cols.map((c) => { try { return c.v(r); } catch (e) { return ''; } }),
           [ult ? dataCurta(ult.criado) : '', ult ? ult.resultado : '', ult ? ult.atendente : '', ult && ult.fu_status === 'pendente' ? dataBR(ult.fu_data) : '']);
     });
@@ -172,10 +178,11 @@
     abrirModal(`
       <h2>${esc(r.NOM_ALUNO)}</h2>
       <div class="ficha-aluno">
-        <div><span>Matrícula</span>${esc(m)}</div><div><span>Curso</span>${esc(r.NOM_CURSO)}</div>
-        <div><span>Modalidade</span>${esc(r.MODALIDADE_PP_PC || r.MODALIDADE || '')}</div><div><span>Base</span>${NOMES_BASE[E.base]}</div>
-        ${cols.map((c) => { let v = ''; try { v = c.v(r); } catch (e) {} return `<div><span>${esc(c.t)}</span>${esc(v || '—')}</div>`; }).join('')}
+        <div><span>Matrícula</span>${esc(matVis(r))}</div><div><span>Curso</span>${esc(r.NOM_CURSO)}</div>
+        <div><span>Modalidade</span>${esc(r.MODALIDADE_PP_PC || r.MODALIDADE || '')}</div><div><span>Base</span>${CFG.fonte ? esc(CFG.nomeFonte) : NOMES_BASE[E.base]}</div>
+        ${cols.map((c) => { let v = ''; try { v = c.v(r); } catch (e) {} return `<div><span>${esc(c.t)}</span>${esc(v === 0 ? 0 : (v || '—'))}</div>`; }).join('')}
       </div>
+      ${CFG.detalhe ? CFG.detalhe(r, esc) : ''}
       <div class="contatos">
         ${tel ? `<a class="btn mini" target="_blank" rel="noopener" href="https://wa.me/55${tel}">💬 WhatsApp</a><a class="btn mini" href="tel:${tel}">📞 ${esc(tel)}</a>` : '<span class="selo cinza">Sem telefone</span>'}
         ${email ? `<a class="btn mini" href="mailto:${esc(email)}">✉️ ${esc(email)}</a>` : ''}
@@ -231,6 +238,35 @@
     };
   }
 
+  /* ── importação de arquivo (NPS: exportação do Medallia) ── */
+  function carregarXLSX() {
+    if (window.XLSX) return Promise.resolve();
+    return new Promise((ok, falha) => { const s2 = document.createElement('script'); s2.src = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js'; s2.onload = ok; s2.onerror = () => falha(new Error('Não foi possível carregar o leitor de planilhas. Confira a internet.')); document.head.appendChild(s2); });
+  }
+  async function importarArquivo(arq) {
+    if (!arq) return;
+    const btn = $('#f-importar'); btn.disabled = true; btn.textContent = 'Lendo o arquivo...';
+    try {
+      await carregarXLSX();
+      const wb = XLSX.read(await arq.arrayBuffer(), { type: 'array', cellDates: false });
+      const linhas = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { header: 1, raw: false, defval: '' });
+      const respostas = CFG.importar.converter(linhas);
+      if (!respostas.length) throw new Error(CFG.importar.erroFormato);
+      let novas = 0, atualizadas = 0;
+      for (let i = 0; i < respostas.length; i += 300) {
+        btn.textContent = `Enviando ${Math.min(i + 300, respostas.length)} de ${respostas.length}...`;
+        const r = await chamar('importar', { respostas: respostas.slice(i, i + 300) });
+        if (!r || !r.ok) throw new Error((r && r.erro) || 'Falha ao enviar.');
+        novas += r.novas; atualizadas += r.atualizadas;
+      }
+      aviso(`Importação concluída: ${novas} resposta(s) nova(s) e ${atualizadas} atualizada(s).`, 'ok');
+      await carregarBase();
+    } catch (e) {
+      if (!e.auth) aviso(e.message, 'erro');
+      if ($('#f-importar')) { $('#f-importar').disabled = false; $('#f-importar').textContent = CFG.importar.rotulo; }
+    }
+  }
+
   /* ── follow-up ── */
   function pendentes() {
     const nome = eu().nome;
@@ -245,7 +281,7 @@
     $('#area').innerHTML = `
       <div class="filtros">
         <select id="fu-quem"><option value="meus" ${E.fuQuem === 'meus' ? 'selected' : ''}>Meus follow-ups</option><option value="todos" ${E.fuQuem === 'todos' ? 'selected' : ''}>Toda a equipe</option></select>
-        <span class="total">${L.length} pendente(s) na base ${NOMES_BASE[E.base]}</span>
+        <span class="total">${L.length} pendente(s) · ${esc(nomeBase())}</span>
       </div>
       ${grupos.map(([t, lista, cls]) => `<div class="grupo-fu"><h3>${t} (${lista.length})</h3>${lista.map((x) => `
         <div class="fu ${cls}"><div><b>${esc(x.aluno || x.matricula)}</b> <small>${esc(x.matricula)} · ${dataBR(x.fu_data)} · ${esc(x.atendente)}</small>
@@ -285,12 +321,13 @@
     const maxDia = Math.max(1, ...dias.map((d) => porDia[d] || 0));
     $('#area').innerHTML = `
       <div class="kpis">
-        <div class="kpi"><span>Alunos no sistema</span><b>${E.alunos.length.toLocaleString('pt-BR')}</b><small>de ${E.todos.toLocaleString('pt-BR')} na base ${NOMES_BASE[E.base]}</small></div>
-        <div class="kpi"><span>Alunos acionados</span><b>${acionados.size.toLocaleString('pt-BR')}</b><small>${cobertura.toLocaleString('pt-BR', { maximumFractionDigits: 1 })}% de cobertura</small></div>
+        <div class="kpi"><span>${unidade()} no sistema</span><b>${E.alunos.length.toLocaleString('pt-BR')}</b><small>de ${E.todos.toLocaleString('pt-BR')} · ${esc(nomeBase())}</small></div>
+        <div class="kpi"><span>${unidade()} ${CFG.feminino ? 'acionadas' : 'acionados'}</span><b>${acionados.size.toLocaleString('pt-BR')}</b><small>${cobertura.toLocaleString('pt-BR', { maximumFractionDigits: 1 })}% de cobertura</small></div>
         <div class="kpi"><span>Acionamentos</span><b>${regs.length.toLocaleString('pt-BR')}</b><small>${regs.filter((x) => new Date(x.criado).toISOString().slice(0, 10) === hoje).length} hoje</small></div>
         <div class="kpi"><span>Follow-ups pendentes</span><b>${pend.length}</b><small>${pend.filter((x) => x.fu_data < hoje).length} atrasado(s)</small></div>
         ${(CFG.indicadores || []).map((k) => { let v = ''; try { v = k.v(E.alunos); } catch (e) {} return `<div class="kpi"><span>${esc(k.t)}</span><b style="font-size:${String(v).length > 12 ? 15 : 24}px">${esc(v)}</b></div>`; }).join('')}
       </div>
+      ${CFG.dashboardExtra ? CFG.dashboardExtra(E.alunos, esc, barras) : ''}
       <div class="duas">
         <div class="painel"><h2>Resultados dos contatos</h2>${barras(contar(regs, (x) => x.resultado))}</div>
         <div class="painel"><h2>Canais</h2>${barras(contar(regs, (x) => x.canal))}</div>
@@ -314,7 +351,7 @@
     $('#area').innerHTML = `
       <div class="filtros"><select id="per">
         ${[['hoje', 'Hoje'], ['7', 'Últimos 7 dias'], ['30', 'Últimos 30 dias'], ['tudo', 'Todo o período']].map(([v, t]) => `<option value="${v}" ${E.periodo === v ? 'selected' : ''}>${t}</option>`).join('')}
-      </select><span class="total">Base ${NOMES_BASE[E.base]}</span></div>
+      </select><span class="total">${esc(nomeBase())}</span></div>
       <div class="painel"><table class="tabela"><thead><tr><th>Atendente</th><th>Acionamentos</th><th>Alunos diferentes</th><th>Follow-ups agendados</th><th>Follow-ups concluídos</th><th>Último registro</th></tr></thead>
       <tbody>${nomes.map((n) => { const a = porAt[n] || { n: 0, alunos: new Set(), fu: 0, ultimo: 0 }; return `<tr><td><b>${esc(n)}</b></td><td>${a.n}</td><td>${a.alunos.size}</td><td>${a.fu}</td><td>${feitos[n] || 0}</td><td>${a.ultimo ? dataCurta(a.ultimo) : ''}</td></tr>`; }).join('') || '<tr><td colspan="6" class="vazio">Nenhum acionamento no período.</td></tr>'}</tbody></table></div>`;
     $('#per').onchange = (ev) => { E.periodo = ev.target.value; telaProdutividade(); };
@@ -340,6 +377,7 @@
     $('#titulo').textContent = CFG.icone + ' ' + CFG.nome;
     $('#subtitulo').textContent = CFG.subtitulo;
     $('#aba-original').hidden = !CFG.original;
+    if (CFG.fonte) $('#bases').style.display = 'none';
     try { const b = localStorage.getItem('jornada_base_' + SIS); if (NOMES_BASE[b]) E.base = b; } catch (e) {}
     document.querySelectorAll('#abas button').forEach((b) => { b.onclick = () => { E.aba = b.dataset.aba; desenhar(); }; });
     document.querySelectorAll('#bases button').forEach((b) => {

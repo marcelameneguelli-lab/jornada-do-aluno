@@ -31,7 +31,7 @@ with sync_playwright() as p:
     pg.fill('#login-email','marques.marcela@estacio.br'); pg.fill('#login-senha',prov['admin']); pg.click('#btn-entrar')
     pg.wait_for_selector('#form-troca:not([hidden])'); pg.fill('#troca-atual',prov['admin']); pg.fill('#troca-nova','Admin2026b'); pg.fill('#troca-conf','Admin2026b'); pg.click('#form-troca button.primario')
     pg.wait_for_function("document.body.dataset.tela==='app' && document.querySelectorAll('.card-sistema').length>0"); assert pg.locator('.card-sistema:not(.ferramenta)').count()==8; ok('admin vê os 8 sistemas')
-    pg.goto(B+'#/s/nps'); pg.wait_for_selector('.aviso-migracao'); ok('sistema ainda não migrado mostra aviso')
+    ok('todos os sistemas migrados')
     pg.hover('#lateral'); pg.wait_for_timeout(250); pg.click('#menu a[href="#/usuarios"]'); pg.mouse.move(1000,450); pg.wait_for_selector('#tab-usuarios tbody tr td:not(.vazio)'); ok('lista de usuários carrega')
     pg.click('#btn-novo-usuario'); pg.fill('#form-usuario [name=nome]','Novo Teste'); pg.fill('#form-usuario [name=email]','novo.teste@estacio.br')
     pg.select_option('#form-usuario [name=perfil]','coordenador')

@@ -34,6 +34,13 @@ function basesResumo_() {
     const del = n ? sh.getRange(2, 4, n, 1).getValues() : [];
     r.formandos = { total: del.filter(l => !l[0]).length };
   } catch (e) { r.erros.push('Formandos: ' + e.message); }
+  try {
+    const sh = abaNps_();
+    const n = Math.max(sh.getLastRow() - 1, 0);
+    const datas = n ? sh.getRange(2, 3, n, 2).getValues() : [];
+    r.nps = { total: n, ultima: datas.reduce((m, l) => Math.max(m, Number(l[1]) || 0), 0),
+      ate: datas.reduce((m, l) => (String(l[0]) > m ? String(l[0]) : m), '').slice(0, 10) };
+  } catch (e) { r.erros.push('NPS: ' + e.message); }
   return r;
 }
 
@@ -77,7 +84,7 @@ function coletarDia_(ini, fim) {
 
   // Provas, Estágio, Financeiro, Financiamentos: motor de acompanhamento
   const hojeIso = Utilities.formatDate(new Date(ini), tz, 'yyyy-MM-dd');
-  [['provas', 'Provas'], ['estagio', 'Estágio'], ['financeiro', 'Financeiro'], ['financiamentos', 'Financiamentos']].forEach(([sis, nome]) => {
+  [['provas', 'Provas'], ['estagio', 'Estágio'], ['financeiro', 'Financeiro'], ['financiamentos', 'Financiamentos'], ['nps', 'NPS']].forEach(([sis, nome]) => {
     try {
       const sh = planilhaDo_(sis).getSheetByName('acomp_' + sis);
       const n = sh ? Math.max(sh.getLastRow() - 1, 0) : 0;
@@ -117,7 +124,7 @@ function coletarDia_(ini, fim) {
   return { porAt: porAt, extras: extras, atrasados: atrasados, acessos: acessos, erros: erros };
 }
 
-const ORDEM_SISTEMAS_RELATORIO = ['Renovação', 'Engajamento', 'Provas', 'Estágio', 'Financeiro', 'Financiamentos', 'Formandos'];
+const ORDEM_SISTEMAS_RELATORIO = ['Renovação', 'Engajamento', 'Provas', 'Estágio', 'Financeiro', 'Financiamentos', 'NPS', 'Formandos'];
 
 function montarRelatorio_(dia) {
   const ini = inicioDoDia_(dia || new Date()), fim = ini + 86400000;

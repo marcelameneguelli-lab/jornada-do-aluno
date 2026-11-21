@@ -31,3 +31,12 @@ t('ativar cria os gatilhos das 13h e 20h', ()=>{ post({acao:'nucleo.relatorio_at
 t('agendamento: só envia seg a sex 20h e sábado 13h', ()=>{ const RealDate=g.Date; const casos=[['2026-11-20T20:05:00',true],['2026-11-20T13:05:00',false],['2026-11-21T13:05:00',true],['2026-11-21T20:05:00',false],['2026-11-22T20:05:00',false]];
   casos.forEach(([iso,esperado])=>{ const antes=g._emails||0; g.Date=class extends RealDate{ constructor(...a){ super(...(a.length?a:[iso])); } static now(){ return new RealDate(iso).getTime(); } }; try{ g.relatorioJornadaAgendado(); } finally { g.Date=RealDate; } assert.equal((g._emails||0)-antes, esperado?1:0, iso); }); });
 console.log(`\n${ok} testes da gestão passaram`);
+t('NPS: importar só gestão, sem duplicar, entra no relatório', ()=>{
+  const lote=[{id:'91.0',matricula:'1',nota:'2',NOM_ALUNO:'X'},{id:'92',matricula:'2',nota:'10'},{id:'93',matricula:''}];
+  assert.equal(post({acao:'nucleo.usuario_salvar',token:tM,usuario:{nome:'Felipe',email:'felipe@estacio.br',perfil:'atendente',sistemas:['nps']}}).ok,true);
+  assert.equal(post({acao:'nps.importar',token:tF,respostas:lote}).permissao,false);
+  let r=post({acao:'nps.importar',token:tY,respostas:lote}); assert.equal(r.novas,2); r=post({acao:'nps.importar',token:tY,respostas:lote}); assert.equal(r.novas,0); assert.equal(r.atualizadas,2);
+  const rs=post({acao:'nps.respostas',token:tF}); assert.deepEqual(rs.dados.map(x=>x.id).sort(),['91','92']);
+  post({acao:'nps.registrar',token:tF,reg:{matricula:'91',obs:'liguei',resultado:'Dor resolvida'}});
+  assert(post({acao:'nucleo.relatorio_previa',token:tM}).html.includes('NPS')); assert.equal(post({acao:'nucleo.bases_resumo',token:tY}).nps.total,2); });
+console.log(`${ok} testes da gestão e do NPS passaram`);

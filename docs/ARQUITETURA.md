@@ -39,6 +39,12 @@ Regras de entrada: Provas = AV ou AVS no polo (QTD_ELEGIVEL_AV_POLO / QTD_ELEGIV
 
 Servidor: 14_Acompanhamento.gs. Abas acomp_<sistema> (acionamentos e follow-ups) e ficha_<sistema> (campos por aluno). O atendente gravado é sempre quem está logado. Cada sistema só acessa as ações do EngajaVR que a sua tela original usa.
 
+## NPS (Medallia)
+
+Mesmo motor de acompanhamento, com base própria: a exportação "Survey Export" do Medallia, lida no navegador (SheetJS) e enviada em lotes para a aba nps_respostas (16_NPS.gs), com chave no ID da Pesquisa. Cada resposta é uma linha (o mesmo aluno pode responder mais de uma vez). Grupos: promotor 9 e 10, neutro 7 e 8, detrator 0 a 6. Dashboard com NPS e meta, NPS por mês e por modalidade, motivos dos detratores e insatisfação por tema. Ficha do caso: tema da dor e situação.
+
+Conferido em 20/11/2026 com o arquivo real (Responses_20261120_163817.xlsx): 362 respostas de jan a nov/2026, NPS 40,3 (225 promotores, 58 neutros, 79 detratores).
+
 ## Ferramentas da equipe
 
 Calendário, Tarefas e Tutoriais aparecem no menu e no Início para todos os usuários logados, sem depender dos sistemas liberados. Usam as telas e os dados do EngajaVR (mesmo armazenamento), abertas em "modo ferramenta" (sem abas, bases nem contador de alunos). No servidor, ficam em 13_Ferramentas.gs (ações ferramentas.*).

@@ -12,7 +12,7 @@ window.JORNADA = {
     { id: 'estagio',     nome: 'Estágio',     icone: '💼', descricao: 'Elegíveis, TCE e documentos', etapa: 5, pronto: true, pagina: 'modulos/acompanhamento/index.html?sistema=estagio' },
     { id: 'financeiro',  nome: 'Financeiro',  icone: '💰', descricao: 'Vencimentos e inadimplência', etapa: 5, pronto: true, pagina: 'modulos/acompanhamento/index.html?sistema=financeiro' },
     { id: 'financiamentos', nome: 'Financiamentos', icone: '🏦', descricao: 'ProUni, FIES, Pravaler e Ficou Fácil: aproveitamento e termos', etapa: 6, pronto: true, pagina: 'modulos/acompanhamento/index.html?sistema=financiamentos' },
-    { id: 'nps',         nome: 'NPS',         icone: '⭐', descricao: 'Base do Medallia: promotores, neutros e detratores', etapa: 6 },
+    { id: 'nps',         nome: 'NPS',         icone: '⭐', descricao: 'Base do Medallia: promotores, neutros e detratores', etapa: 6, pronto: true, pagina: 'modulos/acompanhamento/index.html?sistema=nps' },
     { id: 'formandos',   nome: 'Formandos',   icone: '🎓', descricao: 'Prováveis formandos e colação de grau', etapa: 2, pronto: true },
   ],
   // Ferramentas da equipe: valem para todos os usuários, fora dos sistemas (decisão de 20/11/2026)
