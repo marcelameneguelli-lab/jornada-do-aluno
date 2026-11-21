@@ -18,10 +18,11 @@ function log_(tipo, quem, detalhe) {
   catch (e) { Logger.log(tipo + ' ' + quem + ' ' + detalhe); }
 }
 
-/** Planilha de um sistema. Provas, Estágio e Financeiro usam a do Engajamento. */
+/** Planilha de um sistema (vazio em PLANILHAS = Central). */
 function planilhaDo_(sis) {
-  const mapa = { provas: 'engajamento', estagio: 'engajamento', financeiro: 'engajamento' };
-  const chave = mapa[sis] || sis;
+  // Provas, Estágio e Financeiro leem a base do Engajamento, mas gravam os acionamentos na própria
+  // planilha (PLANILHAS[sis], vazio = Central): a planilha do Engajamento chegou ao limite de células.
+  const chave = sis;
   if (!(chave in PLANILHAS)) throw new Error('Planilha não configurada para ' + sis);
   const id = PLANILHAS[chave];
   return id ? SpreadsheetApp.openById(id) : planilhaCentral_();

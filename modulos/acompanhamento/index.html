@@ -11,7 +11,21 @@
   .importar-central { max-width: 620px; margin: 10px auto; padding: 20px; }
   .importar-central h3 { margin: 0 0 8px; }
   .importar-central p { color: #5b6676; font-size: 13px; line-height: 1.5; }
-  [hidden] { display: none !important; } /* o estilo geral de input não pode mostrar o campo de arquivo escondido */
+  [hidden] { display: none !important; }
+  .cartoes { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px; margin-bottom: 14px; }
+  .cartao { background: #fff; border: 1px solid var(--borda); border-top: 3px solid var(--azul); border-radius: 10px; padding: 12px; text-align: center; cursor: pointer; font: inherit; }
+  .cartao b { display: block; font-size: 24px; color: var(--azul); } .cartao span { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .4px; color: var(--texto-2); }
+  .cartao.ativo { background: var(--azul-claro); box-shadow: 0 0 0 2px var(--azul) inset; }
+  .cartao.amarelo { border-top-color: #f0b400; } .cartao.amarelo b { color: #8a5a00; }
+  .cartao.azul { border-top-color: #1c7ed6; } .cartao.azul b { color: #1864ab; }
+  .cartao.verde { border-top-color: var(--verde); } .cartao.verde b { color: var(--verde-escuro); }
+  .cartao.cinza b { color: #495057; } .cartao.laranja { border-top-color: #e8590c; } .cartao.laranja b { color: #b54708; }
+  .filtros .rot { display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; color: var(--texto-2); margin: 0; }
+  .filtros .rot select, .filtros .rot input { margin: 0; }
+  .origem { color: #8a94a3; font-style: italic; }
+  .sit { display: inline-block; border-radius: 10px; padding: 2px 8px; font-size: 11px; font-weight: 700; white-space: nowrap; }
+  .sit.falta { background: #fff4d6; color: #8a5a00; } .sit.agendou { background: #e7f5ff; color: #1864ab; } .sit.fez { background: #e6f6e6; color: #2b6a1f; } .sit.na { background: #f1f3f5; color: #6c757d; } .sit.faltou { background: #ffe3e3; color: #b42318; }
+  .cartao.vermelho { border-top-color: #e03131; } .cartao.vermelho b { color: #b42318; } /* o estilo geral de input não pode mostrar o campo de arquivo escondido */
   .topo { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; padding: 14px 22px; background: #fff; border-bottom: 1px solid var(--borda); position: sticky; top: 0; z-index: 5; }
   .topo h1 { font-size: 19px; margin: 0; }
   .topo small { display: block; color: var(--texto-2); font-size: 12px; }

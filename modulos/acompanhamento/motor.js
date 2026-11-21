@@ -15,7 +15,8 @@
 
   const E = {
     base: 'impar', alunos: [], todos: 0, regs: {}, fichas: {}, desde: 0,
-    aba: 'alunos', pagina: 1, filtro: { busca: '', curso: '', mod: '', situacao: '', extra: '', programa: '' },
+    aba: 'alunos', pagina: 1, filtro: { busca: '', curso: '', mod: '', situacao: '', extra: '', programa: '', tipo: '', canal: '', atend: '', de: '', ate: '' },
+    hist: {}, // acionamentos do Engajamento (todas as bases), por matrícula: entram no "último acionamento"
     fuQuem: 'meus', periodo: '7', apoio: {},
   };
   const eu = () => { const s = Api.Sessao.ler(); return (s && s.me) || { nome: '', perfil: '' }; };
@@ -30,6 +31,38 @@
     const r = await Api.chamar(SIS + '.' + acao, dados || {});
     if (r && r.permissao === false) throw new Error(r.erro || 'Seu perfil não tem acesso a este sistema.');
     return r;
+  }
+
+  /* ── contexto para as funções da configuração (tipo de prova escolhido, último acionamento) ── */
+  const ctx = () => ({ tipo: E.filtro.tipo || (CFG.seletor ? CFG.seletor.opcoes[0][0] : ''), ultimo: (r) => ultimoAc(mat(r)) });
+  const aplicaSeletor = (r, c) => !CFG.seletor || CFG.seletor.filtra(r, c.tipo);
+
+  /* Datas do histórico do EngajaVR: "dd/mm/aaaa hh:mm:ss" ou "dd/mm/aaaa, hh:mm:ss" */
+  function msDeDataBR(t) {
+    const m = String(t || '').match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})(?:,?\s+(\d{1,2}):(\d{2}))?/);
+    return m ? new Date(+m[3], +m[2] - 1, +m[1], +(m[4] || 0), +(m[5] || 0)).getTime() : 0;
+  }
+  /** Todos os acionamentos do aluno: os deste sistema e, quando configurado, os do Engajamento. */
+  function acionamentos(m) {
+    const proprios = regsDoAluno(m).map((x) => ({ ms: x.criado, canal: x.canal, atend: x.atendente, resultado: x.resultado, origem: CFG.nome }));
+    return proprios.concat(E.hist[m] || []).sort((a, b) => b.ms - a.ms);
+  }
+  const ultimoAc = (m) => acionamentos(m)[0] || null;
+  async function carregarHistoricoEngajamento() {
+    if (!CFG.historicoEngajamento) return;
+    const h = {};
+    await Promise.all(Object.keys(NOMES_BASE).map(async (b) => {
+      try {
+        const r = await chamar('getHistory', { base: b });
+        const d = (r && r.data) || {};
+        Object.keys(d).forEach((mt) => (d[mt] || []).forEach((a) => {
+          const k = String(mt).replace(/\D/g, '');
+          (h[k] = h[k] || []).push({ ms: msDeDataBR(a.datetime || a.date), canal: a.canal || a.canal_envio || '', atend: a.atendente || a.atend || '', resultado: a.motivo || a.tipo || '', origem: 'Engajamento ' + NOMES_BASE[b] });
+        }));
+      } catch (e) { /* sem o histórico do Engajamento, vale só o deste sistema */ }
+    }));
+    E.hist = h;
+    if (E.alunos.length && $('#modal').hidden && E.aba !== 'original') desenhar();
   }
 
   /* ── dados ── */
@@ -75,19 +108,22 @@
 
   /* ── filtros ── */
   function filtrados() {
-    const f = E.filtro, busca = f.busca.trim().toLowerCase();
+    const f = E.filtro, busca = f.busca.trim().toLowerCase(), c = ctx();
     const extra = (CFG.filtros || []).filter((x) => x.id === f.extra)[0];
     return E.alunos.filter((r) => {
       const m = mat(r);
+      if (!aplicaSeletor(r, c)) return false;
+      if (CFG.filtroData && (f.de || f.ate)) { const d = CFG.filtroData.v(r, c); if (!d || (f.de && d < f.de) || (f.ate && d > f.ate)) return false; }
+      if (f.canal || f.atend) { if (!acionamentos(m).some((a) => (!f.canal || a.canal === f.canal) && (!f.atend || a.atend === f.atend))) return false; }
       if (busca && (String(r.NOM_ALUNO || '').toLowerCase().indexOf(busca) < 0) && m.indexOf(busca) < 0 && String(matVis(r)).indexOf(busca) < 0) return false;
       if (f.curso && r.NOM_CURSO !== f.curso) return false;
       if (f.mod && (r.MODALIDADE_PP_PC || r.MODALIDADE || '') !== f.mod) return false;
       if (f.programa && CFG.filtroPrograma && CFG.filtroPrograma(r) !== f.programa) return false;
-      if (extra && !extra.f(r, fichaDe(m))) return false;
+      if (extra && !extra.f(r, fichaDe(m), c)) return false;
       if (f.situacao) {
-        const rs = regsDoAluno(m);
-        if (f.situacao === 'sem' && rs.length) return false;
-        if (f.situacao === 'com' && !rs.length) return false;
+        const rs = regsDoAluno(m), tem = acionamentos(m).length > 0;
+        if (f.situacao === 'sem' && tem) return false;
+        if (f.situacao === 'com' && !tem) return false;
         if (f.situacao === 'fu' && !rs.some((x) => x.fu_status === 'pendente')) return false;
       }
       return true;
@@ -111,38 +147,55 @@
     const f = E.filtro;
     const opc = (arr, sel, rotulo) => `<option value="">${rotulo}</option>` + arr.map((x) => `<option ${x === sel ? 'selected' : ''}>${esc(x)}</option>`).join('');
     const cols = CFG.colunas || [];
+    const c = ctx();
+    const doTipo = E.alunos.filter((r) => aplicaSeletor(r, c));
+    // cartões clicáveis (como no sistema antigo): cada um aplica um filtro
+    const cards = (CFG.filtros || []).filter((x) => x.card);
+    const canais = new Set(), atends = new Set();
+    doTipo.forEach((r) => acionamentos(mat(r)).forEach((a) => { if (a.canal) canais.add(a.canal); if (a.atend) atends.add(a.atend); }));
     $('#area').innerHTML = `
+      ${cards.length ? `<div class="cartoes">
+        <button class="cartao ${!f.extra ? 'ativo' : ''}" data-card=""><b>${doTipo.length.toLocaleString('pt-BR')}</b><span>${esc(CFG.rotuloTotal || 'Total')}</span></button>
+        ${cards.map((x) => `<button class="cartao ${x.cor || ''} ${f.extra === x.id ? 'ativo' : ''}" data-card="${x.id}"><b>${doTipo.filter((r) => { try { return x.f(r, fichaDe(mat(r)), c); } catch (e) { return false; } }).length.toLocaleString('pt-BR')}</b><span>${esc(x.t)}</span></button>`).join('')}
+      </div>` : ''}
       <div class="filtros">
+        ${CFG.seletor ? `<label class="rot">${esc(CFG.seletor.rotulo)}<select id="f-tipo">${CFG.seletor.opcoes.map(([v, t]) => `<option value="${v}" ${v === c.tipo ? 'selected' : ''}>${esc(t)}</option>`).join('')}</select></label>` : ''}
         <input type="search" id="f-busca" placeholder="Buscar por nome ou matrícula" value="${esc(f.busca)}">
         <select id="f-curso">${opc(unicos(E.alunos, (r) => r.NOM_CURSO), f.curso, 'Todos os cursos')}</select>
         <select id="f-mod">${opc(unicos(E.alunos, (r) => r.MODALIDADE_PP_PC || r.MODALIDADE), f.mod, 'Todas as modalidades')}</select>
         ${CFG.filtroPrograma ? `<select id="f-programa">${opc(unicos(E.alunos, CFG.filtroPrograma), f.programa, CFG.filtroProgramaRotulo || 'Todos os programas')}</select>` : ''}
         <select id="f-extra"><option value="">Todos</option>${(CFG.filtros || []).map((x) => `<option value="${x.id}" ${x.id === f.extra ? 'selected' : ''}>${esc(x.t)}</option>`).join('')}</select>
         <select id="f-situacao">
-          <option value="">Qualquer situação</option>
+          <option value="">${CFG.historicoEngajamento ? 'Acionamento: todos' : 'Qualquer situação'}</option>
           <option value="sem" ${f.situacao === 'sem' ? 'selected' : ''}>Sem acionamento</option>
-          <option value="com" ${f.situacao === 'com' ? 'selected' : ''}>Já acionados</option>
+          <option value="com" ${f.situacao === 'com' ? 'selected' : ''}>Com acionamento</option>
           <option value="fu" ${f.situacao === 'fu' ? 'selected' : ''}>Com follow-up pendente</option>
         </select>
+        ${CFG.historicoEngajamento ? `<select id="f-canal">${opc(Array.from(canais).sort(), f.canal, 'Todos os canais')}</select>
+        <select id="f-atend">${opc(Array.from(atends).sort(), f.atend, 'Todos os atendentes')}</select>` : ''}
+        ${CFG.filtroData ? `<label class="rot">${esc(CFG.filtroData.t)} de<input type="date" id="f-de" value="${esc(f.de)}"></label><label class="rot">até<input type="date" id="f-ate" value="${esc(f.ate)}"></label>` : ''}
         <button class="btn mini" id="f-exportar">Exportar CSV</button>
         <span class="total">${lista.length.toLocaleString('pt-BR')} de ${E.alunos.length.toLocaleString('pt-BR')} ${unidade()}</span>
       </div>
       <div class="painel"><table class="tabela"><thead><tr>
-        <th>Aluno</th><th>Curso</th><th>Modalidade</th>${cols.map((c) => `<th>${esc(c.t)}</th>`).join('')}<th>Último contato</th><th>Follow-up</th>
+        <th>Aluno</th><th>Curso</th><th>Modalidade</th>${cols.map((c) => `<th>${esc(c.t)}</th>`).join('')}<th>${CFG.historicoEngajamento ? 'Último acionamento' : 'Último contato'}</th><th>Follow-up</th>
       </tr></thead><tbody>${fatia.map((r) => {
-        const m = mat(r), rs = regsDoAluno(m), ult = rs[0];
+        const m = mat(r), rs = regsDoAluno(m), ult = CFG.historicoEngajamento ? ultimoAc(m) : rs[0];
         const fu = rs.filter((x) => x.fu_status === 'pendente').map((x) => x.fu_data).sort()[0];
         return `<tr class="clicavel" data-mat="${esc(m)}">
           <td class="nome"><b>${esc(r.NOM_ALUNO)}${Apoio.selo(E.apoio[Apoio.norm(matVis(r))])}</b><small>${esc(matVis(r))}</small></td>
           <td>${esc(r.NOM_CURSO)}</td><td>${esc(r.MODALIDADE_PP_PC || r.MODALIDADE || '')}</td>
-          ${cols.map((c) => { let v = ''; try { v = c.v(r); } catch (e) {} const al = c.alerta && c.alerta(r); return `<td class="${al ? 'alerta' : ''}">${esc(v)}${al ? ' ⚠️' : ''}</td>`; }).join('')}
-          <td>${ult ? `${esc(dataCurta(ult.criado))}<br><small>${esc(ult.resultado || ult.canal)}</small>` : '<span class="selo cinza">Sem contato</span>'}</td>
+          ${cols.map((k) => { let v = ''; try { v = k.v(r, c); } catch (e) {} const al = k.alerta && k.alerta(r, c); return `<td class="${al ? 'alerta' : ''}">${k.html ? v : esc(v)}${al ? ' ⚠️' : ''}</td>`; }).join('')}
+          <td>${!ult ? '<span class="selo cinza">Sem contato</span>' : CFG.historicoEngajamento
+            ? `${esc(dataAA(ult.ms))}<br><small>${esc([ult.canal, ult.atend].filter(Boolean).join(' · '))}</small>${ult.origem !== CFG.nome ? `<br><small class="origem">${esc(ult.origem)}</small>` : ''}`
+            : `${esc(dataCurta(ult.criado))}<br><small>${esc(ult.resultado || ult.canal)}</small>`}</td>
           <td>${fu ? esc(dataBR(fu)) : ''}</td></tr>`;
       }).join('') || `<tr><td colspan="${cols.length + 5}" class="vazio">${E.todos ? 'Nenhum registro com esses filtros.' : (CFG.fonte ? CFG.semDados : 'A base ' + NOMES_BASE[E.base] + ' ainda não foi importada. A coordenação importa na Central de Bases.')}</td></tr>`}</tbody></table></div>
       <div class="paginas"><button class="btn mini" id="p-ant" ${E.pagina <= 1 ? 'disabled' : ''}>Anterior</button> Página ${E.pagina} de ${paginas} <button class="btn mini" id="p-prox" ${E.pagina >= paginas ? 'disabled' : ''}>Próxima</button></div>`;
     const reaplicar = (campo, el) => { E.filtro[campo] = el.value; E.pagina = 1; telaAlunos(); };
     let t; $('#f-busca').oninput = (ev) => { clearTimeout(t); t = setTimeout(() => { reaplicar('busca', ev.target); const i = $('#f-busca'); i.focus(); i.setSelectionRange(i.value.length, i.value.length); }, 250); };
-    [['#f-curso', 'curso'], ['#f-mod', 'mod'], ['#f-extra', 'extra'], ['#f-situacao', 'situacao'], ['#f-programa', 'programa']].forEach(([s, c]) => { const el = $(s); if (el) el.onchange = () => reaplicar(c, el); });
+    [['#f-curso', 'curso'], ['#f-mod', 'mod'], ['#f-extra', 'extra'], ['#f-situacao', 'situacao'], ['#f-programa', 'programa'], ['#f-tipo', 'tipo'], ['#f-canal', 'canal'], ['#f-atend', 'atend'], ['#f-de', 'de'], ['#f-ate', 'ate']].forEach(([s, k]) => { const el = $(s); if (el) el.onchange = () => reaplicar(k, el); });
+    document.querySelectorAll('[data-card]').forEach((b) => { b.onclick = () => { E.filtro.extra = b.dataset.card; E.pagina = 1; telaAlunos(); }; });
     $('#p-ant').onclick = () => { E.pagina--; telaAlunos(); };
     $('#p-prox').onclick = () => { E.pagina++; telaAlunos(); };
     $('#f-exportar').onclick = () => exportar(lista);
@@ -152,17 +205,18 @@
 
   function exportar(lista) {
     const cols = CFG.colunas || [];
-    const cab = ['Matrícula', 'Nome', 'Curso', 'Modalidade', 'Telefone', 'E-mail'].concat(cols.map((c) => c.t), ['Último contato', 'Resultado', 'Atendente', 'Follow-up']);
+    const c = ctx(), semHtml = (v) => String(v == null ? '' : v).replace(/<[^>]*>/g, '');
+    const cab = ['Matrícula', 'Nome', 'Curso', 'Modalidade', 'Telefone', 'E-mail'].concat(cols.map((k) => k.t), ['Último acionamento', 'Canal', 'Resultado', 'Atendente', 'Follow-up']);
     const linhas = lista.map((r) => {
-      const m = mat(r), ult = regsDoAluno(m)[0];
+      const m = mat(r), ult = ultimoAc(m), fu = regsDoAluno(m).filter((x) => x.fu_status === 'pendente').map((x) => x.fu_data).sort()[0];
       return [matVis(r), r.NOM_ALUNO, r.NOM_CURSO, r.MODALIDADE_PP_PC || r.MODALIDADE, r.NUM_TELEF_CELULAR || r.NUM_TELEFONE, r.END_EMAIL]
-        .concat(cols.map((c) => { try { return c.v(r); } catch (e) { return ''; } }),
-          [ult ? dataCurta(ult.criado) : '', ult ? ult.resultado : '', ult ? ult.atendente : '', ult && ult.fu_status === 'pendente' ? dataBR(ult.fu_data) : '']);
+        .concat(cols.map((k) => { try { return semHtml(k.v(r, c)); } catch (e) { return ''; } }),
+          [ult ? dataAA(ult.ms) : '', ult ? ult.canal : '', ult ? ult.resultado : '', ult ? ult.atend : '', fu ? dataBR(fu) : '']);
     });
     const csv = [cab].concat(linhas).map((l) => l.map((c) => '"' + String(c == null ? '' : c).replace(/"/g, '""') + '"').join(';')).join('\r\n');
     const a = document.createElement('a');
     a.href = URL.createObjectURL(new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8' }));
-    a.download = `${SIS}_${E.base}_${new Date().toISOString().slice(0, 10)}.csv`;
+    a.download = `${SIS}_${E.base}${c.tipo ? '_' + c.tipo : ''}_${new Date().toISOString().slice(0, 10)}.csv`;
     a.click();
   }
 
@@ -182,7 +236,7 @@
       <div class="ficha-aluno">
         <div><span>Matrícula</span>${esc(matVis(r))}</div><div><span>Curso</span>${esc(r.NOM_CURSO)}</div>
         <div><span>Modalidade</span>${esc(r.MODALIDADE_PP_PC || r.MODALIDADE || '')}</div><div><span>Base</span>${CFG.fonte ? esc(CFG.nomeFonte) : NOMES_BASE[E.base]}</div>
-        ${cols.map((c) => { let v = ''; try { v = c.v(r); } catch (e) {} return `<div><span>${esc(c.t)}</span>${esc(v === 0 ? 0 : (v || '—'))}</div>`; }).join('')}
+        ${cols.map((k) => { let v = ''; try { v = k.v(r, ctx()); } catch (e) {} return `<div><span>${esc(k.t)}</span>${k.html ? (v || '—') : esc(v === 0 ? 0 : (v || '—'))}</div>`; }).join('')}
       </div>
       ${Apoio.quadro(E.apoio[Apoio.norm(matVis(r))])}
       ${CFG.detalhe ? CFG.detalhe(r, esc) : ''}
@@ -197,6 +251,8 @@
       <div class="secao">Histórico neste sistema (${rs.length})</div>
       <div class="hist">${rs.map((x) => `<div><b>${esc(x.resultado || x.canal)}</b> · ${esc(x.canal)} <small>· ${esc(x.atendente)} · ${dataCurta(x.criado)}</small><br>${esc(x.obs)}
         ${x.fu_data ? `<br><small>Follow-up ${dataBR(x.fu_data)}: ${x.fu_status === 'feito' ? 'concluído' : 'pendente'}</small>` : ''}</div>`).join('') || '<p class="dica">Nenhum acionamento ainda.</p>'}</div>
+      ${CFG.historicoEngajamento && (E.hist[m] || []).length ? `<div class="secao">Acionamentos no Engajamento (${E.hist[m].length})</div>
+      <div class="hist">${E.hist[m].slice().sort((p, q) => q.ms - p.ms).slice(0, 8).map((x) => `<div><b>${esc(x.resultado || x.canal)}</b> · ${esc(x.canal)} <small>· ${esc(x.atend)} · ${dataAA(x.ms)} · ${esc(x.origem)}</small></div>`).join('')}</div>` : ''}
       <div class="secao">Novo acionamento</div>
       <form id="form-ac">
         <div class="grade2">
@@ -323,9 +379,9 @@
 
   /* ── dashboard ── */
   function contar(lista, fn) { const c = {}; lista.forEach((x) => { const k = fn(x) || 'Não informado'; c[k] = (c[k] || 0) + 1; }); return c; }
-  function barras(c) {
+  function barras(c, manterOrdem) {
     const max = Math.max(1, ...Object.values(c));
-    return Object.keys(c).sort((a, b) => c[b] - c[a]).map((k) => `<div class="barra"><span>${esc(k)}</span><div class="trilho"><i style="width:${(c[k] / max * 100).toFixed(1)}%"></i></div><b>${c[k]}</b></div>`).join('') || '<p class="dica">Sem dados ainda.</p>';
+    return Object.keys(c).sort((a, b) => manterOrdem ? 0 : c[b] - c[a]).map((k) => `<div class="barra"><span>${esc(k)}</span><div class="trilho"><i style="width:${(c[k] / max * 100).toFixed(1)}%"></i></div><b>${c[k]}</b></div>`).join('') || '<p class="dica">Sem dados ainda.</p>';
   }
   function telaDashboard() {
     const mats = new Set(E.alunos.map(mat));
@@ -344,9 +400,9 @@
         <div class="kpi"><span>${unidade()} ${CFG.feminino ? 'acionadas' : 'acionados'}</span><b>${acionados.size.toLocaleString('pt-BR')}</b><small>${cobertura.toLocaleString('pt-BR', { maximumFractionDigits: 1 })}% de cobertura</small></div>
         <div class="kpi"><span>Acionamentos</span><b>${regs.length.toLocaleString('pt-BR')}</b><small>${regs.filter((x) => new Date(x.criado).toISOString().slice(0, 10) === hoje).length} hoje</small></div>
         <div class="kpi"><span>Follow-ups pendentes</span><b>${pend.length}</b><small>${pend.filter((x) => x.fu_data < hoje).length} atrasado(s)</small></div>
-        ${(CFG.indicadores || []).map((k) => { let v = ''; try { v = k.v(E.alunos); } catch (e) {} return `<div class="kpi"><span>${esc(k.t)}</span><b style="font-size:${String(v).length > 12 ? 15 : 24}px">${esc(v)}</b></div>`; }).join('')}
+        ${(CFG.indicadores || []).map((k) => { let v = ''; try { v = k.v(E.alunos, ctx()); } catch (e) {} return `<div class="kpi"><span>${esc(k.t)}</span><b style="font-size:${String(v).length > 12 ? 15 : 24}px">${esc(v)}</b></div>`; }).join('')}
       </div>
-      ${CFG.dashboardExtra ? CFG.dashboardExtra(E.alunos, esc, barras) : ''}
+      ${CFG.dashboardExtra ? CFG.dashboardExtra(E.alunos, esc, barras, ctx()) : ''}
       <div class="duas">
         <div class="painel"><h2>Resultados dos contatos</h2>${barras(contar(regs, (x) => x.resultado))}</div>
         <div class="painel"><h2>Canais</h2>${barras(contar(regs, (x) => x.canal))}</div>
@@ -385,6 +441,7 @@
   /* ── utilidades ── */
   // sistemas com anoCurto (NPS) mostram as datas como dd/mm/aa
   function dataCurta(ms) { return ms ? new Date(ms).toLocaleString('pt-BR', CFG && CFG.anoCurto ? { day: '2-digit', month: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit' } : { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : ''; }
+  function dataAA(ms) { return ms ? new Date(ms).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: '2-digit' }) : ''; }
   function dataBR(iso) { const m = String(iso || '').match(/^(\d{4})-(\d{2})-(\d{2})/); return m ? `${m[3]}/${m[2]}/${CFG && CFG.anoCurto ? m[1].slice(2) : m[1]}` : String(iso || ''); }
   function abrirModal(html) { $('#modal-corpo').innerHTML = html; $('#modal').hidden = false; document.querySelectorAll('#modal [data-fechar]').forEach((b) => { b.onclick = fecharModal; }); }
   function fecharModal() { $('#modal').hidden = true; $('#modal-corpo').innerHTML = ''; }
@@ -408,6 +465,7 @@
     if (MODO_IMPORTAR) { carregarBase(); return; }
     // orientações de apoio do NAAP/NAE (selo na lista e quadro na ficha)
     Apoio.carregar().then((m) => { E.apoio = m; if (E.alunos.length && $('#modal').hidden) desenhar(); });
+    carregarHistoricoEngajamento();
     sincronizar().then(carregarBase);
     setInterval(sincronizar, 45000);
   }

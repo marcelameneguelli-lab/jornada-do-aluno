@@ -44,6 +44,50 @@
 
   const OPC_TERMO = ['', 'Pendente', 'Assinado', 'Não se aplica'];
 
+  /* ── Provas no polo (colunas da base líquida, como no EngajaVR) ── */
+  const T = (t) => (t === 'avs' ? 'AVS' : 'AV');
+  const ead = (r) => txt(r.MODALIDADE_PP_PC || r.MODALIDADE).toUpperCase() === 'EAD';
+  const NOME_SIT = { falta: 'Falta agendar', faltou: 'Faltou', agendou: 'Agendou', fez: 'Fez as provas', na: 'Sem informação' };
+  function sitProva(r, t) {
+    const st = txt(r[`STATUS_AGEND_${T(t)}`]).toUpperCase();
+    if (st.indexOf('FEZ') >= 0 || st === 'COMPARECEU' || st === 'REALIZADO') return 'fez';
+    if (st.indexOf('FALTOU') === 0) return 'faltou'; // faltou à prova agendada: precisa reagendar
+    if (st.indexOf('FALTA AGENDAR') === 0 || sim(r[`FALTA_AGENDAR_${T(t)}`])) return 'falta';
+    if (st.indexOf('AGEND') >= 0 || st === 'CONFIRMADO') return 'agendou';
+    return 'na';
+  }
+  /* Quantidade de disciplinas que falta agendar: vem do texto do status ("FALTA AGENDAR 2 DISCIPLINAS").
+     "MAIS DE 3": se o aluno ainda não agendou nenhuma (adesão 0%), é o total de disciplinas no polo. */
+  function faltaNum(r, t) {
+    if (sitProva(r, t) !== 'falta') return 0;
+    const st = txt(r[`STATUS_AGEND_${T(t)}`]).toUpperCase(), qtd = num(r[`QTD_ELEGIVEL_${T(t)}_POLO`]);
+    const nada = txt(r[`ADESAO_${T(t)}_DISC_ONLINE_POLO`]) === '0%';
+    if (st.indexOf('MAIS DE') >= 0) return nada && qtd > 3 ? qtd : 4;
+    const m = st.match(/(\d+)\s+DISCIPLINA/);
+    if (m) return Number(m[1]);
+    return nada ? qtd : 1;
+  }
+  function faltaTexto(r, t) {
+    if (sitProva(r, t) === 'faltou') { const m = txt(r[`STATUS_AGEND_${T(t)}`]).match(/(\d+)\s+DISCIPLINA/i); return m ? `faltou em ${m[1]} (reagendar)` : 'faltou (reagendar)'; }
+    if (sitProva(r, t) !== 'falta') return '';
+    const st = txt(r[`STATUS_AGEND_${T(t)}`]).toUpperCase(), n = faltaNum(r, t);
+    if (st.indexOf('MAIS DE') >= 0 && txt(r[`ADESAO_${T(t)}_DISC_ONLINE_POLO`]) !== '0%') return 'mais de 3 disciplinas';
+    return n + (n === 1 ? ' disciplina' : ' disciplinas');
+  }
+  const FAIXAS = ['1 disciplina', '2 disciplinas', '3 disciplinas', 'mais de 3 disciplinas'];
+  const faltaFaixa = (r, t) => { const n = faltaNum(r, t); return n > 3 ? FAIXAS[3] : FAIXAS[Math.max(n, 1) - 1]; };
+  /* DT_PROXIMA_PROVA_AGENDADA vem como dd-mm-aaaa (ou dd/mm/aaaa, ou aaaa-mm-dd) */
+  function isoProva(r) {
+    const t = txt(r.DT_PROXIMA_PROVA_AGENDADA).split(' ')[0].split('T')[0];
+    let m = t.match(/^(\d{4})[-\/](\d{1,2})[-\/](\d{1,2})$/); if (m) return `${m[1]}-${p2(m[2])}-${p2(m[3])}`;
+    m = t.match(/^(\d{1,2})[-\/](\d{1,2})[-\/](\d{4})$/); if (m) return `${m[3]}-${p2(m[2])}-${p2(m[1])}`;
+    return '';
+  }
+  const hojeISO = () => { const d = new Date(); return `${d.getFullYear()}-${p2(d.getMonth() + 1)}-${p2(d.getDate())}`; };
+  const emDias = (n) => { const d = new Date(); d.setDate(d.getDate() + n); return `${d.getFullYear()}-${p2(d.getMonth() + 1)}-${p2(d.getDate())}`; };
+  const contarPor = (L, fn) => { const c = {}; L.forEach((r) => { const k = fn(r); if (k) c[k] = (c[k] || 0) + 1; }); return c; };
+  const ordenar = (c, ordem) => { const o = {}; ordem.forEach((k) => { if (c[k]) o[k] = c[k]; }); return o; };
+
   /* ── NPS (Medallia) ── */
   const META_NPS = 46.24; // meta de NPS Medallia do PEG 2026 (editável)
   const nota = (r) => { const n = parseFloat(String(r.nota == null ? '' : r.nota).replace(',', '.')); return isNaN(n) ? null : n; };
@@ -96,24 +140,61 @@
 
   window.SISTEMAS_ACOMP = {
     provas: {
-      nome: 'Provas', icone: '📝', original: 'polo',
-      subtitulo: 'Alunos com AV ou AVS no polo',
+      nome: 'Provas', icone: '📝', original: 'polo', historicoEngajamento: true,
+      subtitulo: 'Alunos com AV ou AVS no polo: agendamento e acompanhamento',
       elegivel: (r) => num(r.QTD_ELEGIVEL_AV_POLO) > 0 || num(r.QTD_ELEGIVEL_AVS_POLO) > 0,
+      // como no sistema antigo: a tela mostra AV ou AVS (Tipo de prova)
+      seletor: { rotulo: 'Prova', opcoes: [['av', 'AV no polo'], ['avs', 'AVS no polo']], filtra: (r, t) => num(r[`QTD_ELEGIVEL_${T(t)}_POLO`]) > 0 },
+      rotuloTotal: 'Total elegíveis',
       colunas: [
-        { t: 'AV polo', v: (r) => num(r.QTD_ELEGIVEL_AV_POLO) || '' },
-        { t: 'AVS polo', v: (r) => num(r.QTD_ELEGIVEL_AVS_POLO) || '' },
-        { t: 'Falta agendar', v: (r) => [sim(r.FALTA_AGENDAR_AV) ? 'AV' : '', sim(r.FALTA_AGENDAR_AVS) ? 'AVS' : ''].filter(Boolean).join(' e ') },
-        { t: 'Próxima prova', v: (r) => data(r.DT_PROXIMA_PROVA_AGENDADA) },
+        { t: 'Disciplinas no polo', v: (r, c) => num(r[`QTD_ELEGIVEL_${T(c.tipo)}_POLO`]) || '' },
+        { t: 'Situação', html: true, v: (r, c) => { const s = sitProva(r, c.tipo); return `<span class="sit ${s}">${NOME_SIT[s]}</span>`; } },
+        { t: 'Falta agendar', v: (r, c) => faltaTexto(r, c.tipo) },
+        { t: 'Adesão', v: (r, c) => txt(r[`ADESAO_${T(c.tipo)}_DISC_ONLINE_POLO`]).replace('N/A', '') },
+        { t: 'Próxima prova', v: (r) => dataAA(isoProva(r)) },
       ],
       filtros: [
-        { id: 'falta', t: 'Falta agendar', f: (r) => sim(r.FALTA_AGENDAR_AV) || sim(r.FALTA_AGENDAR_AVS) },
-        { id: 'av', t: 'Com AV no polo', f: (r) => num(r.QTD_ELEGIVEL_AV_POLO) > 0 },
-        { id: 'avs', t: 'Com AVS no polo', f: (r) => num(r.QTD_ELEGIVEL_AVS_POLO) > 0 },
+        { id: 'falta', t: 'Falta agendar', card: true, cor: 'amarelo', f: (r, fi, c) => sitProva(r, c.tipo) === 'falta' },
+        { id: 'faltou', t: 'Faltou', card: true, cor: 'vermelho', f: (r, fi, c) => sitProva(r, c.tipo) === 'faltou' },
+        { id: 'agendou', t: 'Agendou', card: true, cor: 'azul', f: (r, fi, c) => sitProva(r, c.tipo) === 'agendou' },
+        { id: 'fez', t: 'Fez as provas', card: true, cor: 'verde', f: (r, fi, c) => sitProva(r, c.tipo) === 'fez' },
+        { id: 'ead', t: 'EAD', card: true, cor: 'cinza', f: (r) => ead(r) },
+        { id: 'pres', t: 'Presencial/Semi', card: true, cor: 'laranja', f: (r) => !ead(r) },
+        { id: 'mais3', t: 'Falta agendar mais de 3 disciplinas', f: (r, fi, c) => sitProva(r, c.tipo) === 'falta' && faltaNum(r, c.tipo) > 3 },
+        { id: 'prox7', t: 'Prova nos próximos 7 dias', f: (r) => { const d = isoProva(r); return d && d >= hojeISO() && d <= emDias(7); } },
+        { id: 'falta_sem_ac', t: 'Falta agendar e sem acionamento', f: (r, fi, c) => sitProva(r, c.tipo) === 'falta' && !c.ultimo(r) },
       ],
-      indicadores: [
-        { t: 'Falta agendar', v: (L) => L.filter((r) => sim(r.FALTA_AGENDAR_AV) || sim(r.FALTA_AGENDAR_AVS)).length },
-        { t: 'Com AVS no polo', v: (L) => L.filter((r) => num(r.QTD_ELEGIVEL_AVS_POLO) > 0).length },
-      ],
+      filtroData: { t: 'Próxima prova', v: (r) => isoProva(r) },
+      dashboardExtra: (L, esc, barras, c) => {
+        const bloco = (t) => {
+          const el = L.filter((r) => num(r[`QTD_ELEGIVEL_${T(t)}_POLO`]) > 0);
+          const por = { falta: 0, faltou: 0, agendou: 0, fez: 0, na: 0 }; let disc = 0, semAc = 0;
+          el.forEach((r) => { const s = sitProva(r, t); por[s]++; if (s === 'falta') { disc += faltaNum(r, t); if (!c.ultimo(r)) semAc++; } });
+          const pctOk = el.length ? ((por.agendou + por.fez) / el.length * 100).toLocaleString('pt-BR', { maximumFractionDigits: 1 }) : '0';
+          return `<div class="painel"><h2>${T(t)} no polo · ${el.length.toLocaleString('pt-BR')} elegíveis</h2>
+            <div class="kpis" style="margin-bottom:8px">
+              <div class="kpi"><span>Falta agendar</span><b>${por.falta.toLocaleString('pt-BR')}</b><small>${disc.toLocaleString('pt-BR')} disciplina(s) a agendar</small></div>
+              <div class="kpi"><span>Faltou (reagendar)</span><b>${por.faltou.toLocaleString('pt-BR')}</b></div>
+              <div class="kpi"><span>Agendou</span><b>${por.agendou.toLocaleString('pt-BR')}</b></div>
+              <div class="kpi"><span>Fez as provas</span><b>${por.fez.toLocaleString('pt-BR')}</b></div>
+              <div class="kpi"><span>Agendou ou fez</span><b>${pctOk}%</b></div>
+              <div class="kpi"><span>Falta agendar sem acionamento</span><b>${semAc.toLocaleString('pt-BR')}</b></div>
+            </div>
+            <h2>Falta agendar por quantidade de disciplinas</h2>${barras(ordenar(contarPor(el.filter((r) => sitProva(r, t) === 'falta'), (r) => faltaFaixa(r, t)), FAIXAS), true)}</div>`;
+        };
+        const dias = []; for (let i = 0; i < 14; i++) dias.push(emDias(i));
+        const porDia = {}; dias.forEach((d) => { porDia[dataAA(d)] = 0; });
+        L.forEach((r) => { const d = isoProva(r); if (d && porDia[dataAA(d)] != null) porDia[dataAA(d)]++; });
+        const faltaTipo = L.filter((r) => c.tipo && num(r[`QTD_ELEGIVEL_${T(c.tipo)}_POLO`]) > 0 && sitProva(r, c.tipo) === 'falta');
+        const topCursos = contarPor(faltaTipo, (r) => txt(r.NOM_CURSO));
+        const top = {}; Object.keys(topCursos).sort((a, b) => topCursos[b] - topCursos[a]).slice(0, 10).forEach((k) => { top[k] = topCursos[k]; });
+        return `<div class="duas">${bloco('av')}${bloco('avs')}</div>
+          <div class="duas">
+            <div class="painel"><h2>Provas agendadas nos próximos 14 dias</h2>${barras(porDia, true)}</div>
+            <div class="painel"><h2>Cursos com mais alunos faltando agendar (${T(c.tipo)})</h2>${barras(top)}</div>
+          </div>
+          <div class="painel"><h2>Falta agendar ${T(c.tipo)} por modalidade</h2>${barras(contarPor(faltaTipo, (r) => txt(r.MODALIDADE_PP_PC) || 'Não informado'))}</div>`;
+      },
       resultados: ['Agendou', 'Vai agendar', 'Já fez a prova', 'Não vai fazer', 'Sem retorno', 'Número errado', 'Outro'],
     },
 

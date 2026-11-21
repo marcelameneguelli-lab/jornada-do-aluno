@@ -40,10 +40,13 @@ const PLANILHAS = {
   // Sistemas novos (não existiam antes): ficam na planilha Central até termos volume que peça planilha própria
   financiamentos: '',
   nps:            '',
+  provas:         '', // acionamentos de Provas, Estágio e Financeiro: vazio = planilha Central
+  estagio:        '',
+  financeiro:     '',
   apoio:          '', // Apoio às Avaliações (NAAP/NAE); vazio = planilha Central
 };
 
-// Sistemas do CRM. Provas, Estágio e Financeiro usam a planilha do Engajamento.
+// Sistemas do CRM. Provas, Estágio e Financeiro leem a base do Engajamento e gravam na Central.
 // Financiamentos (ProUni, FIES, Pravaler, Ficou Fácil) e NPS (Medallia) são novos.
 const SISTEMAS = ['renovacao', 'engajamento', 'provas', 'estagio', 'financeiro', 'financiamentos', 'nps', 'formandos', 'apoio'];
 

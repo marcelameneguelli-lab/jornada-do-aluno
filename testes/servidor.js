@@ -25,8 +25,12 @@ g.Engajamento_().acoes.salvarBase({ base:'impar', parte:0, total:1, dados: Array
   APROVEITAMENTO_ACADEMICO_ATUAL:i%2?'PARCIAL':'100%', SAFRA:'2023.1', PROPENSAO_EVASAO:i===4?'ALTA':'BAIXA', NOM_SITUACAO_ALUNO:'MATRICULADO',
   CLASSE_PAGANTE_SEMESTRE:['MENSALISTA','PROUNI','FIES','PRAVALER','PROUNI','MENSALISTA'][i], PCT_APROVACAO_ANT:['','66,67','80','','90',''][i], FAIXA_APROVEITAMENTO:'61% a 80%',
   QTD_ELEGIVEL_AV_POLO:String([3,0,2,0,1,0][i]), QTD_ELEGIVEL_AVS_POLO:String([1,0,0,0,2,0][i]), FALTA_AGENDAR_AV:i===0?'1':'0', FALTA_AGENDAR_AVS:i===4?'1':'0',
+  STATUS_AGEND_AV:['FALTA AGENDAR 3 DISCIPLINAS','N/A','AGENDOU','N/A','FEZ PROVAS POLO','N/A'][i], STATUS_AGEND_AVS:['FALTA AGENDAR 1 DISCIPLINA','N/A','N/A','N/A','FALTOU 1 DISCIPLINA','N/A'][i],
+  ADESAO_AV_DISC_ONLINE_POLO:['0%','N/A','PARCIAL','N/A','100%','N/A'][i], ADESAO_AVS_DISC_ONLINE_POLO:['0%','N/A','N/A','N/A','PARCIAL','N/A'][i],
+  DT_PROXIMA_PROVA_AGENDADA:i===2?(()=>{const d=new Date(Date.now()+2*864e5);return String(d.getDate()).padStart(2,'0')+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+d.getFullYear();})():'',
   QTD_ELEGIVEL_ESTAGIO:i===3||i===5?'1':'', FAIXA_DIVIDA:i===2?'Até R$ 500':'', TIPO_INADIMPLENCIA:i===2?'Mensalidade':'',
   QTD_DIAS_ULTIMO_ACESSO:String(i*5) })) });
+try { g.Engajamento_().acoes.saveAction({ base:'impar', id:'eng1', matricula:'202301000104', atend:'Angelica', canal:'WhatsApp', tipo:'Acionamento', motivo:'Provas', datetime:'10/11/2026 14:30:00', date:'10/11/2026' }); } catch (e) { console.log('sem histórico do Engajamento no exemplo:', e.message); }
 fs.writeFileSync('/tmp/prov.json', JSON.stringify({admin:sh.d[1][6], atend:sh.d[2][6], eng:sh.d[3][6]}));
 const tipos={'.html':'text/html; charset=utf-8','.js':'application/javascript','.css':'text/css','.png':'image/png','.webmanifest':'application/manifest+json'};
 http.createServer((req,res)=>{
