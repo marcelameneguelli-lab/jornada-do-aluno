@@ -24,4 +24,5 @@ post({acao:'engajamento.salvarBase',token:tM,base:'par',dados:[{COD_MATRICULA:'2
 t('busca nome e curso pela matrícula na base líquida', ()=>{ const r=post({acao:'apoio.buscar_aluno',token:tN,matricula:'202602000555'}); assert(r.ok && r.aluno==='Aluna Par' && r.curso==='Psicologia' && r.base==='par', JSON.stringify(r)); });
 t('matrícula fora das bases avisa que não encontrou', ()=>{ const r=post({acao:'apoio.buscar_aluno',token:tN,matricula:'209999999999'}); assert(r.ok && r.naoEncontrado); });
 t('busca só para quem tem o sistema', ()=>{ assert.equal(post({acao:'apoio.buscar_aluno',token:tF,matricula:'202602000555'}).permissao,false); });
+t('prova em outro campus guarda o campus e aparece para a equipe', ()=>{ post({acao:'apoio.salvar',token:tN,registro:Object.assign({},reg,{matricula:'202601000009',avaliacao:['Prova em outro campus'],campus_prova:'Barra Mansa'})}); const o=post({acao:'apoio.orientacoes',token:tF}).dados.filter(x=>x.matricula==='202601000009')[0]; assert(o && o.campus_prova==='Barra Mansa' && o.avaliacao.includes('Prova em outro campus')); });
 console.log(ok+' testes do Apoio às Avaliações passaram');

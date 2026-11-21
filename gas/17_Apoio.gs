@@ -12,7 +12,7 @@
 
 const CAB_APOIO = ['matricula', 'dados', 'ativo', 'revisao', 'atualizado', 'quem'];
 // campos aceitos (qualquer outro é descartado, para não virar lugar de diagnóstico)
-const CAMPOS_APOIO = ['aluno', 'curso', 'avaliacao', 'tempo_adicional', 'plataforma', 'orientacoes', 'responsavel', 'contato'];
+const CAMPOS_APOIO = ['aluno', 'curso', 'avaliacao', 'tempo_adicional', 'campus_prova', 'plataforma', 'orientacoes', 'responsavel', 'contato'];
 
 function abaApoio_() {
   const ss = planilhaDo_('apoio');
@@ -48,7 +48,7 @@ function apoioLer_(soAtivas) {
 /** Para toda a equipe: só as orientações ativas, sem responsável/contato interno do NAAP. */
 function apoioOrientacoes_() {
   const dados = apoioLer_(true).map(o => ({
-    matricula: o.matricula, aluno: o.aluno || '', avaliacao: o.avaliacao || [], tempo_adicional: o.tempo_adicional || '',
+    matricula: o.matricula, aluno: o.aluno || '', avaliacao: o.avaliacao || [], tempo_adicional: o.tempo_adicional || '', campus_prova: o.campus_prova || '',
     plataforma: o.plataforma || [], orientacoes: o.orientacoes || '', revisao: o.revisao,
   }));
   return { ok: true, dados: dados };
@@ -61,7 +61,7 @@ function apoioSalvar_(d, eu) {
   const o = {};
   CAMPOS_APOIO.forEach(c => { if (r[c] != null) o[c] = r[c]; });
   ['avaliacao', 'plataforma'].forEach(c => { o[c] = (Array.isArray(o[c]) ? o[c] : []).map(x => String(x).slice(0, 120)).slice(0, 30); });
-  ['aluno', 'curso', 'tempo_adicional', 'responsavel', 'contato'].forEach(c => { o[c] = String(o[c] || '').slice(0, 200); });
+  ['aluno', 'curso', 'tempo_adicional', 'campus_prova', 'responsavel', 'contato'].forEach(c => { o[c] = String(o[c] || '').slice(0, 200); });
   o.orientacoes = String(o.orientacoes || '').slice(0, 2000);
   if (!o.avaliacao.length && !o.plataforma.length && !o.orientacoes.trim()) return { ok: false, erro: 'Marque ao menos um recurso ou escreva uma orientação.' };
   const revisao = /^\d{4}-\d{2}-\d{2}$/.test(String(r.revisao || '')) ? String(r.revisao) : '';

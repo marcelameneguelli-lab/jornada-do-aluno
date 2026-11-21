@@ -6,7 +6,7 @@
     'Tempo adicional', 'Sala separada ou com menos estímulos', 'Ledor', 'Transcritor',
     'Prova ampliada ou fonte maior', 'Intérprete de Libras', 'Pausas durante a prova',
     'Enunciados objetivos ou prova adaptada', 'Prova no computador com leitor de tela', 'Avaliação oral',
-    'Lembrete da data da prova com antecedência',
+    'Lembrete da data da prova com antecedência', 'Prova em outro campus',
   ];
   const PLATAFORMA = [
     'Orientação passo a passo no primeiro acesso', 'Prazos estendidos nas atividades', 'Material em formato acessível',
@@ -28,7 +28,11 @@
     return cache;
   }
 
-  const itens = (o) => (o.avaliacao || []).map((x) => x === 'Tempo adicional' && o.tempo_adicional ? x + ' (' + o.tempo_adicional + ')' : x);
+  const itens = (o) => (o.avaliacao || []).map((x) => {
+    if (x === 'Tempo adicional' && o.tempo_adicional) return x + ' (' + o.tempo_adicional + ')';
+    if (x === 'Prova em outro campus' && o.campus_prova) return x + ': ' + o.campus_prova;
+    return x;
+  });
 
   /** Selo discreto para listas. */
   function selo(o) {

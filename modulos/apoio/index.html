@@ -53,7 +53,7 @@
 <script src="../../nucleo/config.js?v=1.2.0"></script>
 <script src="../../nucleo/api.js?v=1.2.3"></script>
 <script>window.App = (window.parent && window.parent !== window) ? window.parent.App : null;</script>
-<script src="../../nucleo/apoio.js?v=1.2.0"></script>
+<script src="../../nucleo/apoio.js?v=1.2.4"></script>
 <script>
 (function () {
   const $ = (s) => document.querySelector(s), esc = Apoio.esc;
@@ -109,7 +109,10 @@
         </div>
         <div class="secao">Nas avaliações</div>
         <div class="marcar">${marcar(Apoio.AVALIACAO, o.avaliacao || [], 'avaliacao')}</div>
-        <label>Tempo adicional (quanto)<input name="tempo_adicional" value="${esc(o.tempo_adicional || '')}" placeholder="Ex.: 1 hora, ou 50% do tempo da prova"></label>
+        <div class="grade2">
+          <label>Tempo adicional (quanto)<input name="tempo_adicional" value="${esc(o.tempo_adicional || '')}" placeholder="Ex.: 1 hora, ou 50% do tempo da prova"></label>
+          <label>Campus onde faz a prova<input name="campus_prova" value="${esc(o.campus_prova || '')}" placeholder="Ex.: Barra Mansa (quando marcar outro campus)"></label>
+        </div>
         <div class="secao">Na plataforma</div>
         <div class="marcar">${marcar(Apoio.PLATAFORMA, o.plataforma || [], 'plataforma')}</div>
         <label>Outras orientações para a equipe<textarea name="orientacoes" placeholder="Ex.: confirmar a sala com a coordenação do polo dois dias antes; preferir mensagens curtas e por escrito.">${esc(o.orientacoes || '')}</textarea></label>
@@ -149,8 +152,10 @@
       ev.preventDefault();
       const f = ev.target, todos = (n) => [...f.querySelectorAll(`[name=${n}]:checked`)].map((x) => x.value);
       const registro = { matricula: f.matricula.value, aluno: f.aluno.value.trim(), curso: f.curso.value.trim(), revisao: f.revisao.value,
-        avaliacao: todos('avaliacao'), tempo_adicional: f.tempo_adicional.value.trim(), plataforma: todos('plataforma'),
+        avaliacao: todos('avaliacao'), tempo_adicional: f.tempo_adicional.value.trim(), campus_prova: f.campus_prova.value.trim(), plataforma: todos('plataforma'),
         orientacoes: f.orientacoes.value.trim(), responsavel: f.responsavel.value.trim(), contato: f.contato.value.trim(), ativo: f.ativo.checked };
+      if (registro.avaliacao.indexOf('Prova em outro campus') >= 0 && !registro.campus_prova) { aviso('Informe em qual campus o aluno faz a prova.', 'erro'); f.campus_prova.focus(); return; }
+      if (registro.campus_prova && registro.avaliacao.indexOf('Prova em outro campus') < 0) registro.avaliacao.push('Prova em outro campus');
       const b = $('#btn-salvar'); b.disabled = true; b.textContent = 'Salvando...';
       try {
         const r = await Api.chamar('apoio.salvar', { registro });
