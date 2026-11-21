@@ -16,7 +16,7 @@
   const E = {
     base: 'impar', alunos: [], todos: 0, regs: {}, fichas: {}, desde: 0,
     aba: 'alunos', pagina: 1, filtro: { busca: '', curso: '', mod: '', situacao: '', extra: '', programa: '' },
-    fuQuem: 'meus', periodo: '7',
+    fuQuem: 'meus', periodo: '7', apoio: {},
   };
   const eu = () => { const s = Api.Sessao.ler(); return (s && s.me) || { nome: '', perfil: '' }; };
 
@@ -133,7 +133,7 @@
         const m = mat(r), rs = regsDoAluno(m), ult = rs[0];
         const fu = rs.filter((x) => x.fu_status === 'pendente').map((x) => x.fu_data).sort()[0];
         return `<tr class="clicavel" data-mat="${esc(m)}">
-          <td class="nome"><b>${esc(r.NOM_ALUNO)}</b><small>${esc(matVis(r))}</small></td>
+          <td class="nome"><b>${esc(r.NOM_ALUNO)}${Apoio.selo(E.apoio[Apoio.norm(matVis(r))])}</b><small>${esc(matVis(r))}</small></td>
           <td>${esc(r.NOM_CURSO)}</td><td>${esc(r.MODALIDADE_PP_PC || r.MODALIDADE || '')}</td>
           ${cols.map((c) => { let v = ''; try { v = c.v(r); } catch (e) {} const al = c.alerta && c.alerta(r); return `<td class="${al ? 'alerta' : ''}">${esc(v)}${al ? ' ⚠️' : ''}</td>`; }).join('')}
           <td>${ult ? `${esc(dataCurta(ult.criado))}<br><small>${esc(ult.resultado || ult.canal)}</small>` : '<span class="selo cinza">Sem contato</span>'}</td>
@@ -184,6 +184,7 @@
         <div><span>Modalidade</span>${esc(r.MODALIDADE_PP_PC || r.MODALIDADE || '')}</div><div><span>Base</span>${CFG.fonte ? esc(CFG.nomeFonte) : NOMES_BASE[E.base]}</div>
         ${cols.map((c) => { let v = ''; try { v = c.v(r); } catch (e) {} return `<div><span>${esc(c.t)}</span>${esc(v === 0 ? 0 : (v || '—'))}</div>`; }).join('')}
       </div>
+      ${Apoio.quadro(E.apoio[Apoio.norm(matVis(r))])}
       ${CFG.detalhe ? CFG.detalhe(r, esc) : ''}
       <div class="contatos">
         ${tel ? `<a class="btn mini" target="_blank" rel="noopener" href="https://wa.me/55${tel}">💬 WhatsApp</a><a class="btn mini" href="tel:${tel}">📞 ${esc(tel)}</a>` : '<span class="selo cinza">Sem telefone</span>'}
@@ -405,6 +406,8 @@
     });
     $('#modal').onclick = (ev) => { if (ev.target.id === 'modal') fecharModal(); };
     if (MODO_IMPORTAR) { carregarBase(); return; }
+    // orientações de apoio do NAAP/NAE (selo na lista e quadro na ficha)
+    Apoio.carregar().then((m) => { E.apoio = m; if (E.alunos.length && $('#modal').hidden) desenhar(); });
     sincronizar().then(carregarBase);
     setInterval(sincronizar, 45000);
   }

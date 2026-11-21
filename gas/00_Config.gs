@@ -40,11 +40,12 @@ const PLANILHAS = {
   // Sistemas novos (não existiam antes): ficam na planilha Central até termos volume que peça planilha própria
   financiamentos: '',
   nps:            '',
+  apoio:          '', // Apoio às Avaliações (NAAP/NAE); vazio = planilha Central
 };
 
 // Sistemas do CRM. Provas, Estágio e Financeiro usam a planilha do Engajamento.
 // Financiamentos (ProUni, FIES, Pravaler, Ficou Fácil) e NPS (Medallia) são novos.
-const SISTEMAS = ['renovacao', 'engajamento', 'provas', 'estagio', 'financeiro', 'financiamentos', 'nps', 'formandos'];
+const SISTEMAS = ['renovacao', 'engajamento', 'provas', 'estagio', 'financeiro', 'financiamentos', 'nps', 'formandos', 'apoio'];
 
 // Perfis. "gestao" libera importar bases, exportar e ver a produtividade de todos.
 const PERFIS = {

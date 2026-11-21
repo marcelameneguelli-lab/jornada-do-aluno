@@ -26,7 +26,7 @@ t('atendente não acessa gestão de usuários', ()=>{ const r=post({acao:'nucleo
 t('usuário inativo não entra', ()=>{ const r=post({acao:'nucleo.entrar',email:'fora@estacio.br',senha:prov(4)}); assert.equal(r.erro,'inativo'); });
 let tokM;
 t('admin entra, troca senha e lista usuários sem expor hash', ()=>{ let r=post({acao:'nucleo.entrar',email:'marques.marcela@estacio.br',senha:prov(2)}); tokM=post({acao:'nucleo.trocar_senha',token:r.token,atual:prov(2),nova:'Jornada2026a'}).token;
-  r=post({acao:'nucleo.usuarios_listar',token:tokM}); assert(r.ok && r.usuarios.length===3); assert(!('hash' in r.usuarios[0]) && !('sal' in r.usuarios[0])); assert.equal(r.me.admin,true); assert.equal(r.me.sistemas.length,8); });
+  r=post({acao:'nucleo.usuarios_listar',token:tokM}); assert(r.ok && r.usuarios.length===3); assert(!('hash' in r.usuarios[0]) && !('sal' in r.usuarios[0])); assert.equal(r.me.admin,true); assert.equal(r.me.sistemas.length,9); });
 t('admin cria usuário com provisória', ()=>{ const r=post({acao:'nucleo.usuario_salvar',token:tokM,usuario:{nome:'Yasmin',email:'yasmin@estacio.br',perfil:'coordenador',sistemas:['formandos']}}); assert(r.ok && r.provisoria.length===8);
   const e=post({acao:'nucleo.entrar',email:'yasmin@estacio.br',senha:r.provisoria}); assert(e.ok && e.trocar && e.me.gestao); });
 t('admin não tira o próprio acesso', ()=>{ const r=post({acao:'nucleo.usuario_salvar',token:tokM,usuario:{nome:'Marcela',email:'marques.marcela@estacio.br',perfil:'atendente'}}); assert.equal(r.ok,false); });

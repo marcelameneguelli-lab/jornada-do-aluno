@@ -9,6 +9,8 @@
  */
 
 const ACOES_PUBLICAS = ['nucleo.ping', 'nucleo.entrar'];
+// ações de leitura que valem para todo usuário logado, mesmo sem o sistema liberado
+const ACOES_TODOS_LOGADOS = ['apoio.orientacoes'];
 
 function doGet(e) {
   const p = (e && e.parameter) || {};
@@ -63,7 +65,7 @@ function processar_(acao, d) {
       eu = autenticar_(d.token, chave === 'nucleo.trocar_senha');
       if (eu.erro) return { ok: false, auth: false, erro: eu.erro };
       // núcleo e ferramentas da equipe (Calendário, Tarefas, Tutoriais) valem para todos os logados
-      if (sis !== 'nucleo' && sis !== 'ferramentas' && !podeSistema_(eu, sis)) {
+      if (sis !== 'nucleo' && sis !== 'ferramentas' && ACOES_TODOS_LOGADOS.indexOf(chave) < 0 && !podeSistema_(eu, sis)) {
         return { ok: false, permissao: false, erro: 'Seu perfil não tem acesso a este sistema.' };
       }
     }

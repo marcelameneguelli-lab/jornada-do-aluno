@@ -8,7 +8,7 @@
  *  G senha provisória | H sal (não mexer) | I hash (não mexer) | J trocar senha
  *
  * Coluna "sistemas": "todos" ou lista separada por vírgula, com os nomes
- * renovacao, engajamento, provas, estagio, financeiro, financiamentos, nps, formandos.
+ * renovacao, engajamento, provas, estagio, financeiro, financiamentos, nps, formandos, apoio.
  */
 
 const COLS_USUARIOS = ['nome', 'e-mail', 'perfil', 'sistemas', 'ativo', 'último acesso',

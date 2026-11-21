@@ -156,3 +156,10 @@ Cada etapa só termina quando os itens dela em `CHECKLIST_RECURSOS.md` estão co
 - EngajaVR: o servidor entrega dados de alunos e a lista de usuários sem login, e aceita troca da lista de usuários por qualquer pessoa com a URL. Resolvido pelo login único.
 - EngajaVR: a tela Provas chama `savePoloData` e `loadPoloData`, que não existem no backend, então os registros de provas ficam só no navegador de cada pessoa. O sistema Provas novo grava no servidor.
 - EngajaVR: PIN de admin padrão 1234 guardado no navegador. Substituído pelo perfil admin.
+
+## Apoio às Avaliações (21/11/2026)
+
+Sistema `apoio` para o NAAP e o NAE: direcionamento para avaliações e uso da plataforma, sem rotular o aluno (não há campo de diagnóstico, condição ou laudo, e o servidor descarta campos fora da lista).
+- Servidor: 17_Apoio.gs, aba `apoio_orientacoes` (planilha PLANILHAS.apoio, vazio = Central). Ações: `listar` e `salvar` (quem tem o sistema), `orientacoes` (leitura para todos os logados, via ACOES_TODOS_LOGADOS no roteador, só registros ativos e sem responsável/contato).
+- Site: modulos/apoio (cadastro, abas Ativas, Para revisar e Encerradas) e nucleo/apoio.js (lista padronizada de recursos, selo e quadro). O motor de acompanhamento mostra o selo na lista e o quadro na ficha (Provas, Estágio, Financeiro, Financiamentos, NPS).
+- Próximo passo possível: o mesmo selo dentro de Renovação, Engajamento e Formandos.
