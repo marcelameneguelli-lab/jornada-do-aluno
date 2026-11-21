@@ -25,6 +25,7 @@
   .tabela tr.clicavel { cursor: pointer; } .tabela tr.clicavel:hover td { background: #f7f9fc; }
   .chips span { display: inline-block; background: #eef3f9; border-radius: 10px; padding: 2px 8px; font-size: 11px; margin: 1px 3px 1px 0; }
   .vencida { color: var(--erro); font-weight: 700; }
+  .prova-perto { color: #b54708; }
   .modal-caixa.larga { max-width: 780px; }
   .grade2 { display: grid; grid-template-columns: 1fr 1fr; gap: 0 12px; }
   .marcar { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 14px; margin: 4px 0 10px; }
@@ -57,7 +58,25 @@
 <script>
 (function () {
   const $ = (s) => document.querySelector(s), esc = Apoio.esc;
-  const E = { lista: [], aba: 'ativas', busca: '' };
+  const E = { lista: [], aba: 'ativas', busca: '', provas: null };
+  // DT_PROXIMA_PROVA_AGENDADA vem como dd-mm-aaaa (ou aaaa-mm-dd)
+  const isoProva = (t) => { t = String(t || '').split(' ')[0].split('T')[0]; let m = t.match(/^(\d{4})[-\/](\d{1,2})[-\/](\d{1,2})$/); if (m) return `${m[1]}-${m[2].padStart(2, '0')}-${m[3].padStart(2, '0')}`; m = t.match(/^(\d{1,2})[-\/](\d{1,2})[-\/](\d{4})$/); return m ? `${m[3]}-${m[2].padStart(2, '0')}-${m[1].padStart(2, '0')}` : ''; };
+  const emDias = (n) => { const d = new Date(); d.setDate(d.getDate() + n); return d.toISOString().slice(0, 10); };
+  const situacaoCurta = (st) => { st = String(st || '').toUpperCase(); if (!st || st === 'N/A') return ''; if (st.indexOf('FEZ') >= 0) return 'fez'; if (st.indexOf('FALTOU') === 0) return 'faltou'; if (st.indexOf('FALTA AGENDAR') === 0) return 'falta agendar'; if (st.indexOf('AGEND') >= 0) return 'agendou'; return st.toLowerCase(); };
+  function celulaProva(m) {
+    if (!E.provas) return '<small class="dica">consultando...</small>';
+    const p = E.provas[m];
+    if (!p) return '<small class="dica">não está na base líquida</small>';
+    const iso = isoProva(p.data);
+    const sit = [p.qtd_av ? 'AV: ' + (situacaoCurta(p.av) || '—') : '', p.qtd_avs ? 'AVS: ' + (situacaoCurta(p.avs) || '—') : ''].filter(Boolean).join(' · ');
+    const perto = iso && iso >= emDias(0) && iso <= emDias(7);
+    return `${iso ? `<b class="${perto ? 'prova-perto' : ''}">${dataBR(iso)}</b>${perto ? ' <small class="prova-perto">esta semana</small>' : ''}` : '<span class="dica">sem prova agendada</span>'}${sit ? `<br><small>${esc(sit)}</small>` : ''}`;
+  }
+  async function carregarProvas() {
+    try { const r = await Api.chamar('apoio.proximas_provas', {}, { timeout: 90000 }); E.provas = (r && r.ok && r.dados) || {}; }
+    catch (e) { E.provas = {}; }
+    if ($('#modal').hidden) desenhar();
+  }
   const hoje = () => new Date().toISOString().slice(0, 10);
   const dataBR = (iso) => { const m = String(iso || '').match(/^(\d{4})-(\d{2})-(\d{2})/); return m ? `${m[3]}/${m[2]}/${m[1].slice(2)}` : ''; };
   const quando = (ms) => ms ? new Date(ms).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: '2-digit' }) : '';
@@ -69,6 +88,7 @@
       const r = await Api.chamar('apoio.listar');
       if (!r || !r.ok) throw new Error((r && r.erro) || 'Não foi possível carregar.');
       E.lista = r.dados.sort((a, b) => String(a.aluno).localeCompare(String(b.aluno), 'pt-BR'));
+      carregarProvas();
     } catch (e) { if (!e.auth) aviso(e.message, 'erro'); E.lista = []; }
     desenhar();
   }
@@ -82,13 +102,14 @@
     $('#area').innerHTML = `
       <div class="lembrete">Registre <b>o que fazer</b> na avaliação e na plataforma. Não registre diagnóstico, condição ou laudo: a equipe só precisa do direcionamento.</div>
       <div class="filtros"><input type="search" id="busca" placeholder="Buscar por nome ou matrícula" value="${esc(E.busca)}"><span class="total">${lista.length} aluno(s)</span></div>
-      <div class="painel"><table class="tabela"><thead><tr><th>Aluno</th><th>Curso</th><th>Nas avaliações</th><th>Na plataforma</th><th>Revisão</th><th>Atualizado</th></tr></thead>
+      <div class="painel"><table class="tabela"><thead><tr><th>Aluno</th><th>Curso</th><th>Próxima prova</th><th>Nas avaliações</th><th>Na plataforma</th><th>Revisão</th><th>Atualizado</th></tr></thead>
       <tbody>${lista.map((o) => `<tr class="clicavel" data-mat="${esc(o.matricula)}">
         <td class="nome"><b>${esc(o.aluno)}</b><small>${esc(o.matricula)}</small></td><td>${esc(o.curso)}</td>
+        <td>${celulaProva(o.matricula)}</td>
         <td class="chips">${Apoio.itens(o).map((x) => `<span>${esc(x)}</span>`).join('')}</td>
         <td class="chips">${(o.plataforma || []).map((x) => `<span>${esc(x)}</span>`).join('')}</td>
         <td class="${precisaRevisar(o) ? 'vencida' : ''}">${o.revisao ? dataBR(o.revisao) : 'sem data'}</td>
-        <td><small>${esc(o.quem)}<br>${quando(o.atualizado)}</small></td></tr>`).join('') || '<tr><td colspan="6" class="vazio">Nenhum aluno aqui.</td></tr>'}</tbody></table></div>`;
+        <td><small>${esc(o.quem)}<br>${quando(o.atualizado)}</small></td></tr>`).join('') || '<tr><td colspan="7" class="vazio">Nenhum aluno aqui.</td></tr>'}</tbody></table></div>`;
     const busca = $('#busca'); busca.oninput = () => { E.busca = busca.value; const pos = busca.selectionStart; desenhar(); const n = $('#busca'); n.focus(); n.setSelectionRange(pos, pos); };
     document.querySelectorAll('tr[data-mat]').forEach((tr) => { tr.onclick = () => abrir(E.lista.filter((o) => o.matricula === tr.dataset.mat)[0]); });
   }
@@ -105,7 +126,7 @@
           <label>Matrícula<input name="matricula" value="${esc(o.matricula || '')}" ${novo ? '' : 'readonly'} required inputmode="numeric"><small class="dica" id="busca-info">${novo ? 'Digite a matrícula: nome e curso vêm da base líquida.' : ''}</small></label>
           <label>Nome do aluno<input name="aluno" value="${esc(o.aluno || '')}" required></label>
           <label>Curso<input name="curso" value="${esc(o.curso || '')}"></label>
-          <label>Revisar até<input type="date" name="revisao" value="${esc(o.revisao || '')}"></label>
+          <label>Revisar até<input type="date" name="revisao" value="${esc(o.revisao || revisaoPadrao())}" required></label>
         </div>
         <div class="secao">Nas avaliações</div>
         <div class="marcar">${marcar(Apoio.AVALIACAO, o.avaliacao || [], 'avaliacao')}</div>

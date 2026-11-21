@@ -38,7 +38,8 @@ function apoioLer_(soAtivas) {
     if (soAtivas && !ativo) return;
     let o = {};
     try { o = JSON.parse(l[1] || '{}'); } catch (e) { return; }
-    o.matricula = normMatApoio_(l[0]); o.ativo = ativo; o.revisao = String(l[3] || '');
+    o.matricula = normMatApoio_(l[0]); o.ativo = ativo;
+    o.revisao = l[3] instanceof Date ? Utilities.formatDate(l[3], Session.getScriptTimeZone(), 'yyyy-MM-dd') : String(l[3] || '');
     o.atualizado = Number(l[4]) || 0; o.quem = String(l[5] || '');
     lista.push(o);
   });
@@ -64,7 +65,9 @@ function apoioSalvar_(d, eu) {
   ['aluno', 'curso', 'tempo_adicional', 'campus_prova', 'responsavel', 'contato'].forEach(c => { o[c] = String(o[c] || '').slice(0, 200); });
   o.orientacoes = String(o.orientacoes || '').slice(0, 2000);
   if (!o.avaliacao.length && !o.plataforma.length && !o.orientacoes.trim()) return { ok: false, erro: 'Marque ao menos um recurso ou escreva uma orientação.' };
-  const revisao = /^\d{4}-\d{2}-\d{2}$/.test(String(r.revisao || '')) ? String(r.revisao) : '';
+  // sem data de revisão informada: revisar em 6 meses
+  const revisao = /^\d{4}-\d{2}-\d{2}$/.test(String(r.revisao || '')) ? String(r.revisao)
+    : Utilities.formatDate(new Date(Date.now() + 182 * 86400000), Session.getScriptTimeZone(), 'yyyy-MM-dd');
   const ativo = r.ativo === false ? 'nao' : 'sim';
   const lock = LockService.getScriptLock();
   lock.waitLock(20000);
@@ -100,6 +103,32 @@ function apoioBuscarAluno_(d) {
   return { ok: true, aluno: '', curso: '', naoEncontrado: true };
 }
 
+/** Próxima prova e situação do agendamento (AV e AVS no polo) dos alunos com orientação ativa, pela base líquida. */
+function apoioProximasProvas_() {
+  const mats = apoioLer_(true).map(o => o.matricula).filter(Boolean);
+  const res = {};
+  if (!mats.length) return { ok: true, dados: res };
+  const E = Engajamento_();
+  BASES_ENGAJAMENTO.forEach(b => {
+    const faltam = mats.filter(m => !res[m]);
+    if (!faltam.length) return;
+    let raw = '';
+    try { raw = E.storeGet('crm_base_' + b) || ''; } catch (e) { raw = ''; }
+    if (!raw || !faltam.some(m => raw.indexOf(m) >= 0)) return;
+    let lista = [];
+    try { lista = JSON.parse(raw); } catch (e) { return; }
+    if (!Array.isArray(lista)) lista = (lista && lista.dados) || [];
+    const quero = {}; faltam.forEach(m => { quero[m] = true; });
+    lista.forEach(x => {
+      const m = normMatApoio_(x && (x.COD_MATRICULA || x.MATRICULA));
+      if (!quero[m]) return;
+      res[m] = { data: String(x.DT_PROXIMA_PROVA_AGENDADA || ''), av: String(x.STATUS_AGEND_AV || ''), avs: String(x.STATUS_AGEND_AVS || ''),
+        qtd_av: Number(x.QTD_ELEGIVEL_AV_POLO) || 0, qtd_avs: Number(x.QTD_ELEGIVEL_AVS_POLO) || 0, base: b };
+    });
+  });
+  return { ok: true, dados: res };
+}
+
 function Modulo_apoio() {
   return {
     acoes: {
@@ -107,6 +136,7 @@ function Modulo_apoio() {
       orientacoes: () => apoioOrientacoes_(),
       salvar: (d, eu) => apoioSalvar_(d, eu),
       buscar_aluno: (d) => apoioBuscarAluno_(d),
+      proximas_provas: () => apoioProximasProvas_(),
     },
     // leitura das orientações ativas vale para todos os logados (ver ACOES_TODOS_LOGADOS)
   };

@@ -25,6 +25,8 @@ with sync_playwright() as p:
     f.check('[name=plataforma][value="Orientação passo a passo no primeiro acesso"]'); f.fill('[name=orientacoes]','Confirmar a sala com o polo dois dias antes.')
     f.fill('[name=responsavel]','NAAP'); pg.screenshot(path='/home/claude/testes/tela_apoio_form.png')
     f.click('#btn-salvar'); f.wait_for_selector('tr[data-mat="202301000102"]', timeout=10000); ok('NAAP cadastra a orientação e ela aparece na lista')
+    f.wait_for_function("!document.querySelector('tr[data-mat=\"202301000102\"]').innerText.includes('consultando')", timeout=15000)
+    lin=f.inner_text('tr[data-mat="202301000102"]'); import re; assert re.search(r'\d{2}/\d{2}/\d{2}', lin) and 'AV: agendou' in lin, lin; ok('mostra a próxima prova e a situação do agendamento')
     pg.mouse.move(900,400); pg.screenshot(path='/home/claude/testes/tela_apoio.png')
     pg.goto(B+'#/s/provas'); pg.wait_for_timeout(2500)
     p2=[x for x in pg.frames if 'sistema=provas' in x.url][0]; p2.wait_for_function("Motor.estado.alunos.length>0 && Object.keys(Motor.estado.apoio).length>0", timeout=15000)
