@@ -179,5 +179,8 @@ for _velha in ["""      var sh = getOrCreate('Acionamentos',
     assert out.count(_velha) == 1, _velha[:40]
     _nova = _velha.replace("var sh = getOrCreate(", "var sh = { appendRow: function () {} }; try { sh = getOrCreate(").replace("var sh   = getOrCreate(", "var sh = { appendRow: function () {} }; try { sh = getOrCreate(").replace("'id']);", "'id']); } catch (eAba) { Logger.log('Acionamentos: ' + eAba.message); }")
     out = out.replace(_velha, _nova)
+# bloqueios curtos: se um processo demorado segurar o bloqueio, segue em vez de dar "Tempo limite do bloqueio"
+out = re.sub(r"(?:const|var) lock = LockService\.getScriptLock\(\);\s*\n(\s*)lock\.waitLock\((\d+)\);", r"var lock = bloqueio_(\2);", out)
+
 open(os.path.join(RAIZ,'gas/12_Engajamento.gs'),'w',encoding='utf8').write(out)
 print('ok', len(casos),'ações;', n_ss,'acessos à planilha;', n_p,'usos de propriedades isolados')

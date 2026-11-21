@@ -80,8 +80,7 @@ function acompRegistrar_(sis, d, eu) {
   if (!mat) return { ok: false, erro: 'Matrícula ausente.' };
   if (!String(r.obs || '').trim()) return { ok: false, erro: 'Preencha a observação do atendimento.' };
   const base = BASES_ENGAJAMENTO.indexOf(r.base) >= 0 ? r.base : '';
-  const lock = LockService.getScriptLock();
-  lock.waitLock(20000);
+  const lock = bloqueio_(20000);
   try {
     const sh = abaAcomp_(sis, 'acomp');
     const id = String(r.id || ('a' + Date.now() + Math.random().toString(36).slice(2, 7)));
@@ -101,8 +100,7 @@ function acompRegistrar_(sis, d, eu) {
 function acompFollowup_(sis, d, eu) {
   const id = String(d.id || '');
   const status = d.status === 'pendente' ? 'pendente' : 'feito';
-  const lock = LockService.getScriptLock();
-  lock.waitLock(20000);
+  const lock = bloqueio_(20000);
   try {
     const sh = abaAcomp_(sis, 'acomp');
     const linhas = linhasDe_(sh, 1);
@@ -123,8 +121,7 @@ function acompFicha_(sis, d, eu) {
   const mat = String(d.matricula || '').trim();
   const novos = d.dados || {};
   if (!mat) return { ok: false, erro: 'Matrícula ausente.' };
-  const lock = LockService.getScriptLock();
-  lock.waitLock(20000);
+  const lock = bloqueio_(20000);
   try {
     const sh = abaAcomp_(sis, 'ficha');
     const linhas = linhasDe_(sh, 2);
@@ -157,8 +154,7 @@ function acompExtraSalvar_(sis, d, eu) {
   const chave = String(d.chave || '').slice(0, 40);
   if (!/^\d{6,}(:(av|avs))?$/.test(chave)) return { ok: false, erro: 'Aluno inválido.' };
   const E = Engajamento_();
-  const lock = LockService.getScriptLock();
-  lock.waitLock(20000);
+  const lock = bloqueio_(20000);
   try {
     let mapa = {};
     try { mapa = JSON.parse(E.storeGet(pref + d.base) || '{}') || {}; } catch (e) { mapa = {}; }

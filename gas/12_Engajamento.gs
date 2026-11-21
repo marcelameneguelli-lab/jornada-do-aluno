@@ -1383,8 +1383,7 @@ function Engajamento_() {
     function savePoloData(body) {
       var base = String((body && body.base) || 'impar');
       var novo = (body && body.data) || {};
-      var lock = LockService.getScriptLock();
-      lock.waitLock(20000);
+      var lock = bloqueio_(20000);
       try {
         var raw = storeGet('PoloData_' + base), atual = raw ? JSON.parse(raw) : {};
         Object.keys(novo).forEach(function (mat) {

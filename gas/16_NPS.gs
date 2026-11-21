@@ -39,8 +39,7 @@ function npsImportar_(d, eu) {
   const lote = Array.isArray(d.respostas) ? d.respostas : [];
   if (!lote.length) return { ok: false, erro: 'Nenhuma resposta no arquivo.' };
   if (lote.length > 600) return { ok: false, erro: 'Lote grande demais (máx. 600 por envio).' };
-  const lock = LockService.getScriptLock();
-  lock.waitLock(30000);
+  const lock = bloqueio_(30000);
   try {
     const sh = abaNps_();
     const n = Math.max(sh.getLastRow() - 1, 0);

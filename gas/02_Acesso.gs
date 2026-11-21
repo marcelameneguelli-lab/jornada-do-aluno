@@ -216,8 +216,7 @@ function trocarSenha_(eu, d) {
   const motivo = senhaFraca_(nova, eu);
   if (motivo) return { ok: false, erro: 'senha_fraca', detalhe: motivo };
   if (nova === atual) return { ok: false, erro: 'senha_fraca', detalhe: 'A nova senha precisa ser diferente da atual.' };
-  const lock = LockService.getScriptLock();
-  lock.waitLock(20000);
+  const lock = bloqueio_(20000);
   try {
     const sal = novoSal_(), hash = hashSenha_(sal, nova);
     const sh = abaUsuarios_();
@@ -259,8 +258,7 @@ function usuarioSalvar_(d, eu) {
   if (email === eu.email && (ativo === 'não' || perfil !== 'admin')) {
     return { ok: false, erro: 'Você não pode tirar o seu próprio acesso de administrador.' };
   }
-  const lock = LockService.getScriptLock();
-  lock.waitLock(20000);
+  const lock = bloqueio_(20000);
   try {
     const sh = abaUsuarios_();
     const existente = acharUsuario_(email);
@@ -281,8 +279,7 @@ function usuarioSalvar_(d, eu) {
 function usuarioNovaProvisoria_(d, eu) {
   const alvo = acharUsuario_(d.email);
   if (!alvo) return { ok: false, erro: 'Usuário não encontrado.' };
-  const lock = LockService.getScriptLock();
-  lock.waitLock(20000);
+  const lock = bloqueio_(20000);
   try {
     const prov = gravarProvisoria_(abaUsuarios_(), alvo.linha);
     limparCacheUsuarios_();

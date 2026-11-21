@@ -69,8 +69,7 @@ function apoioSalvar_(d, eu) {
   const revisao = /^\d{4}-\d{2}-\d{2}$/.test(String(r.revisao || '')) ? String(r.revisao)
     : Utilities.formatDate(new Date(Date.now() + 182 * 86400000), Session.getScriptTimeZone(), 'yyyy-MM-dd');
   const ativo = r.ativo === false ? 'nao' : 'sim';
-  const lock = LockService.getScriptLock();
-  lock.waitLock(20000);
+  const lock = bloqueio_(20000);
   try {
     const sh = abaApoio_();
     const n = Math.max(sh.getLastRow() - 1, 0);

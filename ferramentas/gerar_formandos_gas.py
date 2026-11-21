@@ -89,5 +89,8 @@ function formandos_ativarBackupSemanal() {{ Formandos_().ativarBackupSemanal(); 
 function formandos_limparApagados() {{ Formandos_().limparApagados(); }}
 function formandos_removerSenhaLimpeza() {{ Formandos_().removerSenhaLimpeza(); }}
 '''
+import re
+# bloqueios curtos: se um processo demorado segurar o bloqueio, segue em vez de dar "Tempo limite do bloqueio"
+out = re.sub(r"(?:const|var) lock = LockService\.getScriptLock\(\);\s*\n(\s*)lock\.waitLock\((\d+)\);", r"var lock = bloqueio_(\2);", out)
 open('/home/claude/jornada/gas/10_Formandos.gs','w',encoding='utf8').write(out)
 print('ok', out.count('\n'),'linhas')

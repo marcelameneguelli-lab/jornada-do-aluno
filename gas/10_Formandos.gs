@@ -134,8 +134,7 @@ function Formandos_() {
 
 
     function gravar_(ops) {
-      const lock = LockService.getScriptLock();
-      lock.waitLock(25000);
+      var lock = bloqueio_(25000);
       try {
         const t = Math.max(Date.now(), ultima_() + 1);
         const porCol = {};
@@ -257,8 +256,7 @@ function Formandos_() {
     /** Remove da planilha as linhas apagadas há mais de 30 dias (os atendentes já sincronizaram). */
     function limparApagados() {
       const corte = Date.now() - 30 * 86400000;
-      const lock = LockService.getScriptLock();
-      lock.waitLock(25000);
+      var lock = bloqueio_(25000);
       try {
         SYNC_COLECOES.forEach(function (col) {
           const sh = aba_(col);
@@ -276,8 +274,7 @@ function Formandos_() {
 
     /** Esqueceu a senha da limpeza de dados? Rode esta função e crie outra no painel. */
     function removerSenhaLimpeza() {
-      const lock = LockService.getScriptLock();
-      lock.waitLock(25000);
+      var lock = bloqueio_(25000);
       try {
         const t = Math.max(Date.now(), ultima_() + 1);
         aplicar_('config', [{ op: 'delete', col: 'config', id: 'clear' }], t);

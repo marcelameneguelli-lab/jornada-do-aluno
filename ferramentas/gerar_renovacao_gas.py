@@ -109,5 +109,8 @@ out = out.replace(_v, """    function carregarAtendentes() {
       });
       return { ok: true, atendentes: lista };
     }""")
+# bloqueios curtos: se um processo demorado segurar o bloqueio, segue em vez de dar "Tempo limite do bloqueio"
+out = re.sub(r"(?:const|var) lock = LockService\.getScriptLock\(\);\s*\n(\s*)lock\.waitLock\((\d+)\);", r"var lock = bloqueio_(\2);", out)
+
 open(os.path.join(RAIZ,'gas/11_Renovacao.gs'),'w',encoding='utf8').write(out)
 print('ok', n,'usos de propriedades isolados;', len(acoes),'ações')

@@ -35,8 +35,9 @@ function trazerHistoricoEngajaVR_(eu) {
   if (!DriveApp.getFoldersByName(PASTA_ENGAJAVR).hasNext()) return { ok: false, erro: 'Não encontrei a pasta "' + PASTA_ENGAJAVR + '" no Drive desta conta.' };
   const E = Engajamento_();
   const resultado = {};
-  const lock = LockService.getScriptLock();
-  lock.waitLock(30000);
+  // sem bloqueio durante toda a rotina (leva minutos): cada gravação no Drive já tem o seu bloqueio curto,
+  // e o resto do sistema continua funcionando enquanto isso
+  const lock = { releaseLock: function () {} };
   try {
     BASES_ENGAJAMENTO.forEach(b => {
       const antigo = lerHistoricoEngajaVR_(b);
@@ -113,8 +114,9 @@ function migrarEngajaVR_(url, eu) {
   try { lerApiEngajaVR_(url, 'ping'); } catch (e) { return { ok: false, erro: 'O EngajaVR não respondeu: ' + e.message }; }
   const E = Engajamento_();
   const rel = { listas: {}, bases: {} };
-  const lock = LockService.getScriptLock();
-  lock.waitLock(30000);
+  // sem bloqueio durante toda a rotina (leva minutos): cada gravação no Drive já tem o seu bloqueio curto,
+  // e o resto do sistema continua funcionando enquanto isso
+  const lock = { releaseLock: function () {} };
   try {
     // listas gerais
     [['getEventos', 'EventosJSON', 'calendário'], ['getTarefas', 'Tarefas', 'tarefas'], ['getTutoriais', 'Tutoriais', 'tutoriais'],

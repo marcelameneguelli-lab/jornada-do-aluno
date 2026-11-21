@@ -672,8 +672,7 @@ function Renovacao_() {
       // Usado pelas telas antigas (renomear, desativar, conta meta). Mantém e-mail
       // e senha de cada pessoa: casa primeiro pelo e-mail, depois pelo nome.
       if (!lista || !Array.isArray(lista)) return { ok: false, erro: 'Lista inválida.' };
-      const lock = LockService.getScriptLock();
-      lock.waitLock(15000);
+      var lock = bloqueio_(15000);
       try {
         const atuais = lerUsuarios();
         const novos = lista.filter(at => at && at.nome).map(at => {
@@ -734,8 +733,7 @@ function Renovacao_() {
 
     function salvarAcionamento(ac) {
       if (!ac || !ac.alunoId) return { ok: false, erro: 'Dados de acionamento inválidos.' };
-      const lock = LockService.getScriptLock();
-      lock.waitLock(15000);
+      var lock = bloqueio_(15000);
       try {
         const ss  = getSpreadsheet();
         const aba = ss.getSheetByName('Acionamentos');
@@ -1230,8 +1228,7 @@ function Renovacao_() {
     function registrarAcesso(d) {
       const colab = String((d && d.colab) || '').trim() || 'Não identificado';
       const evento = d && d.evento === 'ativo' ? 'ativo' : 'entrada';
-      const lock = LockService.getScriptLock();
-      lock.waitLock(10000);
+      var lock = bloqueio_(10000);
       try {
         const aba = garantirAbaAcessos(getSpreadsheet());
         const hoje = hojeBR(), hora = horaAgora();
@@ -1735,8 +1732,7 @@ function Renovacao_() {
       const falhas = parseInt(cache.get(chaveFalha) || '0');
       if (falhas >= 5) return { ok: false, erro: 'Muitas tentativas erradas. Aguarde 15 minutos ou peça para o administrador resetar sua senha.' };
 
-      const lock = LockService.getScriptLock();
-      lock.waitLock(15000);
+      var lock = bloqueio_(15000);
       try {
         const lista = lerUsuarios();
         const u = lista.find(x => x.email === email);
@@ -1771,8 +1767,7 @@ function Renovacao_() {
       const nova = String(d.nova || '');
       if (nova.length < 8) return { ok: false, erro: 'A nova senha precisa ter pelo menos 8 caracteres.' };
       if (!/[A-Za-z]/.test(nova) || !/\d/.test(nova)) return { ok: false, erro: 'Use letras e números na nova senha.' };
-      const lock = LockService.getScriptLock();
-      lock.waitLock(15000);
+      var lock = bloqueio_(15000);
       try {
         const lista = lerUsuarios();
         const u = lista.find(x => x.email === sess.email);
@@ -1800,8 +1795,7 @@ function Renovacao_() {
       const perfil = PERFIS_VALIDOS.includes(dados.perfil) ? dados.perfil : 'atendente';
       if (!nome) return { ok: false, erro: 'Informe o nome.' };
       if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return { ok: false, erro: 'E-mail inválido.' };
-      const lock = LockService.getScriptLock();
-      lock.waitLock(15000);
+      var lock = bloqueio_(15000);
       try {
         const lista = lerUsuarios();
         const chaveEmail = emailNorm(dados.emailOriginal || '');
@@ -1835,8 +1829,7 @@ function Renovacao_() {
 
     function usuarioResetarSenha(sess, d) {
       const email = emailNorm(d.email);
-      const lock = LockService.getScriptLock();
-      lock.waitLock(15000);
+      var lock = bloqueio_(15000);
       try {
         const lista = lerUsuarios();
         const u = lista.find(x => x.email === email);
@@ -1855,8 +1848,7 @@ function Renovacao_() {
       const email = emailNorm(d.email);
       const nome = normNome(d.nome || '');
       if (email && email === sess.email) return { ok: false, erro: 'Você não pode remover o seu próprio usuário.' };
-      const lock = LockService.getScriptLock();
-      lock.waitLock(15000);
+      var lock = bloqueio_(15000);
       try {
         const lista = lerUsuarios();
         const resto = lista.filter(x => email ? x.email !== email : normNome(x.nome) !== nome);

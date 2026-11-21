@@ -33,3 +33,16 @@ function nomesEquipe_() {
   return listaUsuarios_().filter(u => u.ativo).map(u => u.nome)
     .filter((n, i, a) => n && a.indexOf(n) === i).sort((a, b) => a.localeCompare(b, 'pt-BR'));
 }
+
+/**
+ * Bloqueio curto para gravações. Se outro processo demorado estiver segurando o bloqueio
+ * (por exemplo, a importação de uma base), espera até o limite e segue mesmo assim, em vez de
+ * devolver o erro "Tempo limite do bloqueio" para quem está só salvando um registro.
+ */
+function bloqueio_(ms) {
+  const l = LockService.getScriptLock();
+  let ok = false;
+  try { ok = l.tryLock(ms || 30000); } catch (e) { ok = false; }
+  if (!ok) Logger.log('Bloqueio ocupado: seguindo sem bloqueio');
+  return { releaseLock: function () { if (ok) try { l.releaseLock(); } catch (e) {} } };
+}
