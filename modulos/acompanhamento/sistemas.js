@@ -11,8 +11,24 @@
   const txt = (v) => String(v == null ? '' : v).trim();
   const moeda = (v) => num(v).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
   const data = (v) => { const t = txt(v); if (!t) return ''; const m = t.match(/^(\d{4})-(\d{2})-(\d{2})/); return m ? `${m[3]}/${m[2]}/${m[1]}` : t.split(' ')[0]; };
+  /* Datas do Medallia → "aaaa-mm-dd hh:mm". Aceita o número de data do Excel, texto ISO
+     e o formato americano m/d/aa (como o leitor de planilhas mostrava antes da correção). */
+  const p2 = (n) => String(n).padStart(2, '0');
+  function isoDe(v) {
+    if (v == null || v === '') return '';
+    if (typeof v === 'number' || /^\d{5}(\.\d+)?$/.test(String(v).trim())) {
+      const n = Number(v), dias = Math.floor(n), ms = Math.round((n - dias) * 86400000);
+      const d = new Date(Date.UTC(1899, 11, 30) + dias * 86400000 + ms);
+      return `${d.getUTCFullYear()}-${p2(d.getUTCMonth() + 1)}-${p2(d.getUTCDate())} ${p2(d.getUTCHours())}:${p2(d.getUTCMinutes())}`;
+    }
+    const t = String(v).trim();
+    if (/^\d{4}-\d{2}-\d{2}/.test(t)) return t.slice(0, 16);
+    const m = t.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})(?:\s+(\d{1,2}):(\d{2}))?/);
+    if (m) { const ano = m[3].length === 2 ? '20' + m[3] : m[3]; return `${ano}-${p2(m[1])}-${p2(m[2])}` + (m[4] ? ` ${p2(m[4])}:${m[5]}` : ''); }
+    return t;
+  }
   /* dd/mm/aa (NPS) */
-  const dataAA = (v) => { const t = txt(v); if (!t) return ''; const m = t.match(/^(\d{4})-(\d{2})-(\d{2})/); return m ? `${m[3]}/${m[2]}/${m[1].slice(2)}` : t.split(' ')[0]; };
+  const dataAA = (v) => { const t = isoDe(v); const m = t.match(/^(\d{4})-(\d{2})-(\d{2})/); return m ? `${m[3]}/${m[2]}/${m[1].slice(2)}` : t.split(' ')[0]; };
 
   /* Financiamentos: programa do aluno (CLASSE_PAGANTE_SEMESTRE + colunas próprias de Ficou Fácil e Pravaler) */
   function programa(r) {
@@ -34,7 +50,7 @@
   const grupoNps = (r) => { const n = nota(r); return n == null ? '' : n >= 9 ? 'Promotor' : n >= 7 ? 'Neutro' : 'Detrator'; };
   const calcNps = (L) => { const v = L.map(nota).filter((n) => n != null); if (!v.length) return null; const p = v.filter((n) => n >= 9).length, d = v.filter((n) => n <= 6).length; return (p - d) / v.length * 100; };
   const fmtNps = (x) => x == null ? '—' : x.toLocaleString('pt-BR', { maximumFractionDigits: 1 });
-  const mes = (r) => txt(r.data_resposta).slice(0, 7);
+  const mes = (r) => isoDe(r.data_resposta).slice(0, 7);
   const nomeMes = (m) => { const [a, mm] = m.split('-'); return ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'][Number(mm) - 1] + '/' + a; };
   const TEMAS = [['aprendizado', 'Aprendizado'], ['infraestrutura', 'Infraestrutura'], ['pagamento', 'Pagamento'], ['comunicacao', 'Comunicação']];
   const insatisfeito = (r) => TEMAS.filter(([k]) => txt(r['satisf_' + k]) === 'Não').map(([, t]) => t);
@@ -45,7 +61,8 @@
     if (iCab < 0) return [];
     const cab = linhas[iCab].map((c) => String(c).trim());
     const col = (nome) => cab.indexOf(nome);
-    const pega = (l, nome) => { const i = col(nome); return i < 0 ? '' : String(l[i] == null ? '' : l[i]).trim(); };
+    const valor = (l, nome) => { const i = col(nome); return i < 0 ? '' : l[i]; };
+    const pega = (l, nome) => { const v = valor(l, nome); return String(v == null ? '' : v).replace(/\.0$/, '').trim(); };
     const notaCols = cab.map((c, i) => [c, i]).filter(([c]) => /Probabilidade de recomendação/.test(c));
     const soDigitos = (v) => String(v || '').replace(/\D/g, '');
     return linhas.slice(iCab + 1).filter((l) => pega(l, 'ID da Pesquisa') && pega(l, 'Matrícula')).map((l) => {
@@ -57,7 +74,7 @@
         NOM_CURSO: pega(l, 'Curso'), MODALIDADE_PP_PC: pega(l, 'Modalidade'),
         END_EMAIL: pega(l, 'Email do aluno'), NUM_TELEF_CELULAR: soDigitos(pega(l, 'Celular do aluno') || pega(l, 'Telefone do aluno')),
         campus: pega(l, 'Campus'), periodo: pega(l, 'Período vigente'), semestre: pega(l, 'Semestre par ou ímpar'),
-        programa: pega(l, 'Programa de Pesquisa'), data_resposta: pega(l, 'Data de Resposta (Brasília)').slice(0, 16),
+        programa: pega(l, 'Programa de Pesquisa'), data_resposta: isoDe(valor(l, 'Data de Resposta (Brasília)')),
         nota: notaV.replace(/\.0$/, ''),
         motivo: pega(l, 'Driver da marca (Exp. Geral)'), motivo_outros: pega(l, 'Outros - Driver da marca (Exp. Geral)'),
         comentario: pega(l, 'Comentário - Marca (Exp. Geral)'), comentario_adicional: pega(l, 'Comentário adicional'),
@@ -141,7 +158,7 @@
       semDados: 'Nenhuma resposta importada ainda. Use "Importar arquivo do Medallia".',
       chave: (r) => r.id, matriculaVisivel: (r) => r.matricula,
       elegivel: (r) => nota(r) != null,
-      ordenar: (a, b) => String(b.data_resposta).localeCompare(String(a.data_resposta)),
+      ordenar: (a, b) => isoDe(b.data_resposta).localeCompare(isoDe(a.data_resposta)), // mais recente primeiro
       importar: { rotulo: 'Importar arquivo do Medallia', converter: converterMedallia, erroFormato: 'Não encontrei a coluna "ID da Pesquisa". Use a exportação "Survey Export" do Medallia, sem alterar o arquivo.' },
       colunas: [
         { t: 'Resposta', v: (r) => dataAA(r.data_resposta) },

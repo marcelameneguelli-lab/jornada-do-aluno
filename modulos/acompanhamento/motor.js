@@ -249,7 +249,8 @@
     try {
       await carregarXLSX();
       const wb = XLSX.read(await arq.arrayBuffer(), { type: 'array', cellDates: false });
-      const linhas = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { header: 1, raw: false, defval: '' });
+      // raw: true mantém as datas como número do Excel (o sistema converte); raw: false gerava datas no formato americano
+      const linhas = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { header: 1, raw: true, defval: '' });
       const respostas = CFG.importar.converter(linhas);
       if (!respostas.length) throw new Error(CFG.importar.erroFormato);
       let novas = 0, atualizadas = 0;

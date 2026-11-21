@@ -20,8 +20,11 @@ with sync_playwright() as p:
     pg.goto(B+'#/s/nps'); pg.wait_for_timeout(2500)
     f=[x for x in pg.frames if 'sistema=nps' in x.url][0]
     f.wait_for_selector('#f-importar'); assert 'Nenhuma resposta importada' in f.inner_text('#area'); ok('NPS vazio mostra o botão de importar')
+    assert not f.is_visible('#f-arquivo'); ok('campo de arquivo fica escondido (só o botão aparece)')
     assert f.evaluate("getComputedStyle(document.getElementById('bases')).display")=='none'; ok('sem seletor de base Ímpar/Par/Técnico')
     f.set_input_files('#f-arquivo','/home/claude/testes/medallia_ficticio.xlsx'); f.wait_for_function("Motor.estado.alunos.length===8", timeout=20000); ok('importa o arquivo do Medallia (8 respostas)')
+    datas=f.evaluate("[...document.querySelectorAll('tbody tr td:nth-child(4)')].map(t=>t.innerText)")
+    assert datas[0]=='17/11/26' and datas==sorted(datas,key=lambda d:d[6:]+d[3:5]+d[:2],reverse=True), datas; ok('datas do Excel em dd/mm/aa, mais recente primeiro: '+', '.join(datas[:3]))
     f.select_option('#f-extra','det'); pg.wait_for_timeout(300); assert f.locator('tr[data-mat]').count()==3; ok('filtro de detratores: 3')
     pg.mouse.move(900,400); pg.screenshot(path='/home/claude/testes/tela_nps.png')
     f.locator('tr[data-mat]').first.click(); f.wait_for_selector('#form-ac')
