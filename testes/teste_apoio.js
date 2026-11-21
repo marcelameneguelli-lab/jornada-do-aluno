@@ -20,4 +20,8 @@ t('toda a equipe lê as orientações ativas, sem responsável e contato', ()=>{
 t('sem login não lê', ()=>{ assert.equal(post({acao:'apoio.orientacoes'}).auth,false); });
 t('encerrada some das orientações da equipe', ()=>{ post({acao:'apoio.salvar',token:tN,registro:Object.assign({},reg,{ativo:false})}); assert.equal(post({acao:'apoio.orientacoes',token:tF}).dados.length,0); assert.equal(post({acao:'apoio.listar',token:tM}).dados[0].ativo,false); });
 t('fica registrado no log', ()=>{ const txt=JSON.stringify(g._ss.getSheetByName('log').d); assert(txt.includes('APOIO') && txt.includes('202601000001')); });
+post({acao:'engajamento.salvarBase',token:tM,base:'par',dados:[{COD_MATRICULA:'202602000555',NOM_ALUNO:'Aluna Par',NOM_CURSO:'Psicologia'}],parte:0,total:1});
+t('busca nome e curso pela matrícula na base líquida', ()=>{ const r=post({acao:'apoio.buscar_aluno',token:tN,matricula:'202602000555'}); assert(r.ok && r.aluno==='Aluna Par' && r.curso==='Psicologia' && r.base==='par', JSON.stringify(r)); });
+t('matrícula fora das bases avisa que não encontrou', ()=>{ const r=post({acao:'apoio.buscar_aluno',token:tN,matricula:'209999999999'}); assert(r.ok && r.naoEncontrado); });
+t('busca só para quem tem o sistema', ()=>{ assert.equal(post({acao:'apoio.buscar_aluno',token:tF,matricula:'202602000555'}).permissao,false); });
 console.log(ok+' testes do Apoio às Avaliações passaram');

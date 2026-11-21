@@ -81,12 +81,32 @@ function apoioSalvar_(d, eu) {
   } finally { lock.releaseLock(); }
 }
 
+/** Nome e curso do aluno pela matrícula, procurando nas bases líquidas (Ímpar, Par e Técnico). */
+function apoioBuscarAluno_(d) {
+  const mat = normMatApoio_(d.matricula);
+  if (mat.length < 6) return { ok: false, erro: 'Matrícula incompleta.' };
+  const E = Engajamento_();
+  for (let i = 0; i < BASES_ENGAJAMENTO.length; i++) {
+    const b = BASES_ENGAJAMENTO[i];
+    let raw = '';
+    try { raw = E.storeGet('crm_base_' + b) || ''; } catch (e) { raw = ''; }
+    if (!raw || raw.indexOf(mat) < 0) continue; // evita montar a base quando a matrícula nem aparece
+    let lista = [];
+    try { lista = JSON.parse(raw); } catch (e) { continue; }
+    if (!Array.isArray(lista)) lista = (lista && lista.dados) || [];
+    const r = lista.filter(x => x && normMatApoio_(x.COD_MATRICULA || x.MATRICULA) === mat)[0];
+    if (r) return { ok: true, aluno: String(r.NOM_ALUNO || ''), curso: String(r.NOM_CURSO || ''), base: b };
+  }
+  return { ok: true, aluno: '', curso: '', naoEncontrado: true };
+}
+
 function Modulo_apoio() {
   return {
     acoes: {
       listar: () => ({ ok: true, dados: apoioLer_(false) }),
       orientacoes: () => apoioOrientacoes_(),
       salvar: (d, eu) => apoioSalvar_(d, eu),
+      buscar_aluno: (d) => apoioBuscarAluno_(d),
     },
     // leitura das orientações ativas vale para todos os logados (ver ACOES_TODOS_LOGADOS)
   };

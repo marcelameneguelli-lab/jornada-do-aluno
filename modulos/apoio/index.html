@@ -102,7 +102,7 @@
       <h2>${novo ? 'Nova orientação' : esc(o.aluno)}</h2>
       <form id="form-apoio">
         <div class="grade2">
-          <label>Matrícula<input name="matricula" value="${esc(o.matricula || '')}" ${novo ? '' : 'readonly'} required inputmode="numeric"></label>
+          <label>Matrícula<input name="matricula" value="${esc(o.matricula || '')}" ${novo ? '' : 'readonly'} required inputmode="numeric"><small class="dica" id="busca-info">${novo ? 'Digite a matrícula: nome e curso vêm da base líquida.' : ''}</small></label>
           <label>Nome do aluno<input name="aluno" value="${esc(o.aluno || '')}" required></label>
           <label>Curso<input name="curso" value="${esc(o.curso || '')}"></label>
           <label>Revisar até<input type="date" name="revisao" value="${esc(o.revisao || '')}"></label>
@@ -124,6 +124,27 @@
       </form>`;
     $('#modal').hidden = false;
     document.querySelector('[data-fechar]').onclick = fechar;
+    if (novo) {
+      // nome e curso preenchidos pela matrícula (bases líquidas Ímpar, Par e Técnico)
+      const f = $('#form-apoio'), info = $('#busca-info');
+      let ultima = '';
+      const buscar = async () => {
+        const m = f.matricula.value.replace(/\D/g, '');
+        if (m.length < 9 || m === ultima) return;
+        ultima = m;
+        const ja = E.lista.filter((x) => x.matricula === m)[0];
+        if (ja) { info.textContent = 'Este aluno já tem orientação cadastrada. Abrindo...'; setTimeout(() => abrir(ja), 600); return; }
+        info.textContent = 'Procurando na base líquida...';
+        try {
+          const r = await Api.chamar('apoio.buscar_aluno', { matricula: m });
+          if (m !== f.matricula.value.replace(/\D/g, '')) return;
+          if (r && r.ok && r.aluno) { f.aluno.value = r.aluno; f.curso.value = r.curso; info.textContent = '✓ Encontrado na base ' + ({ impar: 'Ímpar', par: 'Par', ct: 'Técnico' }[r.base] || '') + '.'; }
+          else info.textContent = 'Não encontrei na base líquida. Preencha o nome e o curso.';
+        } catch (e) { if (!e.auth) info.textContent = 'Não foi possível procurar agora. Preencha o nome e o curso.'; }
+      };
+      f.matricula.addEventListener('blur', buscar);
+      f.matricula.addEventListener('input', () => { if (f.matricula.value.replace(/\D/g, '').length >= 12) buscar(); });
+    }
     $('#form-apoio').onsubmit = async (ev) => {
       ev.preventDefault();
       const f = ev.target, todos = (n) => [...f.querySelectorAll(`[name=${n}]:checked`)].map((x) => x.value);
