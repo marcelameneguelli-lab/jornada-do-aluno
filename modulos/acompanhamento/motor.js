@@ -18,6 +18,7 @@
     aba: 'alunos', pagina: 1, filtro: { busca: '', curso: '', mod: '', situacao: '', extra: '', programa: '', tipo: '', canal: '', atend: '', de: '', ate: '' },
     hist: {}, // acionamentos do Engajamento (todas as bases), por matrícula: entram no "último acionamento"
     fuQuem: 'meus', periodo: '7', apoio: {}, motivo: '', comEngajamento: true,
+    extra: {}, sel: new Set(), // dados próprios do sistema (TCE do estágio, observação das provas) e alunos marcados para o disparo em lote
   };
   const eu = () => { const s = Api.Sessao.ler(); return (s && s.me) || { nome: '', perfil: '' }; };
 
@@ -35,7 +36,16 @@
   }
 
   /* ── contexto para as funções da configuração (tipo de prova escolhido, último acionamento) ── */
-  const ctx = () => ({ tipo: E.filtro.tipo || (CFG.seletor ? CFG.seletor.opcoes[0][0] : ''), ultimo: (r) => ultimoAc(mat(r)) });
+  const ctx = () => {
+    const c = { tipo: E.filtro.tipo || (CFG.seletor ? CFG.seletor.opcoes[0][0] : ''), ultimo: (r) => ultimoAc(mat(r)) };
+    c.extra = (r) => (CFG.extras && E.extra[CFG.extras.chave(r, c)]) || {};
+    return c;
+  };
+  async function carregarExtras() {
+    if (!CFG.extras || CFG.fonte) return;
+    try { const r = await chamar(CFG.extras.ler, { base: E.base }); E.extra = (r && r.data) || {}; } catch (e) { E.extra = {}; }
+    if (E.alunos.length && $('#modal').hidden && E.aba !== 'original') desenhar();
+  }
   const aplicaSeletor = (r, c) => !CFG.seletor || CFG.seletor.filtra(r, c.tipo);
 
   /* Datas do histórico do EngajaVR: "dd/mm/aaaa hh:mm:ss" ou "dd/mm/aaaa, hh:mm:ss" */
@@ -88,7 +98,9 @@
       if (!e.auth) aviso(e.message, 'erro');
       E.alunos = []; E.todos = 0;
     }
+    E.sel.clear();
     desenhar();
+    carregarExtras();
   }
 
   async function sincronizar() {
@@ -178,12 +190,20 @@
         <button class="btn mini" id="f-exportar">Exportar CSV</button>
         <span class="total">${lista.length.toLocaleString('pt-BR')} de ${E.alunos.length.toLocaleString('pt-BR')} ${unidade()}</span>
       </div>
+      ${CFG.lote ? `<div class="barra-lote" id="barra-lote" ${E.sel.size ? '' : 'hidden'}>
+        <b id="lote-qtd">${E.sel.size} selecionado(s)</b>
+        <select id="lote-canal"><option>WhatsApp</option><option>E-mail</option></select>
+        <button class="btn mini primario" id="lote-abrir">✉️ Escrever mensagem em lote</button>
+        <button class="btn mini" id="lote-limpar">Limpar seleção</button>
+      </div>` : ''}
       <div class="painel"><table class="tabela"><thead><tr>
+        ${CFG.lote ? `<th class="col-sel"><input type="checkbox" id="sel-pagina" title="Marcar os alunos desta página"></th>` : ''}
         <th>Aluno</th><th>Curso</th><th>Modalidade</th>${cols.map((c) => `<th>${esc(c.t)}</th>`).join('')}<th>${CFG.historicoEngajamento ? 'Último acionamento' : 'Último contato'}</th><th>Follow-up</th>
       </tr></thead><tbody>${fatia.map((r) => {
         const m = mat(r), rs = regsDoAluno(m), ult = CFG.historicoEngajamento ? ultimoAc(m) : rs[0];
         const fu = rs.filter((x) => x.fu_status === 'pendente').map((x) => x.fu_data).sort()[0];
         return `<tr class="clicavel" data-mat="${esc(m)}">
+          ${CFG.lote ? `<td class="col-sel"><input type="checkbox" class="sel-aluno" value="${esc(m)}" ${E.sel.has(m) ? 'checked' : ''}></td>` : ''}
           <td class="nome"><b>${esc(r.NOM_ALUNO)}${Apoio.selo(E.apoio[Apoio.norm(matVis(r))])}</b><small>${esc(matVis(r))}</small></td>
           <td>${esc(r.NOM_CURSO)}</td><td>${esc(r.MODALIDADE_PP_PC || r.MODALIDADE || '')}</td>
           ${cols.map((k) => { let v = ''; try { v = k.v(r, c); } catch (e) {} const al = k.alerta && k.alerta(r, c); return `<td class="${al ? 'alerta' : ''}">${k.html ? v : esc(v)}${al ? ' ⚠️' : ''}</td>`; }).join('')}
@@ -191,7 +211,7 @@
             ? `${esc(dataAA(ult.ms))}<br><small>${esc([ult.canal, ult.atend].filter(Boolean).join(' · '))}</small>${ult.origem !== CFG.nome ? `<br><small class="origem">${esc(ult.origem)}</small>` : ''}`
             : `${esc(dataCurta(ult.criado))}<br><small>${esc(ult.resultado || ult.canal)}</small>`}</td>
           <td>${fu ? esc(dataBR(fu)) : ''}</td></tr>`;
-      }).join('') || `<tr><td colspan="${cols.length + 5}" class="vazio">${E.todos ? 'Nenhum registro com esses filtros.' : (CFG.fonte ? CFG.semDados : 'A base ' + NOMES_BASE[E.base] + ' ainda não foi importada. A coordenação importa na Central de Bases.')}</td></tr>`}</tbody></table></div>
+      }).join('') || `<tr><td colspan="${cols.length + 5 + (CFG.lote ? 1 : 0)}" class="vazio">${E.todos ? 'Nenhum registro com esses filtros.' : (CFG.fonte ? CFG.semDados : 'A base ' + NOMES_BASE[E.base] + ' ainda não foi importada. A coordenação importa na Central de Bases.')}</td></tr>`}</tbody></table></div>
       <div class="paginas"><button class="btn mini" id="p-ant" ${E.pagina <= 1 ? 'disabled' : ''}>Anterior</button> Página ${E.pagina} de ${paginas} <button class="btn mini" id="p-prox" ${E.pagina >= paginas ? 'disabled' : ''}>Próxima</button></div>`;
     const reaplicar = (campo, el) => { E.filtro[campo] = el.value; E.pagina = 1; telaAlunos(); };
     let t; $('#f-busca').oninput = (ev) => { clearTimeout(t); t = setTimeout(() => { reaplicar('busca', ev.target); const i = $('#f-busca'); i.focus(); i.setSelectionRange(i.value.length, i.value.length); }, 250); };
@@ -201,8 +221,59 @@
     $('#p-prox').onclick = () => { E.pagina++; telaAlunos(); };
     $('#f-exportar').onclick = () => exportar(lista);
     if ($('#f-importar')) { $('#f-importar').onclick = () => $('#f-arquivo').click(); $('#f-arquivo').onchange = (ev) => importarArquivo(ev.target.files[0]); }
-    document.querySelectorAll('tr[data-mat]').forEach((tr) => { tr.onclick = () => abrirAluno(tr.dataset.mat); });
+    document.querySelectorAll('tr[data-mat]').forEach((tr) => { tr.onclick = (ev) => { if (ev.target.closest('.col-sel')) return; abrirAluno(tr.dataset.mat); }; });
+    if (CFG.lote) {
+      const atualizarBarra = () => { $('#barra-lote').hidden = !E.sel.size; $('#lote-qtd').textContent = `${E.sel.size} selecionado(s)`; };
+      document.querySelectorAll('.sel-aluno').forEach((cb) => { cb.onchange = () => { cb.checked ? E.sel.add(cb.value) : E.sel.delete(cb.value); atualizarBarra(); }; });
+      $('#sel-pagina').onchange = (ev) => { document.querySelectorAll('.sel-aluno').forEach((cb) => { cb.checked = ev.target.checked; cb.checked ? E.sel.add(cb.value) : E.sel.delete(cb.value); }); atualizarBarra(); };
+      $('#lote-limpar').onclick = () => { E.sel.clear(); telaAlunos(); };
+      $('#lote-abrir').onclick = () => abrirLote($('#lote-canal').value);
+    }
   }
+
+  /* ── Disparo em lote (WhatsApp ou e-mail), como nas telas do EngajaVR ──
+   * Abre a conversa de cada aluno marcado com a mensagem pronta e registra um acionamento
+   * em nome do usuário logado, para contar na produtividade e no último acionamento. */
+  function abrirLote(canal) {
+    const c = ctx();
+    const alunos = E.alunos.filter((r) => E.sel.has(mat(r)));
+    if (!alunos.length) return aviso('Marque ao menos um aluno.', 'erro');
+    const modelo = (CFG.lote.modelos && CFG.lote.modelos[canal] ? CFG.lote.modelos[canal](c) : '') || '';
+    const vars = ['{nome}', '{curso}', '{atendente}'].concat(Object.keys(CFG.lote.vars ? CFG.lote.vars(alunos[0], c) : {}).map((k) => `{${k}}`));
+    abrirModal(`<h2>Mensagem em lote · ${esc(canal)}</h2>
+      <p class="dica">${alunos.length} aluno(s). Variáveis: ${vars.map(esc).join(' ')}. Cada envio abre uma janela (${canal === 'WhatsApp' ? 'WhatsApp Web' : 'seu e-mail'}) e fica registrado como acionamento em seu nome.</p>
+      ${canal === 'E-mail' ? `<label>Assunto<input id="lote-assunto" value="${esc(CFG.lote.assunto || CFG.nome)}"></label>` : ''}
+      <label>Mensagem<textarea id="lote-msg" rows="8">${esc(modelo)}</textarea></label>
+      <p class="dica" id="lote-exemplo"></p>
+      <p class="erro" id="lote-erro"></p>
+      <div class="botoes"><button type="button" class="btn" data-fechar>Cancelar</button><button class="btn primario" id="lote-enviar">🚀 Disparar para ${alunos.length}</button></div>`);
+    const montar = (r) => {
+      const v = Object.assign({ nome: capNome(r.NOM_ALUNO), curso: capNome(r.NOM_CURSO), atendente: eu().nome }, CFG.lote.vars ? CFG.lote.vars(r, c) : {});
+      return $('#lote-msg').value.replace(/\{(\w+)\}/g, (x, k) => (v[k] != null ? v[k] : x));
+    };
+    const exemplo = () => { $('#lote-exemplo').textContent = 'Exemplo (' + capNome(alunos[0].NOM_ALUNO) + '): ' + montar(alunos[0]).slice(0, 220); };
+    $('#lote-msg').oninput = exemplo; exemplo();
+    $('#lote-enviar').onclick = async () => {
+      if (!$('#lote-msg').value.trim()) { $('#lote-erro').textContent = 'Escreva a mensagem.'; return; }
+      const assunto = $('#lote-assunto') ? $('#lote-assunto').value : '';
+      const b = $('#lote-enviar'); b.disabled = true;
+      let ok = 0, sem = 0;
+      for (let i = 0; i < alunos.length; i++) {
+        const r = alunos[i], m = mat(r), msg = montar(r);
+        const tel = String(r.NUM_TELEF_CELULAR || r.NUM_TELEFONE || '').replace(/\D/g, ''), email = r.END_EMAIL || '';
+        if (canal === 'WhatsApp' ? !tel : !email) { sem++; continue; }
+        b.textContent = `Enviando ${i + 1} de ${alunos.length}...`;
+        window.open(canal === 'WhatsApp' ? `https://wa.me/55${tel}?text=${encodeURIComponent(msg)}` : `mailto:${email}?subject=${encodeURIComponent(assunto)}&body=${encodeURIComponent(msg)}`, '_blank');
+        const reg = { id: 'l' + Date.now() + Math.random().toString(36).slice(2, 7), matricula: m, aluno: r.NOM_ALUNO, base: E.base,
+          canal, resultado: CFG.lote.resultado || 'Mensagem enviada', obs: 'Mensagem em lote: ' + msg.slice(0, 300), fu_data: '' };
+        try { const r2 = await chamar('registrar', { reg }); if (r2 && r2.ok) { E.regs[reg.id] = Object.assign(reg, { atendente: eu().nome, criado: Date.now(), atualizado: Date.now(), fu_status: '' }); ok++; } } catch (e) { if (e.auth) return; }
+        await new Promise((res) => setTimeout(res, 1500));
+      }
+      fecharModal(); E.sel.clear(); desenhar();
+      aviso(`${ok} mensagem(ns) aberta(s) e registrada(s)${sem ? `; ${sem} aluno(s) sem ${canal === 'WhatsApp' ? 'celular' : 'e-mail'}` : ''}.`, ok ? 'ok' : 'erro');
+    };
+  }
+  const capNome = (t) => String(t || '').toLowerCase().replace(/(^|\s)(\S)/g, (x, a, b) => a + b.toUpperCase()).replace(/\b(De|Da|Do|Das|Dos|E)\b/g, (x) => x.toLowerCase());
 
   function exportar(lista) {
     const cols = CFG.colunas || [];
@@ -241,6 +312,11 @@
       </div>
       ${Apoio.quadro(E.apoio[Apoio.norm(matVis(r))])}
       ${CFG.detalhe ? CFG.detalhe(r, esc) : ''}
+      ${CFG.extras ? (() => { const c = ctx(), x = c.extra(r); return `<div class="secao">${esc(CFG.extras.titulo(c))}</div>
+        <div class="extras" id="extras">${CFG.extras.campos.map((k) => k.tipo === 'texto'
+          ? `<label class="larga">${esc(k.t)}<input data-extra="${k.id}" value="${esc(x[k.id] || '')}" placeholder="${esc(k.dica || '')}"></label>`
+          : `<label class="marca"><input type="checkbox" data-extra="${k.id}" ${x[k.id] ? 'checked' : ''}> ${esc(k.t)}</label>`).join('')}</div>
+        <p class="dica" id="extras-quem">${x._quem ? `Atualizado por ${esc(x._quem)}${x._ts ? ' em ' + dataCurta(x._ts) : ''}` : ''}</p>`; })() : ''}
       <div class="contatos">
         ${tel ? `<a class="btn mini" target="_blank" rel="noopener" href="https://wa.me/55${tel}">💬 WhatsApp</a><a class="btn mini" href="tel:${tel}">📞 ${esc(tel)}</a>` : '<span class="selo cinza">Sem telefone</span>'}
         ${email ? `<a class="btn mini" href="mailto:${esc(email)}">✉️ ${esc(email)}</a>` : ''}
@@ -265,6 +341,18 @@
         <p class="erro" id="ac-erro"></p>
         <div class="botoes"><button type="button" class="btn" data-fechar>Fechar</button><button class="btn primario" id="btn-ac">Registrar acionamento</button></div>
       </form>`);
+    if (CFG.extras) document.querySelectorAll('#extras [data-extra]').forEach((el) => {
+      el.onchange = async () => {
+        const c = ctx(), chave = CFG.extras.chave(r, c), dados = {};
+        dados[el.dataset.extra] = el.type === 'checkbox' ? el.checked : el.value.trim();
+        if (CFG.extras.exclusivos) (CFG.extras.exclusivos[el.dataset.extra] || []).forEach((o) => { if (el.checked) { dados[o] = false; const oe = document.querySelector(`#extras [data-extra="${o}"]`); if (oe) oe.checked = false; } });
+        try {
+          const r2 = await chamar('extra_salvar', { base: E.base, chave, dados });
+          if (!r2 || !r2.ok) throw new Error((r2 && r2.erro) || 'Não foi possível salvar.');
+          E.extra[chave] = r2.registro; $('#extras-quem').textContent = 'Atualizado por ' + eu().nome + ' agora';
+        } catch (e) { if (!e.auth) aviso(e.message, 'erro'); }
+      };
+    });
     const bf = $('#btn-ficha');
     if (bf) bf.onclick = async () => {
       const dados = {};

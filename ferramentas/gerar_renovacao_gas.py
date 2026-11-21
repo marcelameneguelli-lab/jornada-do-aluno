@@ -88,5 +88,26 @@ function renovacao_ativarRelatorioDiario() {{ Renovacao_().ativarRelatorioDiario
 function renovacao_testarRelatorioDiario() {{ Renovacao_().testarRelatorioDiario(); }}
 function renovacao_repararAcionamentos() {{ Renovacao_().repararAcionamentos(); }}
 '''
+# Nomes da equipe = usuários da Jornada (decisão de 21/11/2026): o acionamento grava o nome do login e
+# a lista de atendentes (distribuição, metas, ranking) vem dos usuários com a Renovação liberada.
+_v = "salvar_acionamento:    () => salvarAcionamento(d.acionamento),"
+assert out.count(_v) == 1, 'salvar_acionamento'
+out = out.replace(_v, "salvar_acionamento:    () => salvarAcionamento(Object.assign({}, d.acionamento, sess && sess.nome ? { colab: sess.nome } : {})),")
+_v = """    function carregarAtendentes() {
+      return { ok: true, atendentes: lerUsuarios().map(usuarioPublico) };
+    }"""
+assert out.count(_v) == 1, 'carregarAtendentes'
+out = out.replace(_v, """    function carregarAtendentes() {
+      // equipe e meta continuam vindo da aba Atendentes da Renovação (pelo e-mail ou pelo nome)
+      const antigos = {};
+      lerUsuarios().forEach(u => { if (u.email) antigos[u.email] = u; antigos['n:' + normNome(u.nome)] = u; });
+      const lista = listaUsuarios_().filter(u => u.ativo && podeSistema_(u, 'renovacao')).map(u => {
+        const a = antigos[u.email] || antigos['n:' + normNome(u.nome)] || {};
+        return { nome: u.nome, perfil: PERFIS_VALIDOS.includes(u.perfil) ? u.perfil : (u.perfil === 'admin' ? 'admin' : 'atendente'),
+                 equipe: a.equipe || '', ativo: u.ativo, contaMeta: a.contaMeta !== false, email: u.email,
+                 temSenha: true, trocarSenha: false, ultimoLogin: '' };
+      });
+      return { ok: true, atendentes: lista };
+    }""")
 open(os.path.join(RAIZ,'gas/11_Renovacao.gs'),'w',encoding='utf8').write(out)
 print('ok', n,'usos de propriedades isolados;', len(acoes),'ações')

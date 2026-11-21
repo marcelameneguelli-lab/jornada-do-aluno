@@ -43,12 +43,9 @@ with sync_playwright() as p:
     f.click('[data-aba=dashboard]'); pg.wait_for_timeout(300); assert '25% de cobertura' in f.inner_text('#area').replace('\xa0',' '), f.inner_text('#area')[:300]; ok('dashboard: 1 de 4 acionados = 25% de cobertura')
     pg.mouse.move(900,400); pg.screenshot(path='/home/claude/testes/tela_financiamentos_dash.png')
     f.click('[data-aba=produtividade]'); pg.wait_for_timeout(300); assert 'Marcela Meneguelli' in f.inner_text('#area'); ok('produtividade mostra a atendente')
-    # Financeiro: tela original do EngajaVR na base certa
+    # Financeiro: sem a tela original (tudo na tela nova)
     pg.goto(B+'#/s/financeiro'); pg.wait_for_timeout(2500); f=fr('financeiro'); f.wait_for_function("Motor.estado.alunos.length>0")
-    f.click('[data-aba=original]'); pg.wait_for_timeout(6000)
-    o=[x for x in pg.frames if 'ferramenta=financeiro' in x.url][0]
-    assert o.evaluate("document.getElementById('page-financeiro').classList.contains('active')") and o.evaluate("DB.length")==6; ok('tela original do Financeiro abre com a base do servidor')
-    assert pg.evaluate("localStorage.getItem('crm_active_base')") in (None,'impar'); ok('base ativa do Engajamento não foi alterada')
+    assert not f.is_visible('[data-aba=original]'); ok('Financeiro sem a aba Tela original')
     # troca de base
     f.click('#bases [data-base=par]'); pg.wait_for_timeout(2500); f.click('[data-aba=alunos]'); pg.wait_for_timeout(300); assert f.evaluate("Motor.estado.alunos.length")==0 and 'ainda não foi importada' in f.inner_text('#area'); ok('base Par vazia avisa que não foi importada')
     br.close()

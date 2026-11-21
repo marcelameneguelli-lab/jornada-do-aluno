@@ -106,7 +106,16 @@ function Modulo_engajamento() {{
   const E = Engajamento_();
   const acoes = {{}};
   Object.keys(E.acoes).forEach(nome => {{
-    acoes[nome] = (d) => ENGAJAMENTO_DESATIVADAS[nome] ? Object.assign({{}}, ENGAJAMENTO_DESATIVADAS[nome]) : E.acoes[nome](d);
+    acoes[nome] = (d, eu) => {{
+      if (ENGAJAMENTO_DESATIVADAS[nome]) return Object.assign({{}}, ENGAJAMENTO_DESATIVADAS[nome]);
+      if (nome === 'getAtendentes') return {{ ok: true, data: nomesEquipe_() }}; // a equipe é a dos usuários da Jornada
+      // o atendente é sempre o usuário logado na Jornada (não se escolhe mais numa lista)
+      if (eu && eu.nome && d && typeof d === 'object') {{
+        if (nome === 'saveAction') d.atend = eu.nome;
+        if (nome === 'saveActionLote' && Array.isArray(d.entries)) d.entries.forEach(e => {{ if (e) e.atend = eu.nome; }});
+      }}
+      return E.acoes[nome](d);
+    }};
   }});
   return {{ acoes: acoes, gestao: ENGAJAMENTO_GESTAO, admin: ENGAJAMENTO_ADMIN }};
 }}
@@ -154,5 +163,21 @@ out = out.replace(_velho_falha, """      } catch(e) {
         Logger.log('driveSet erro: ' + e.message);
         throw new Error('Não foi possível gravar no Drive (' + key + '): ' + e.message);
       }""")
+# A planilha do EngajaVR está no limite de células: gravar a linha na aba Acionamentos pode falhar.
+# O acionamento fica salvo mesmo assim no histórico (Drive), que é de onde os sistemas leem.
+for _velha in ["""      sh.appendRow([entry.datetime, entry.matricula, entry.atend, entry.canal,
+                    entry.motivo, entry.obs, entry.base, entry.nps, entry.id]);""",
+               """        sh.appendRow([e.datetime||'', e.matricula||'', e.atend||'',
+                      e.canal||'', e.motivo||'', e.obs||'', e.base||base, e.nps||'', e.id||'']);"""]:
+    assert out.count(_velha) == 1, _velha[:40]
+    out = out.replace(_velha, '      try {\n' + _velha + '\n      } catch (eLinha) { Logger.log(\'Acionamentos (planilha cheia?): \' + eLinha.message); }')
+for _velha in ["""      var sh = getOrCreate('Acionamentos',
+        ['datetime','matricula','atendente','canal','motivo','obs','base','nps','id']);
+      var _tz""", """      var sh   = getOrCreate('Acionamentos',
+        ['datetime','matricula','atendente','canal','motivo','obs','base','nps','id']);
+"""]:
+    assert out.count(_velha) == 1, _velha[:40]
+    _nova = _velha.replace("var sh = getOrCreate(", "var sh = { appendRow: function () {} }; try { sh = getOrCreate(").replace("var sh   = getOrCreate(", "var sh = { appendRow: function () {} }; try { sh = getOrCreate(").replace("'id']);", "'id']); } catch (eAba) { Logger.log('Acionamentos: ' + eAba.message); }")
+    out = out.replace(_velha, _nova)
 open(os.path.join(RAIZ,'gas/12_Engajamento.gs'),'w',encoding='utf8').write(out)
 print('ok', len(casos),'ações;', n_ss,'acessos à planilha;', n_p,'usos de propriedades isolados')

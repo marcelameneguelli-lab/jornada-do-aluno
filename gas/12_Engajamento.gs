@@ -406,8 +406,8 @@ function Engajamento_() {
       var key  = 'HistoryJSON_' + base;
 
       // Salvar na planilha Acionamentos
-      var sh = getOrCreate('Acionamentos',
-        ['datetime','matricula','atendente','canal','motivo','obs','base','nps','id']);
+      var sh = { appendRow: function () {} }; try { sh = getOrCreate('Acionamentos',
+        ['datetime','matricula','atendente','canal','motivo','obs','base','nps','id']); } catch (eAba) { Logger.log('Acionamentos: ' + eAba.message); }
       var _tz = Session.getScriptTimeZone();
       var _now = new Date();
       var entry = {
@@ -424,8 +424,10 @@ function Engajamento_() {
         matricula: body.matricula || '',
         base:     base
       };
+      try {
       sh.appendRow([entry.datetime, entry.matricula, entry.atend, entry.canal,
                     entry.motivo, entry.obs, entry.base, entry.nps, entry.id]);
+      } catch (eLinha) { Logger.log('Acionamentos (planilha cheia?): ' + eLinha.message); }
 
       // Atualizar HistoryJSON
       var raw  = storeGet(key);
@@ -446,12 +448,14 @@ function Engajamento_() {
       var key  = 'HistoryJSON_' + base;
       var raw  = storeGet(key);
       var hist = raw ? JSON.parse(raw) : {};
-      var sh   = getOrCreate('Acionamentos',
-        ['datetime','matricula','atendente','canal','motivo','obs','base','nps','id']);
+      var sh = { appendRow: function () {} }; try { sh = getOrCreate('Acionamentos',
+        ['datetime','matricula','atendente','canal','motivo','obs','base','nps','id']); } catch (eAba) { Logger.log('Acionamentos: ' + eAba.message); }
 
       entries.forEach(function(e) {
+      try {
         sh.appendRow([e.datetime||'', e.matricula||'', e.atend||'',
                       e.canal||'', e.motivo||'', e.obs||'', e.base||base, e.nps||'', e.id||'']);
+      } catch (eLinha) { Logger.log('Acionamentos (planilha cheia?): ' + eLinha.message); }
         if (e.matricula) {
           if (!hist[e.matricula]) hist[e.matricula] = [];
           hist[e.matricula].push(e);
@@ -1460,7 +1464,16 @@ function Modulo_engajamento() {
   const E = Engajamento_();
   const acoes = {};
   Object.keys(E.acoes).forEach(nome => {
-    acoes[nome] = (d) => ENGAJAMENTO_DESATIVADAS[nome] ? Object.assign({}, ENGAJAMENTO_DESATIVADAS[nome]) : E.acoes[nome](d);
+    acoes[nome] = (d, eu) => {
+      if (ENGAJAMENTO_DESATIVADAS[nome]) return Object.assign({}, ENGAJAMENTO_DESATIVADAS[nome]);
+      if (nome === 'getAtendentes') return { ok: true, data: nomesEquipe_() }; // a equipe é a dos usuários da Jornada
+      // o atendente é sempre o usuário logado na Jornada (não se escolhe mais numa lista)
+      if (eu && eu.nome && d && typeof d === 'object') {
+        if (nome === 'saveAction') d.atend = eu.nome;
+        if (nome === 'saveActionLote' && Array.isArray(d.entries)) d.entries.forEach(e => { if (e) e.atend = eu.nome; });
+      }
+      return E.acoes[nome](d);
+    };
   });
   return { acoes: acoes, gestao: ENGAJAMENTO_GESTAO, admin: ENGAJAMENTO_ADMIN };
 }

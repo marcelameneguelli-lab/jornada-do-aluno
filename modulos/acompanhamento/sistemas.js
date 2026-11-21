@@ -44,6 +44,16 @@
 
   const OPC_TERMO = ['', 'Pendente', 'Assinado', 'Não se aplica'];
 
+  /* matrícula sem ".0" e só com números (chave dos registros do EngajaVR) */
+  const mat9 = (r) => String(r.COD_MATRICULA == null ? '' : r.COD_MATRICULA).replace(/\.0$/, '').replace(/\D/g, '');
+  /* vencimento da parcela, como no EngajaVR: DATA_VENCIMENTO, promessa ou dia de vencimento do mês atual */
+  function vencimento(r) {
+    const raw = txt(r.DATA_VENCIMENTO || r.VENCIMENTO_PROMESSA || r.DAT_LIMITE_RENOVACAO);
+    if (!raw) { const dia = parseInt(r.NUM_DIA_VENCTO, 10); if (dia >= 1 && dia <= 31) { const d = new Date(); return `${d.getFullYear()}-${p2(d.getMonth() + 1)}-${p2(dia)}`; } return ''; }
+    let m = raw.match(/^(\d{2})\/(\d{2})\/(\d{4})/); if (m) return `${m[3]}-${m[2]}-${m[1]}`;
+    m = raw.match(/^(\d{4})-(\d{2})-(\d{2})/); return m ? m[0] : '';
+  }
+
   /* ── Provas no polo (colunas da base líquida, como no EngajaVR) ── */
   const T = (t) => (t === 'avs' ? 'AVS' : 'AV');
   const ead = (r) => txt(r.MODALIDADE_PP_PC || r.MODALIDADE).toUpperCase() === 'EAD';
@@ -140,19 +150,35 @@
 
   window.SISTEMAS_ACOMP = {
     provas: {
-      nome: 'Provas', icone: '📝', original: 'polo', historicoEngajamento: true,
+      nome: 'Provas', icone: '📝', historicoEngajamento: true,
       subtitulo: 'Alunos com AV ou AVS no polo: agendamento e acompanhamento',
       elegivel: (r) => num(r.QTD_ELEGIVEL_AV_POLO) > 0 || num(r.QTD_ELEGIVEL_AVS_POLO) > 0,
       // como no sistema antigo: a tela mostra AV ou AVS (Tipo de prova)
       seletor: { rotulo: 'Prova', opcoes: [['av', 'AV no polo'], ['avs', 'AVS no polo']], filtra: (r, t) => num(r[`QTD_ELEGIVEL_${T(t)}_POLO`]) > 0 },
       rotuloTotal: 'Total elegíveis',
       colunas: [
-        { t: 'Disciplinas no polo', v: (r, c) => num(r[`QTD_ELEGIVEL_${T(c.tipo)}_POLO`]) || '' },
+        { t: 'Disciplinas no polo', v: (r, c) => { const p = num(r[`QTD_ELEGIVEL_${T(c.tipo)}_POLO`]), casa = num(r[`QTD_ELEGIVEL_${T(c.tipo)}_CASA`]); return (p || '') + (casa ? ` (+${casa} em casa)` : ''); } },
         { t: 'Situação', html: true, v: (r, c) => { const s = sitProva(r, c.tipo); return `<span class="sit ${s}">${NOME_SIT[s]}</span>`; } },
         { t: 'Falta agendar', v: (r, c) => faltaTexto(r, c.tipo) },
         { t: 'Adesão', v: (r, c) => txt(r[`ADESAO_${T(c.tipo)}_DISC_ONLINE_POLO`]).replace('N/A', '') },
         { t: 'Próxima prova', v: (r) => dataAA(isoProva(r)) },
+        { t: 'Observação', v: (r, c) => c.extra(r).obs || '' },
       ],
+      // observação por aluno e por prova (AV ou AVS), no mesmo lugar da tela antiga
+      extras: {
+        ler: 'loadPoloData', chave: (r, c) => `${mat9(r)}:${c.tipo || 'av'}`,
+        titulo: (c) => `Acompanhamento da ${T(c.tipo)} no polo`,
+        campos: [{ id: 'obs', t: 'Observação', tipo: 'texto', dica: 'Ex.: vai agendar na sexta; pediu outro polo' }],
+      },
+      lote: {
+        assunto: 'Agendamento de provas no polo',
+        resultado: 'Mensagem enviada (provas)',
+        vars: (r, c) => ({ prova: T(c.tipo), disciplinas: String(faltaNum(r, c.tipo) || num(r[`QTD_ELEGIVEL_${T(c.tipo)}_POLO`]) || ''), data: dataAA(isoProva(r)) }),
+        modelos: {
+          WhatsApp: (c) => `Olá, {nome}! Aqui é {atendente}, da Secretaria Acadêmica da Estácio Volta Redonda.\nVocê ainda precisa agendar {disciplinas} disciplina(s) da ${T(c.tipo)} no polo. Agende pelo SIA o quanto antes para garantir data e horário.\nQualquer dúvida, é só responder esta mensagem.`,
+          'E-mail': (c) => `Olá, {nome}!\n\nIdentificamos que você ainda precisa agendar {disciplinas} disciplina(s) da ${T(c.tipo)} no polo, no curso {curso}. Faça o agendamento pelo SIA o quanto antes para garantir data e horário.\n\nEstamos à disposição.\n{atendente}\nSecretaria Acadêmica · Estácio Volta Redonda`,
+        },
+      },
       filtros: [
         { id: 'falta', t: 'Falta agendar', card: true, cor: 'amarelo', f: (r, fi, c) => sitProva(r, c.tipo) === 'falta' },
         { id: 'faltou', t: 'Faltou', card: true, cor: 'vermelho', f: (r, fi, c) => sitProva(r, c.tipo) === 'faltou' },
@@ -199,36 +225,83 @@
     },
 
     estagio: {
-      nome: 'Estágio', icone: '💼', original: 'estagio',
-      subtitulo: 'Alunos elegíveis a estágio',
+      nome: 'Estágio', icone: '💼',
+      subtitulo: 'Alunos elegíveis a estágio · abertura e deferimento do TCE',
       elegivel: (r) => { const v = txt(r.QTD_ELEGIVEL_ESTAGIO || r.ELEGIVEL_ESTAGIO || r.IND_ESTAGIO).toUpperCase(); return !!v && ['0', 'N', 'NAO', 'NÃO'].indexOf(v) < 0; },
+      rotuloTotal: 'Total elegíveis',
       colunas: [
         { t: 'Disciplinas de estágio', v: (r) => txt(r.QTD_ELEGIVEL_ESTAGIO) },
-        { t: 'Período', v: (r) => txt(r.PERIODO || r.NUM_PERIODO || r.PERIODO_ATUAL) },
+        { t: 'TCE', html: true, v: (r, c) => { const x = c.extra(r); return x.tce_indeferido ? '<span class="sit faltou">Indeferido</span>' : x.tce_deferido ? '<span class="sit fez">Deferido</span>' : x.tce_aberto ? '<span class="sit agendou">Aberto</span>' : '<span class="sit falta">Sem TCE</span>'; } },
+        { t: 'Documentos', v: (r, c) => { const x = c.extra(r); return x.tce_aberto ? (x.docs_entregues ? 'entregues' : 'pendentes') : ''; } },
+        { t: 'Convalidação', v: (r, c) => (c.extra(r).convalidacao ? 'sim' : '') },
+        { t: 'Observação', v: (r, c) => c.extra(r).obs || '' },
       ],
-      filtros: [{ id: 'mais1', t: 'Mais de uma disciplina', f: (r) => num(r.QTD_ELEGIVEL_ESTAGIO) > 1 }],
-      indicadores: [{ t: 'Mais de uma disciplina', v: (L) => L.filter((r) => num(r.QTD_ELEGIVEL_ESTAGIO) > 1).length }],
+      // acompanhamento do TCE (o mesmo registro da tela antiga do EngajaVR)
+      extras: {
+        ler: 'getTCEData', chave: (r) => mat9(r), titulo: () => 'Acompanhamento do TCE',
+        campos: [
+          { id: 'tce_aberto', t: 'TCE aberto' }, { id: 'tce_deferido', t: 'TCE deferido' }, { id: 'tce_indeferido', t: 'TCE indeferido' },
+          { id: 'convalidacao', t: 'Convalidação' }, { id: 'docs_entregues', t: 'Documentos entregues na disciplina' },
+          { id: 'obs', t: 'Observação', tipo: 'texto' },
+        ],
+        exclusivos: { tce_deferido: ['tce_indeferido'], tce_indeferido: ['tce_deferido'] },
+      },
+      filtros: [
+        { id: 'sem_tce', t: 'Sem TCE', card: true, cor: 'amarelo', f: (r, fi, c) => !c.extra(r).tce_aberto },
+        { id: 'aberto', t: 'TCE aberto', card: true, cor: 'azul', f: (r, fi, c) => !!c.extra(r).tce_aberto },
+        { id: 'deferido', t: 'TCE deferido', card: true, cor: 'verde', f: (r, fi, c) => !!c.extra(r).tce_deferido },
+        { id: 'indeferido', t: 'Indeferido', card: true, cor: 'vermelho', f: (r, fi, c) => !!c.extra(r).tce_indeferido },
+        { id: 'docs', t: 'Documentos pendentes', card: true, cor: 'laranja', f: (r, fi, c) => { const x = c.extra(r); return !!x.tce_aberto && !x.docs_entregues; } },
+        { id: 'convalidacao', t: 'Com convalidação', f: (r, fi, c) => !!c.extra(r).convalidacao },
+        { id: 'mais1', t: 'Mais de uma disciplina', f: (r) => num(r.QTD_ELEGIVEL_ESTAGIO) > 1 },
+      ],
+      indicadores: [
+        { t: 'Sem TCE', v: (L, c) => L.filter((r) => !c.extra(r).tce_aberto).length },
+        { t: 'TCE deferido', v: (L, c) => L.filter((r) => c.extra(r).tce_deferido).length },
+      ],
+      lote: {
+        assunto: 'Estágio: abertura do TCE',
+        resultado: 'Mensagem enviada (estágio)',
+        modelos: {
+          WhatsApp: () => 'Olá, {nome}! 🎓 Aqui é {atendente}, da Secretaria Acadêmica da Estácio Volta Redonda.\nPassando para informar sobre a abertura do TCE (Termo de Compromisso de Estágio) do seu curso, {curso}.\nSe ainda não iniciou o processo, fale com a gente para receber as orientações.',
+          'E-mail': () => 'Olá, {nome}!\n\nGostaríamos de informar sobre a abertura do TCE (Termo de Compromisso de Estágio) do seu curso, {curso}.\nCaso tenha dúvidas ou precise de orientações para iniciar o processo, estamos à disposição.\n\n{atendente}\nSecretaria Acadêmica · Estácio Volta Redonda',
+        },
+      },
       resultados: ['Vai abrir TCE', 'TCE aberto', 'Documentos pendentes', 'Já estagia', 'Sem interesse', 'Sem retorno', 'Outro'],
     },
 
     financeiro: {
-      nome: 'Financeiro', icone: '💰', original: 'financeiro',
+      nome: 'Financeiro', icone: '💰',
       subtitulo: 'Alunos inadimplentes',
+      rotuloTotal: 'Inadimplentes',
       elegivel: (r) => sim(r.INADIMPLENTE),
       colunas: [
         { t: 'Dívida', v: (r) => moeda(r.VAL_DIVIDA), ordem: (r) => num(r.VAL_DIVIDA) },
         { t: 'Faixa', v: (r) => txt(r.FAIXA_DIVIDA) },
         { t: 'Tipo', v: (r) => txt(r.TIPO_INADIMPLENCIA) },
+        { t: 'Vencimento', v: (r) => dataAA(vencimento(r)), alerta: (r) => { const v = vencimento(r); return !!v && v < hojeISO(); } },
         { t: 'Promessa', v: (r) => data(r.VENCIMENTO_PROMESSA) },
       ],
       filtros: [
-        { id: 'alta', t: 'Dívida a partir de R$ 1.000', f: (r) => num(r.VAL_DIVIDA) >= 1000 },
+        { id: 'vencer', t: 'A vencer (5 dias)', card: true, cor: 'amarelo', f: (r) => { const v = vencimento(r); return v > hojeISO() && v <= emDias(5); } },
+        { id: 'hoje', t: 'Vence hoje', card: true, cor: 'laranja', f: (r) => vencimento(r) === hojeISO() },
+        { id: 'vencidas', t: 'Vencidas', card: true, cor: 'vermelho', f: (r) => { const v = vencimento(r); return !!v && v < hojeISO(); } },
+        { id: 'alta', t: 'Dívida a partir de R$ 1.000', card: true, cor: 'azul', f: (r) => num(r.VAL_DIVIDA) >= 1000 },
         { id: 'promessa', t: 'Com promessa de pagamento', f: (r) => !!txt(r.VENCIMENTO_PROMESSA) },
       ],
       indicadores: [
         { t: 'Dívida total', v: (L) => moeda(L.reduce((s, r) => s + num(r.VAL_DIVIDA), 0)) },
         { t: 'Dívida a partir de R$ 1.000', v: (L) => L.filter((r) => num(r.VAL_DIVIDA) >= 1000).length },
       ],
+      lote: {
+        assunto: 'Regularização financeira',
+        resultado: 'Mensagem enviada (financeiro)',
+        vars: (r) => ({ divida: moeda(r.VAL_DIVIDA), prazo: dataAA(vencimento(r)) }),
+        modelos: {
+          WhatsApp: () => 'Olá, {nome}! Aqui é {atendente}, da Secretaria Acadêmica da Estácio Volta Redonda.\nIdentificamos uma pendência financeira de {divida} (vencimento {prazo}). Podemos ajudar você a regularizar e manter seus estudos em dia. Responda esta mensagem que eu te oriento.',
+          'E-mail': () => 'Olá, {nome}!\n\nIdentificamos uma pendência financeira de {divida}, com vencimento em {prazo}, referente ao curso {curso}.\nEstamos à disposição para orientar a regularização e manter seus estudos em dia.\n\n{atendente}\nSecretaria Acadêmica · Estácio Volta Redonda',
+        },
+      },
       resultados: ['Prometeu pagar', 'Pagou', 'Quer negociar', 'Encaminhado ao financeiro', 'Sem retorno', 'Número errado', 'Outro'],
     },
 

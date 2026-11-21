@@ -213,7 +213,7 @@ function Renovacao_() {
         alunos_sem_acionamento:() => getAlunosSemAcionamento(),
         config:                () => getConfig(),
         exportar_csv:          () => exportarCSV(d),
-        salvar_acionamento:    () => salvarAcionamento(d.acionamento),
+        salvar_acionamento:    () => salvarAcionamento(Object.assign({}, d.acionamento, sess && sess.nome ? { colab: sess.nome } : {})),
         salvar_aluno:          () => salvarAluno(d.aluno),
         importar_alunos:       () => importarAlunos(d.alunos, d.ciclo),
         atualizar_status:      () => atualizarStatus(d.alunoId, d.status, d.ciclo),
@@ -695,7 +695,16 @@ function Renovacao_() {
     }
 
     function carregarAtendentes() {
-      return { ok: true, atendentes: lerUsuarios().map(usuarioPublico) };
+      // equipe e meta continuam vindo da aba Atendentes da Renovação (pelo e-mail ou pelo nome)
+      const antigos = {};
+      lerUsuarios().forEach(u => { if (u.email) antigos[u.email] = u; antigos['n:' + normNome(u.nome)] = u; });
+      const lista = listaUsuarios_().filter(u => u.ativo && podeSistema_(u, 'renovacao')).map(u => {
+        const a = antigos[u.email] || antigos['n:' + normNome(u.nome)] || {};
+        return { nome: u.nome, perfil: PERFIS_VALIDOS.includes(u.perfil) ? u.perfil : (u.perfil === 'admin' ? 'admin' : 'atendente'),
+                 equipe: a.equipe || '', ativo: u.ativo, contaMeta: a.contaMeta !== false, email: u.email,
+                 temSenha: true, trocarSenha: false, ultimoLogin: '' };
+      });
+      return { ok: true, atendentes: lista };
     }
 
     // ============================================================

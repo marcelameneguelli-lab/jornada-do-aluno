@@ -144,6 +144,36 @@ function acompFicha_(sis, d, eu) {
 }
 
 /** Fábrica dos módulos: mesma lógica para todos, com as ações originais de cada um. */
+/* Dados próprios de cada sistema, no mesmo lugar em que o EngajaVR guardava (nada se perde):
+ *   Estágio → TCEData_<base> (TCE aberto, deferido, indeferido, convalidação, documentos, observação)
+ *   Provas  → PoloData_<base>, por matrícula:tipo (observação do AV ou do AVS)
+ * Grava só o aluno alterado (não a lista inteira), para duas pessoas poderem trabalhar ao mesmo tempo. */
+const EXTRAS_SISTEMA = { estagio: 'TCEData_', provas: 'PoloData_' };
+
+function acompExtraSalvar_(sis, d, eu) {
+  const pref = EXTRAS_SISTEMA[sis];
+  if (!pref) return { ok: false, erro: 'Este sistema não tem esse tipo de registro.' };
+  if (BASES_ENGAJAMENTO.indexOf(d.base) < 0) return { ok: false, erro: 'Base desconhecida.' };
+  const chave = String(d.chave || '').slice(0, 40);
+  if (!/^\d{6,}(:(av|avs))?$/.test(chave)) return { ok: false, erro: 'Aluno inválido.' };
+  const E = Engajamento_();
+  const lock = LockService.getScriptLock();
+  lock.waitLock(20000);
+  try {
+    let mapa = {};
+    try { mapa = JSON.parse(E.storeGet(pref + d.base) || '{}') || {}; } catch (e) { mapa = {}; }
+    const novo = Object.assign({}, mapa[chave] || {});
+    Object.keys(d.dados || {}).slice(0, 20).forEach(k => {
+      const v = d.dados[k];
+      novo[k] = typeof v === 'boolean' ? v : String(v == null ? '' : v).slice(0, 1000);
+    });
+    novo._ts = Date.now(); novo._quem = eu ? eu.nome : '';
+    mapa[chave] = novo;
+    E.storeSet(pref + d.base, JSON.stringify(mapa));
+    return { ok: true, registro: novo };
+  } finally { lock.releaseLock(); }
+}
+
 function moduloAcompanhamento_(sis) {
   const E = Engajamento_();
   const acoes = {
@@ -151,6 +181,7 @@ function moduloAcompanhamento_(sis) {
     registrar:    (d, eu) => acompRegistrar_(sis, d, eu),
     followup:     (d, eu) => acompFollowup_(sis, d, eu),
     ficha:        (d, eu) => acompFicha_(sis, d, eu),
+    extra_salvar: (d, eu) => acompExtraSalvar_(sis, d, eu),
   };
   ACOES_ORIGINAIS.comuns.concat(ACOES_ORIGINAIS[sis] || []).forEach(nome => {
     acoes[nome] = (d) => {

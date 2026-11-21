@@ -11,5 +11,6 @@ function Modulo_ferramentas() {
   const E = Engajamento_();
   const acoes = {};
   ACOES_FERRAMENTAS.forEach(nome => { acoes[nome] = (d) => E.acoes[nome](d); });
+  acoes.getAtendentes = () => ({ ok: true, data: nomesEquipe_() }); // a equipe é a dos usuários da Jornada
   return { acoes: acoes, gestao: [], admin: [] };
 }

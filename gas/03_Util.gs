@@ -27,3 +27,9 @@ function planilhaDo_(sis) {
   const id = PLANILHAS[chave];
   return id ? SpreadsheetApp.openById(id) : planilhaCentral_();
 }
+
+/** Nomes da equipe (usuários ativos da Jornada), em ordem alfabética: é a lista de atendentes de todos os sistemas. */
+function nomesEquipe_() {
+  return listaUsuarios_().filter(u => u.ativo).map(u => u.nome)
+    .filter((n, i, a) => n && a.indexOf(n) === i).sort((a, b) => a.localeCompare(b, 'pt-BR'));
+}

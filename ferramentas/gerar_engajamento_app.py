@@ -128,6 +128,53 @@ s=troca(s,'</style>','''  /* Jornada: modo ferramenta (Calendário, Tarefas, Tut
   body.modo-ferramenta #top-count, body.modo-ferramenta .status-dot, body.modo-ferramenta .rodape-engajavr { display: none !important; }
 </style>''')
 s=troca(s,'<div style="text-align:center;padding:10px;font-size:11px;color:var(--text3);border-top:1px solid var(--border);background:var(--surface)">\n  Desenvolvido por','<div class="rodape-engajavr" style="text-align:center;padding:10px;font-size:11px;color:var(--text3);border-top:1px solid var(--border);background:var(--surface)">\n  Desenvolvido por')
+# 4c3. atendente = usuário logado (sem escolher numa lista) e clicar no aluno abre a ficha (decisão de 21/11/2026)
+_i=s.rfind('</body>'); s=s[:_i]+'''<style>
+  #table-body tr[data-mat] { cursor: pointer; }
+  #table-body tr[data-mat]:hover td { background: var(--accent-bg, #eef4ff); }
+  #table-body tr[data-mat] td:nth-child(4) { color: var(--accent, #1c5fd4); text-decoration: underline; text-decoration-color: rgba(28,95,212,.35); text-underline-offset: 3px; }
+  select.jornada-travado { background: #f3f6fa !important; color: #003B71 !important; font-weight: 600; pointer-events: none; }
+</style>
+<script>
+(function () {
+  function nomeLogado() {
+    try { var j = JSON.parse(localStorage.getItem('jornada_sessao') || 'null'); if (j && j.me && j.me.nome) return j.me.nome; } catch (e) {}
+    try { var u = JSON.parse(sessionStorage.getItem('engajavr_session_user') || 'null'); if (u && u.nome) return u.nome; } catch (e) {}
+    return '';
+  }
+  // selects onde se registra um acionamento: sempre o usuário logado
+  var TRAVAR = ['m-atend', 'lote-atend', 'est-atend-sel', 'fin-atend-sel', 'polo-atend-sel'];
+  function travar() {
+    var nome = nomeLogado(); if (!nome) return;
+    try { localStorage.setItem('crm_last_atend', nome); } catch (e) {}
+    TRAVAR.forEach(function (id) {
+      var el = document.getElementById(id); if (!el) return;
+      if (el.options.length !== 1 || el.value !== nome) {
+        el.innerHTML = '<option value="' + nome.replace(/"/g, '&quot;') + '">' + nome.replace(/</g, '&lt;') + '</option>';
+        el.value = nome;
+      }
+      el.classList.add('jornada-travado'); el.setAttribute('tabindex', '-1'); el.title = 'Atendente: usuário logado na Jornada';
+    });
+  }
+  travar();
+  var _open = openModal;
+  openModal = function () { var r = _open.apply(this, arguments); travar(); return r; };
+  setInterval(travar, 2000);
+  // clicar em qualquer parte da linha do aluno abre a ficha (como na Renovação)
+  var tb = document.getElementById('table-body');
+  if (tb) {
+    new MutationObserver(function () {
+      tb.querySelectorAll('tr').forEach(function (tr) { var cb = tr.querySelector('.row-cb'); if (cb && !tr.dataset.mat) tr.dataset.mat = cb.value; });
+    }).observe(tb, { childList: true });
+    tb.addEventListener('click', function (ev) {
+      if (ev.target.closest('input, button, a, select, label, textarea')) return;
+      var tr = ev.target.closest('tr[data-mat]'); if (!tr) return;
+      openModal(tr.dataset.mat);
+    });
+  }
+})();
+</script>
+'''+s[_i:]
 # 4c2. envio da base para o servidor pelo shell da Jornada (não é interrompido ao sair da tela; mostra o andamento)
 _i=s.rfind('</body>'); s=s[:_i]+'''<script>
 (function () {
