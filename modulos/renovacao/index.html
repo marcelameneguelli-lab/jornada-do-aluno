@@ -8618,18 +8618,53 @@ function atualizarSistema() {
 setTimeout(verificarVersaoNova, 60 * 1000);
 setInterval(verificarVersaoNova, 30 * 60 * 1000);
 </script>
+<style>
+  html.jornada-normal #sb a[onclick="ir('importar')"], html.jornada-normal #menu-config, html.jornada-normal #menu-admin { display: none !important; }
+  html.jornada-modo #sb { display: none !important; }
+  #jornada-barra-modo { display: none; }
+  html.jornada-modo-config #jornada-barra-modo { display: flex; gap: 8px; align-items: center; padding: 8px 18px; background: #eef3f9; border-bottom: 1px solid #d5deea; font-size: 13px; }
+</style>
 <script>
-/* Jornada: ?tela=importar vindo da Central de Bases */
+/* Jornada: modo importar (Central de Bases) e modo config (Configurações) */
 (function () {
-  var t = new URLSearchParams(location.search).get('tela');
-  if (t !== 'importar') return;
+  var modo = new URLSearchParams(location.search).get('modo');
+  modo = (modo === 'importar' || modo === 'config') ? modo : '';
+  window.JORNADA_MODO = modo;
+  var raiz = document.documentElement;
+  var irOriginal = ir;
+  if (!modo) {
+    raiz.classList.add('jornada-normal');
+    // atalhos internos para Importar e Configurações levam para a área central da Jornada
+    ir = function (t) {
+      var pai = (window.parent && window.parent !== window) ? window.parent : null;
+      if (pai && t === 'importar') { pai.location.hash = '#/bases/renovacao'; return; }
+      if (pai && t === 'config') { pai.location.hash = '#/config/renovacao'; return; }
+      return irOriginal(t);
+    };
+    return;
+  }
+  raiz.classList.add('jornada-modo', 'jornada-modo-' + modo);
+  // nesta tela só existe a parte pedida: qualquer navegação volta para ela
+  ir = function () { return irOriginal(modo); };
+  if (modo === 'config') {
+    var barra = document.createElement('div');
+    barra.id = 'jornada-barra-modo';
+    barra.innerHTML = '<span>Metas, ritmo e prazos da Renovação.</span><button class="btn bs bpq" onclick="abrirAdmin()">🔐 Painel do administrador</button>';
+    var app = document.getElementById('app'); app.parentNode.insertBefore(barra, app);
+  }
   var tentativas = 0;
   var abrir = function () {
     tentativas++;
-    try { if (typeof S !== 'undefined' && S && S.perfil && typeof podeVer === 'function') { if (podeVer('importar')) ir('importar'); return; } } catch (e) {}
-    if (tentativas < 20) setTimeout(abrir, 500);
+    try {
+      if (typeof S !== 'undefined' && S && S.perfil) {
+        if (podeVer(modo)) irOriginal(modo);
+        else document.getElementById('app').innerHTML = '<div style="padding:40px;text-align:center">Seu perfil não tem acesso a esta área.</div>';
+        return;
+      }
+    } catch (e) {}
+    if (tentativas < 30) setTimeout(abrir, 400);
   };
-  window.addEventListener('load', function () { setTimeout(abrir, 800); });
+  window.addEventListener('load', function () { setTimeout(abrir, 300); });
 })();
 </script>
 </body>

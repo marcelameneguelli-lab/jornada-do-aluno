@@ -111,8 +111,7 @@ s=troca(s,"""  if (!_verificarSessaoApp()) {
       setTimeout(function () { showPage(window.JORNADA_FERRAMENTA); }, 50);
     } else {
       _concluirLogin(_usuarioLogado); // Jornada: inclui a busca da base no servidor
-      // atalho da Central de Bases: abrir direto na importação (só para quem pode importar)
-      if (new URLSearchParams(location.search).get('tela') === 'importar') setTimeout(function () { if (_podeImportar()) showPage('importar'); }, 600);
+      _jornadaModo();
     }
   }""")
 # 4c. menu do Engajamento sem as telas que saíram (decisão de 20/11/2026):
@@ -129,6 +128,49 @@ s=troca(s,'</style>','''  /* Jornada: modo ferramenta (Calendário, Tarefas, Tut
   body.modo-ferramenta #top-count, body.modo-ferramenta .status-dot, body.modo-ferramenta .rodape-engajavr { display: none !important; }
 </style>''')
 s=troca(s,'<div style="text-align:center;padding:10px;font-size:11px;color:var(--text3);border-top:1px solid var(--border);background:var(--surface)">\n  Desenvolvido por','<div class="rodape-engajavr" style="text-align:center;padding:10px;font-size:11px;color:var(--text3);border-top:1px solid var(--border);background:var(--surface)">\n  Desenvolvido por')
+# 4d. importação e área administrativa saíram de dentro do sistema (decisão de 21/11/2026):
+#     ficam na Central de Bases e em Configurações da Jornada (?modo=importar&base=X ou ?modo=config).
+_i=s.rfind('</body>'); s=s[:_i]+'''<style>
+  html.jornada-normal #tab-importar, html.jornada-normal [onclick="showPage('admin')"] { display: none !important; }
+  html.jornada-modo .tab-bar, html.jornada-modo #priority-bar, html.jornada-modo #top-count, html.jornada-modo .rodape-engajavr { display: none !important; }
+  .jornada-obsoleto { display: none !important; }
+</style>
+<script>
+/* Jornada: modo importar (Central de Bases) e modo config (Configurações) */
+function _jornadaModo() {
+  var q = new URLSearchParams(location.search), modo = q.get('modo');
+  modo = (modo === 'importar' || modo === 'config') ? modo : '';
+  var raiz = document.documentElement, pai = (window.parent && window.parent !== window) ? window.parent : null;
+  // itens que não existem mais na Jornada: publicar HTML no GAS, usuários e senha próprios, conexão manual com o GAS
+  ['publish-result', 'adm-user-email', 'admin-new-pin-1'].forEach(function (id) {
+    var el = document.getElementById(id), card = el && el.closest('#admsub-gestao > div'); if (card) card.classList.add('jornada-obsoleto');
+  });
+  document.querySelectorAll('#page-importar .gas-config').forEach(function (el) { var c = el.closest('.chart-card'); if (c) c.classList.add('jornada-obsoleto'); });
+  document.querySelectorAll('[onclick="adminLogout()"]').forEach(function (b) { b.classList.add('jornada-obsoleto'); });
+  var _tm = document.getElementById('admin-timer-display'); if (_tm && _tm.parentNode) _tm.parentNode.classList.add('jornada-obsoleto');
+  var _show = showPage;
+  if (!modo) {
+    raiz.classList.add('jornada-normal');
+    showPage = function (p) {
+      if (pai && p === 'importar') { pai.location.hash = '#/bases/engajamento?base=' + (typeof ACTIVE_BASE !== 'undefined' ? ACTIVE_BASE : 'impar'); return; }
+      if (pai && p === 'admin') { pai.location.hash = '#/config/engajamento'; return; }
+      return _show.apply(this, arguments);
+    };
+    return;
+  }
+  raiz.classList.add('jornada-modo', 'jornada-modo-' + modo);
+  var tela = modo === 'importar' ? 'importar' : 'admin';
+  var pode = modo === 'importar' ? _podeImportar() : _podeAdmin();
+  showPage = function () { return _show(tela); };
+  if (!pode) { document.querySelector('.main').innerHTML = '<div style="padding:40px;text-align:center">Seu perfil não tem acesso a esta área.</div>'; return; }
+  var base = q.get('base');
+  var abrir = function () { _show(tela); };
+  if (base && typeof BASE_CONFIG !== 'undefined' && BASE_CONFIG[base] && base !== ACTIVE_BASE) {
+    Promise.resolve(switchBase(base)).catch(function () {}).then(function () { setTimeout(abrir, 50); });
+  } else setTimeout(abrir, 50);
+}
+</script>
+'''+s[_i:]
 # 5. service worker é o da Jornada
 s=troca(s,"if ('serviceWorker' in navigator && location.protocol === 'https:') {","if (false) { // Jornada: service worker único na tela base")
 os.makedirs(os.path.join(RAIZ,'app/modulos/engajamento'),exist_ok=True)

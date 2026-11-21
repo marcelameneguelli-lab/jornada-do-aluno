@@ -49,9 +49,21 @@ Conferido em 20/11/2026 com o arquivo real (Responses_20261120_163817.xlsx): 362
 
 Calendário, Tarefas e Tutoriais aparecem no menu e no Início para todos os usuários logados, sem depender dos sistemas liberados. Usam as telas e os dados do EngajaVR (mesmo armazenamento), abertas em "modo ferramenta" (sem abas, bases nem contador de alunos). No servidor, ficam em 13_Ferramentas.gs (ações ferramentas.*).
 
-## Central de Bases
+## Central de Bases e Configurações (administração única)
 
-(Implementada em 20/11/2026: mostra a situação de cada base e leva direto para a tela de importação do sistema, que mantém as regras originais.) Uma tela só para importar e conferir as bases, com um cartão por base (Renovação Ímpar, Renovação Par, Engajamento Ímpar, Engajamento Par, Engajamento Técnico, NPS Medallia, Formandos). Cada cartão mostra ciclo, data da última importação, quantidade de alunos e quem importou.
+Decisão de 21/11/2026: as bases são importadas só na Central de Bases, e os sistemas apenas consomem os dados. As áreas de administrador que ficavam dentro de cada sistema foram reunidas em Configurações, no grupo Administração do menu (junto com Usuários e perfis e Relatório diário).
+
+- Central de Bases (admin e coordenador): um cartão por base com a situação (ciclos, alunos, última importação) e quem usa a base. O botão abre a tela de importação original do sistema em `?modo=importar`, sem o restante do sistema:
+  - Renovação: tela Importar Base do RenovaVR (ciclo, curva, Drive).
+  - Base líquida Ímpar, Par e Técnico: página Importar do EngajaVR, já na base escolhida. Serve Engajamento, Provas, Estágio, Financeiro e Financiamentos.
+  - Formandos: importar alunos, importar formados e ENADE.
+  - NPS: arquivo Survey Export do Medallia.
+- Configurações (admin): abre cada sistema em `?modo=config`:
+  - Renovação: ritmo, metas, período e prazo, painel do administrador.
+  - Engajamento: equipe de atendentes, renomear no histórico, relatório por atendente, zona de perigo. Saíram o PIN, o "publicar no GAS" e os usuários próprios, que já não tinham função.
+  - Formandos: semestre de trabalho e limpeza dos dados.
+- Dentro dos sistemas não há mais Importar, Configurações nem Admin. Os atalhos internos que existiam (por exemplo "Ir para Importação" no dashboard da Renovação) levam para a Central de Bases ou para Configurações.
+- Nada mudou no servidor: as ações de importação e de configuração são as mesmas, com as mesmas permissões.
 
 Dentro de cada sistema, o topo mostra sempre um selo com a base ativa (cor diferente para ímpar e par), para não misturar ciclos.
 

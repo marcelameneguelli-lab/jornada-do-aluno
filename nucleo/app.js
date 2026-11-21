@@ -97,8 +97,9 @@
     h += '<div class="menu-grupo">Ferramentas da equipe</div>';
     JORNADA.ferramentas.forEach(f => { h += `<a href="#/f/${f.id}" data-rota="f/${f.id}" title="${esc(f.nome)}"><span>${f.icone}</span>${esc(f.nome)}</a>`; });
     if (me.gestao || me.admin) {
-      h += '<div class="menu-grupo">Gestão</div>';
+      h += '<div class="menu-grupo">Administração</div>';
       if (me.gestao) h += '<a href="#/bases" data-rota="bases" title="Central de Bases"><span>🗂️</span>Central de Bases</a>';
+      if (me.admin) h += '<a href="#/config" data-rota="config" title="Configurações dos sistemas"><span>⚙️</span>Configurações</a>';
       if (me.admin) h += '<a href="#/relatorio" data-rota="relatorio" title="Relatório diário"><span>📨</span>Relatório diário</a>';
       if (me.admin) h += '<a href="#/usuarios" data-rota="usuarios" title="Usuários e perfis"><span>👥</span>Usuários e perfis</a>';
     }
@@ -107,7 +108,7 @@
 
   function rota() {
     const r = (location.hash || '#/inicio').replace(/^#\/?/, '') || 'inicio';
-    document.querySelectorAll('#menu a').forEach(a => a.classList.toggle('ativo', a.dataset.rota === r.split('?')[0]));
+    document.querySelectorAll('#menu a').forEach(a => a.classList.toggle('ativo', a.dataset.rota === r.split('?')[0].split('/')[0] || a.dataset.rota === r.split('?')[0]));
     document.body.classList.remove('menu-aberto');
     const area = $('#conteudo');
     document.body.classList.remove('com-sistema');
@@ -115,6 +116,9 @@
     if (r === 'inicio') return telaInicio(area);
     if (r === 'usuarios' && me.admin) return telaUsuarios(area);
     if (r === 'bases' && me.gestao) return telaBases(area);
+    if (r === 'config' && me.admin) return telaConfig(area);
+    const mc = r.match(/^(bases|config)\/([a-z]+)(?:\?(.*))?/);
+    if (mc && (mc[1] === 'bases' ? me.gestao : me.admin)) return abrirCentral(area, mc[1], mc[2], mc[3] || '');
     const mf = r.match(/^f\/([a-z]+)/);
     if (mf) {
       const ferr = JORNADA.ferramentas.filter(f => f.id === mf[1])[0];
@@ -171,28 +175,69 @@
       Até lá, continue usando o sistema atual.</div>`;
   }
 
-  /* ── Central de Bases (gestão) ── */
+  /* ── Central de Bases e Configurações (administração) ──
+   * As bases são importadas só aqui; os sistemas apenas consomem os dados.
+   * Cada importação reaproveita a tela original do sistema, aberta em "modo importar" (sem o restante do sistema).
+   * As configurações de cada sistema ficam reunidas em Configurações, abertas em "modo config". */
+  const CENTRAL = {
+    renovacao: { sis: 'renovacao', nome: 'Renovação', icone: '🔄', importar: 'modulos/renovacao/index.html?modo=importar', config: 'modulos/renovacao/index.html?modo=config',
+      descConfig: 'Ritmo e metas, período e prazo da renovação, painel do administrador.' },
+    engajamento: { sis: 'engajamento', nome: 'Engajamento', icone: '🤝', importar: 'modulos/engajamento/index.html?modo=importar', config: 'modulos/engajamento/index.html?modo=config',
+      descConfig: 'Equipe de atendentes, renomear no histórico, relatório por atendente e limpeza das bases.' },
+    formandos: { sis: 'formandos', nome: 'Formandos', icone: '🎓', importar: 'modulos/formandos/index.html?modo=importar', config: 'modulos/formandos/index.html?modo=config',
+      descConfig: 'Semestre de trabalho e limpeza dos dados do painel.' },
+    nps: { sis: 'nps', nome: 'NPS (Medallia)', icone: '⭐', importar: 'modulos/acompanhamento/index.html?sistema=nps&modo=importar' },
+  };
+  const liberado = (sis) => sistemasLiberados().some(s => s.id === sis);
+
+  function abrirCentral(area, tipo, alvo, extra) {
+    const c = CENTRAL[alvo], pagina = c && c[tipo === 'bases' ? 'importar' : 'config'];
+    if (!pagina) { location.hash = '#/' + tipo; return; }
+    if (!liberado(c.sis)) { aviso('Seu usuário não tem o sistema ' + c.nome + ' liberado.', 'erro'); location.hash = '#/' + tipo; return; }
+    document.body.classList.add('com-sistema');
+    const params = (extra ? '&' + extra.replace(/[^a-z0-9=&_-]/gi, '') : '') + '&v=' + JORNADA.versao;
+    const titulo = tipo === 'bases' ? 'Importar base · ' + c.nome : 'Configurações · ' + c.nome;
+    const volta = tipo === 'bases' ? '← Central de Bases' : '← Configurações';
+    area.innerHTML = `<div class="moldura-central">
+      <div class="barra-central"><a href="#/${tipo}">${volta}</a><b>${c.icone} ${esc(titulo)}</b></div>
+      <iframe class="moldura-sistema" title="${esc(titulo)}" src="${pagina}${params}"></iframe></div>`;
+  }
+
   async function telaBases(area) {
     area.innerHTML = `
-      <div class="cabecalho-tela"><h1>🗂️ Central de Bases</h1><p>Situação das bases de cada sistema e atalho para importar. A importação continua sendo feita na tela de cada sistema, com as regras que já existiam.</p></div>
+      <div class="cabecalho-tela"><h1>🗂️ Central de Bases</h1><p>Todas as bases são importadas aqui. Depois de importada, a base fica disponível para os sistemas que a usam, sem nova importação.</p></div>
       <div class="grade-sistemas" id="cards-bases"><div class="carregando">Consultando as bases...</div></div>`;
     let r;
     try { r = await Api.chamar('nucleo.bases_resumo'); } catch (e) { if (!e.auth) aviso(e.message, 'erro'); return; }
     if (!r || !r.ok) { aviso((r && r.erro) || 'Não foi possível consultar as bases.', 'erro'); return; }
     const fmtData = (ms) => ms ? new Date(ms).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' }) : 'nunca importada';
     const n = (v) => Number(v || 0).toLocaleString('pt-BR');
-    const card = (icone, titulo, linhas, botao) => `<div class="card-sistema base"><div class="cs-icone">${icone}</div><div class="cs-nome">${titulo}</div><div class="cs-desc">${linhas}</div>${botao || ''}</div>`;
-    const btn = (rota, txt) => `<a class="btn mini" href="#/${rota}" style="margin-top:10px;display:inline-block">${txt}</a>`;
+    const card = (icone, titulo, linhas, usadaPor, botao) => `<div class="card-sistema base"><div class="cs-icone">${icone}</div><div class="cs-nome">${titulo}</div><div class="cs-desc">${linhas}${usadaPor ? `<br><small>Usada por: ${usadaPor}</small>` : ''}</div>${botao || ''}</div>`;
+    const btn = (alvo, extra, txt) => liberado(CENTRAL[alvo].sis)
+      ? `<a class="btn mini primario" href="#/bases/${alvo}${extra ? '?' + extra : ''}" style="margin-top:10px;display:inline-block">${txt}</a>`
+      : `<small class="sem-acesso">Sistema não liberado para o seu usuário</small>`;
     const ciclos = r.renovacao ? Object.keys(r.renovacao.ciclos).sort() : [];
     const nomesEng = { impar: 'Ímpar', par: 'Par', ct: 'Técnico' };
-    let h = card('🔄', 'Renovação', ciclos.length ? ciclos.map(c => `Ciclo ${esc(c)}: <b>${n(r.renovacao.ciclos[c])}</b> alunos`).join('<br>') : 'Nenhum ciclo importado', btn('s/renovacao?tela=importar', 'Importar na Renovação'));
+    let h = card('🔄', 'Renovação', ciclos.length ? ciclos.map(c => `Ciclo ${esc(c)}: <b>${n(r.renovacao.ciclos[c])}</b> alunos`).join('<br>') : 'Nenhum ciclo importado', 'Renovação', btn('renovacao', '', 'Importar base da Renovação'));
     ['impar', 'par', 'ct'].forEach(b => {
       const e = (r.engajamento || {})[b] || {};
-      h += card('🤝', 'Engajamento ' + nomesEng[b], `<b>${n(e.total)}</b> alunos<br>Última importação: ${fmtData(e.ts)}<br><small>Também usada por Provas, Estágio, Financeiro e Financiamentos</small>`, btn('s/engajamento?tela=importar', 'Importar no Engajamento'));
+      h += card('🤝', 'Base líquida ' + nomesEng[b], `<b>${n(e.total)}</b> alunos<br>Última importação: ${fmtData(e.ts)}`, 'Engajamento, Provas, Estágio, Financeiro e Financiamentos', btn('engajamento', 'base=' + b, 'Importar base ' + nomesEng[b]));
     });
-    h += card('🎓', 'Formandos', r.formandos ? `<b>${n(r.formandos.total)}</b> alunos no painel` : 'Sem informação', btn('s/formandos', 'Abrir Formandos'));
-    h += card('⭐', 'NPS (Medallia)', r.nps && r.nps.total ? `<b>${n(r.nps.total)}</b> respostas<br>Respostas até ${esc((r.nps.ate || '').split('-').reverse().join('/'))}<br>Última importação: ${fmtData(r.nps.ultima)}` : 'Nenhuma resposta importada', btn('s/nps', 'Importar no NPS'));
+    h += card('🎓', 'Formandos', r.formandos ? `<b>${n(r.formandos.total)}</b> alunos no painel` : 'Sem informação', 'Formandos (alunos, formados e ENADE)', btn('formandos', '', 'Importar no Formandos'));
+    h += card('⭐', 'NPS (Medallia)', r.nps && r.nps.total ? `<b>${n(r.nps.total)}</b> respostas<br>Respostas até ${esc((r.nps.ate || '').split('-').reverse().join('/'))}<br>Última importação: ${fmtData(r.nps.ultima)}` : 'Nenhuma resposta importada', 'NPS', btn('nps', '', 'Importar respostas do Medallia'));
     $('#cards-bases').innerHTML = h + (r.erros && r.erros.length ? `<p class="erro">Não foi possível ler: ${esc(r.erros.join(' | '))}</p>` : '');
+  }
+
+  function telaConfig(area) {
+    const cards = Object.keys(CENTRAL).filter(k => CENTRAL[k].config).map(k => {
+      const c = CENTRAL[k];
+      return `<div class="card-sistema base"><div class="cs-icone">${c.icone}</div><div class="cs-nome">${esc(c.nome)}</div><div class="cs-desc">${esc(c.descConfig)}</div>
+        ${liberado(c.sis) ? `<a class="btn mini primario" href="#/config/${k}" style="margin-top:10px;display:inline-block">Abrir configurações</a>` : '<small class="sem-acesso">Sistema não liberado para o seu usuário</small>'}</div>`;
+    }).join('');
+    area.innerHTML = `
+      <div class="cabecalho-tela"><h1>⚙️ Configurações dos sistemas</h1><p>As áreas de administrador que ficavam dentro de cada sistema agora ficam aqui. Usuários, perfis e senhas estão em <a href="#/usuarios">Usuários e perfis</a>, e o relatório da equipe em <a href="#/relatorio">Relatório diário</a>.</p></div>
+      <div class="grade-sistemas">${cards}</div>
+      <p class="dica-central">Provas, Estágio, Financeiro, Financiamentos e NPS não têm configurações próprias: usam a base líquida (ou a do Medallia) e os usuários da Jornada.</p>`;
   }
 
   /* ── Relatório diário único (admin) ── */

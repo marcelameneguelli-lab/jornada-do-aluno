@@ -155,11 +155,13 @@
       nome: 'NPS', icone: '⭐', original: '',
       subtitulo: 'Pesquisa Medallia: promotores (9 e 10), neutros (7 e 8) e detratores (0 a 6)',
       fonte: 'respostas', nomeFonte: 'respostas do Medallia', unidade: 'respostas', feminino: true, anoCurto: true,
-      semDados: 'Nenhuma resposta importada ainda. Use "Importar arquivo do Medallia".',
+      semDados: 'Nenhuma resposta importada ainda. A coordenação importa o arquivo do Medallia na Central de Bases.',
       chave: (r) => r.id, matriculaVisivel: (r) => r.matricula,
       elegivel: (r) => nota(r) != null,
       ordenar: (a, b) => isoDe(b.data_resposta).localeCompare(isoDe(a.data_resposta)), // mais recente primeiro
-      importar: { rotulo: 'Importar arquivo do Medallia', converter: converterMedallia, erroFormato: 'Não encontrei a coluna "ID da Pesquisa". Use a exportação "Survey Export" do Medallia, sem alterar o arquivo.' },
+      dataDe: (r) => isoDe(r.data_resposta).slice(0, 10),
+      importar: { rotulo: 'Importar arquivo do Medallia', converter: converterMedallia,
+        ajuda: 'Use a exportação "Survey Export" do Medallia, sem alterar o arquivo. Respostas que já existem são atualizadas, as novas são incluídas, e os acionamentos registrados são mantidos.', erroFormato: 'Não encontrei a coluna "ID da Pesquisa". Use a exportação "Survey Export" do Medallia, sem alterar o arquivo.' },
       colunas: [
         { t: 'Resposta', v: (r) => dataAA(r.data_resposta) },
         { t: 'Nota', v: (r) => nota(r) },

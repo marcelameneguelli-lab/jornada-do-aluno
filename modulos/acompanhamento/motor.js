@@ -6,6 +6,8 @@
   const $ = (s, el) => (el || document).querySelector(s);
   const esc = (t) => String(t == null ? '' : t).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
   const SIS = new URLSearchParams(location.search).get('sistema');
+  // modo importar: a tela é aberta pela Central de Bases da Jornada (a importação não fica dentro do sistema)
+  const MODO_IMPORTAR = new URLSearchParams(location.search).get('modo') === 'importar';
   const CFG = (window.SISTEMAS_ACOMP || {})[SIS];
   const NOMES_BASE = { impar: 'Ímpar', par: 'Par', ct: 'Técnico' };
   const POR_PAGINA = 50;
@@ -47,7 +49,7 @@
       E.todos = dados.length;
       E.alunos = dados.filter((x) => { try { return CFG.elegivel(x); } catch (e) { return false; } });
       E.pagina = 1;
-      if (!dados.length) aviso(CFG.fonte ? CFG.semDados : `A base ${NOMES_BASE[E.base]} ainda não foi importada no Engajamento.`);
+      if (!dados.length && !MODO_IMPORTAR) aviso(CFG.fonte ? CFG.semDados : `A base ${NOMES_BASE[E.base]} ainda não foi importada. A coordenação importa na Central de Bases.`);
     } catch (e) {
       if (!e.auth) aviso(e.message, 'erro');
       E.alunos = []; E.todos = 0;
@@ -97,6 +99,7 @@
   function desenhar() {
     document.querySelectorAll('#abas button').forEach((b) => b.classList.toggle('ativa', b.dataset.aba === E.aba));
     document.querySelectorAll('#bases button').forEach((b) => { b.classList.toggle('ativa', b.dataset.base === E.base); b.classList.toggle(b.dataset.base, true); });
+    if (MODO_IMPORTAR) return telaImportar();
     ({ alunos: telaAlunos, followup: telaFollowup, dashboard: telaDashboard, produtividade: telaProdutividade, original: telaOriginal })[E.aba]();
   }
 
@@ -122,7 +125,6 @@
           <option value="fu" ${f.situacao === 'fu' ? 'selected' : ''}>Com follow-up pendente</option>
         </select>
         <button class="btn mini" id="f-exportar">Exportar CSV</button>
-        ${CFG.importar && eu().gestao ? `<button class="btn mini primario" id="f-importar">${esc(CFG.importar.rotulo)}</button><input type="file" id="f-arquivo" accept=".xlsx,.xls,.csv" hidden>` : ''}
         <span class="total">${lista.length.toLocaleString('pt-BR')} de ${E.alunos.length.toLocaleString('pt-BR')} ${unidade()}</span>
       </div>
       <div class="painel"><table class="tabela"><thead><tr>
@@ -136,7 +138,7 @@
           ${cols.map((c) => { let v = ''; try { v = c.v(r); } catch (e) {} const al = c.alerta && c.alerta(r); return `<td class="${al ? 'alerta' : ''}">${esc(v)}${al ? ' ⚠️' : ''}</td>`; }).join('')}
           <td>${ult ? `${esc(dataCurta(ult.criado))}<br><small>${esc(ult.resultado || ult.canal)}</small>` : '<span class="selo cinza">Sem contato</span>'}</td>
           <td>${fu ? esc(dataBR(fu)) : ''}</td></tr>`;
-      }).join('') || `<tr><td colspan="${cols.length + 5}" class="vazio">${E.todos ? 'Nenhum registro com esses filtros.' : (CFG.fonte ? CFG.semDados : 'A base ' + NOMES_BASE[E.base] + ' ainda não foi importada no Engajamento.')}</td></tr>`}</tbody></table></div>
+      }).join('') || `<tr><td colspan="${cols.length + 5}" class="vazio">${E.todos ? 'Nenhum registro com esses filtros.' : (CFG.fonte ? CFG.semDados : 'A base ' + NOMES_BASE[E.base] + ' ainda não foi importada. A coordenação importa na Central de Bases.')}</td></tr>`}</tbody></table></div>
       <div class="paginas"><button class="btn mini" id="p-ant" ${E.pagina <= 1 ? 'disabled' : ''}>Anterior</button> Página ${E.pagina} de ${paginas} <button class="btn mini" id="p-prox" ${E.pagina >= paginas ? 'disabled' : ''}>Próxima</button></div>`;
     const reaplicar = (campo, el) => { E.filtro[campo] = el.value; E.pagina = 1; telaAlunos(); };
     let t; $('#f-busca').oninput = (ev) => { clearTimeout(t); t = setTimeout(() => { reaplicar('busca', ev.target); const i = $('#f-busca'); i.focus(); i.setSelectionRange(i.value.length, i.value.length); }, 250); };
@@ -238,7 +240,20 @@
     };
   }
 
-  /* ── importação de arquivo (NPS: exportação do Medallia) ── */
+  /* ── importação de arquivo (NPS: exportação do Medallia), só pela Central de Bases ── */
+  function telaImportar() {
+    if (!CFG.importar) { $('#area').innerHTML = '<div class="carregando-base">Este sistema não tem importação própria.</div>'; return; }
+    if (!eu().gestao) { $('#area').innerHTML = '<div class="carregando-base">Seu perfil não tem acesso à importação.</div>'; return; }
+    const datas = E.alunos.map((r) => CFG.dataDe ? CFG.dataDe(r) : '').filter(Boolean).sort();
+    $('#area').innerHTML = `<div class="painel importar-central">
+      <h3>${esc(CFG.importar.rotulo)}</h3>
+      <p>${esc(CFG.importar.ajuda || '')}</p>
+      <p class="situacao">Hoje o sistema tem <b>${E.alunos.length.toLocaleString('pt-BR')}</b> ${unidade()}${datas.length ? `, de ${dataBR(datas[0])} a ${dataBR(datas[datas.length - 1])}` : ''}.</p>
+      <button class="btn primario" id="f-importar">${esc(CFG.importar.rotulo)}</button><input type="file" id="f-arquivo" accept=".xlsx,.xls,.csv" hidden>
+    </div>`;
+    $('#f-importar').onclick = () => $('#f-arquivo').click();
+    $('#f-arquivo').onchange = (ev) => importarArquivo(ev.target.files[0]);
+  }
   function carregarXLSX() {
     if (window.XLSX) return Promise.resolve();
     return new Promise((ok, falha) => { const s2 = document.createElement('script'); s2.src = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js'; s2.onload = ok; s2.onerror = () => falha(new Error('Não foi possível carregar o leitor de planilhas. Confira a internet.')); document.head.appendChild(s2); });
@@ -381,6 +396,7 @@
     $('#titulo').textContent = CFG.icone + ' ' + CFG.nome;
     $('#subtitulo').textContent = CFG.subtitulo;
     $('#aba-original').hidden = !CFG.original;
+    if (MODO_IMPORTAR) { $('#abas').style.display = 'none'; $('#sync').style.display = 'none'; }
     if (CFG.fonte) $('#bases').style.display = 'none';
     try { const b = localStorage.getItem('jornada_base_' + SIS); if (NOMES_BASE[b]) E.base = b; } catch (e) {}
     document.querySelectorAll('#abas button').forEach((b) => { b.onclick = () => { E.aba = b.dataset.aba; desenhar(); }; });
@@ -388,6 +404,7 @@
       b.onclick = () => { if (b.dataset.base === E.base) return; E.base = b.dataset.base; try { localStorage.setItem('jornada_base_' + SIS, E.base); } catch (e) {} atualizarContadorFu(); carregarBase(); };
     });
     $('#modal').onclick = (ev) => { if (ev.target.id === 'modal') fecharModal(); };
+    if (MODO_IMPORTAR) { carregarBase(); return; }
     sincronizar().then(carregarBase);
     setInterval(sincronizar, 45000);
   }

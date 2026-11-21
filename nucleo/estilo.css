@@ -125,3 +125,12 @@ body.com-sistema #lateral:not(:hover) #menu a span { font-size: 18px; }
 
 .card-sistema.base { border-top-color: var(--verde); }
 .card-sistema.base .cs-desc { line-height: 1.6; }
+
+/* Central de Bases e Configurações: tela original do sistema em modo importar/config, com barra de volta */
+.moldura-central { display: flex; flex-direction: column; flex: 1; min-width: 0; }
+.barra-central { display: flex; align-items: center; gap: 16px; padding: 10px 18px; background: #f3f6fa; border-bottom: 1px solid #dde4ee; font-size: 14px; }
+.barra-central a { color: #003B71; font-weight: 600; text-decoration: none; }
+.barra-central a:hover { text-decoration: underline; }
+.moldura-central .moldura-sistema { min-height: calc(100vh - 42px); }
+.sem-acesso { display: block; margin-top: 10px; color: #8a94a3; }
+.dica-central { margin-top: 18px; color: #5b6676; font-size: 13px; }
