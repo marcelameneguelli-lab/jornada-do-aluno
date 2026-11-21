@@ -32,11 +32,13 @@ const RODADAS_HASH = 300;
 const PLANILHA_CENTRAL_ID = '';
 
 // Planilhas de cada sistema. FASE DE TESTES: cópias feitas em 20/11/2026.
-// Na virada para produção, troque pelos IDs das planilhas oficiais.
+// IDs das planilhas usadas pela Jornada.
+// Virada de 21/11/2026: planilhas OFICIAIS (antes eram as cópias de teste:
+//   renovacao 15yJEjzP..., engajamento 19AOaj1d..., formandos 1csuSKGz...)
 const PLANILHAS = {
-  renovacao:   '15yJEjzPOOk7O1sA1Z3Ac4FE57Sm-VxK_ot55G5OJMXU', // Cópia de Estácio — Renovação de Matrícula 2026
-  engajamento: '19AOaj1dwh-hkiJBLKbHZMvnwP9qhEpScG-VHB-7DjCw', // Cópia do EngajaVR
-  formandos:   '1csuSKGzI863WvgeDXxWf17WL2wUWGEYDydyZdJT5PIA', // Cópia de Formandos
+  renovacao:   '1MoWvv-7rRnnSuttr5ID4ugrcOWSVhh2iwZpKbosxxNc', // OFICIAL: Estácio — Renovação de Matrícula 2026
+  engajamento: '1GQ1svA47TuXFRH2VXktUYxnV_B-gZTGWdwwrhEB5h-s', // OFICIAL: EngajaVR ("Planilha sem título")
+  formandos:   '1kAVYw7wNKYiJui44LhKQwUPjgMJMQRv2isLWTwfYG-M', // OFICIAL: Formandos
   // Sistemas novos (não existiam antes): ficam na planilha Central até termos volume que peça planilha própria
   financiamentos: '',
   nps:            '',
