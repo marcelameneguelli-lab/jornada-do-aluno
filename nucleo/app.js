@@ -225,19 +225,24 @@
     });
     h += card('🎓', 'Formandos', r.formandos ? `<b>${n(r.formandos.total)}</b> alunos no painel` : 'Sem informação', 'Formandos (alunos, formados e ENADE)', btn('formandos', '', 'Importar no Formandos'));
     h += card('⭐', 'NPS (Medallia)', r.nps && r.nps.total ? `<b>${n(r.nps.total)}</b> respostas<br>Respostas até ${esc((r.nps.ate || '').split('-').reverse().join('/'))}<br>Última importação: ${fmtData(r.nps.ultima)}` : 'Nenhuma resposta importada', 'NPS', btn('nps', '', 'Importar respostas do Medallia'));
-    if (eu().admin) h += card('🗃️', 'Acionamentos do EngajaVR atual', 'Traz para a Jornada os acionamentos gravados pelo EngajaVR em uso (desde agosto eles ficam só no Drive dele). Só lê o EngajaVR, nada é alterado lá. Pode repetir: não duplica.', 'Engajamento, Provas, Estágio, Financeiro e Financiamentos (último acionamento e produtividade)',
-      '<button class="btn mini primario" id="btn-hist-engajavr" style="margin-top:10px">Trazer acionamentos</button><div id="res-hist-engajavr" class="dica"></div>');
+    if (eu().admin) h += card('🗃️', 'Trazer tudo do EngajaVR atual', 'Acionamentos, follow-ups, calendário, tarefas, tutoriais, atendentes, estágio e evasão do EngajaVR em uso. Só lê o EngajaVR, nada é alterado lá. Pode repetir: não duplica.', 'Engajamento, Provas, Estágio, Financeiro, Financiamentos e ferramentas da equipe',
+      '<input id="url-engajavr" placeholder="Endereço /exec do Apps Script do EngajaVR" style="margin-top:10px;font-size:12px"><button class="btn mini primario" id="btn-hist-engajavr" style="margin-top:6px">Trazer tudo</button><div id="res-hist-engajavr" class="dica"></div>');
     $('#cards-bases').innerHTML = h + (r.erros && r.erros.length ? `<p class="erro">Não foi possível ler: ${esc(r.erros.join(' | '))}</p>` : '');
     const bh = $('#btn-hist-engajavr');
     if (bh) bh.onclick = async () => {
-      bh.disabled = true; bh.textContent = 'Trazendo... (pode levar 1 minuto)';
+      const url = $('#url-engajavr').value.trim();
+      if (!/^https:\/\/script\.google\.com\/.+\/exec/.test(url)) { aviso('Cole o endereço /exec do Apps Script do EngajaVR.', 'erro'); return; }
+      bh.disabled = true; bh.textContent = 'Trazendo... (pode levar alguns minutos)';
       try {
-        const x = await Api.chamar('nucleo.historico_engajavr', {}, { timeout: 300000 });
-        if (!x || !x.ok) throw new Error((x && x.erro) || 'Não foi possível trazer os acionamentos.');
-        $('#res-hist-engajavr').innerHTML = Object.keys(x.bases).map(b => { const v = x.bases[b]; return `${nomesEng[b]}: ${v.encontrado ? `<b>${n(v.novos)}</b> novo(s), ${n(v.total)} no total` : 'sem arquivo no EngajaVR'}`; }).join('<br>');
-        aviso('Acionamentos do EngajaVR trazidos para a Jornada.', 'ok');
+        const x = await Api.chamar('nucleo.migrar_engajavr', { url }, { timeout: 360000 });
+        if (!x || !x.ok) throw new Error((x && x.erro) || 'Não foi possível trazer os dados.');
+        const fmt = (v) => typeof v === 'number' ? `<b>${n(v)}</b>` : esc(String(v));
+        const L = x.relatorio.listas, B = x.relatorio.bases;
+        $('#res-hist-engajavr').innerHTML = Object.keys(L).map(k => `${esc(k)}: ${fmt(L[k])} novo(s)`).join('<br>') + '<br>' +
+          Object.keys(B).map(b => `<b>${nomesEng[b]}</b>: ${fmt(B[b].acionamentos)} acionamento(s), ${fmt(B[b].followups)} follow-up(s), estágio ${fmt(B[b].estagio)}, evasão ${fmt(B[b].evasao)}. Base: ${esc(B[b].base)}`).join('<br>');
+        aviso('Dados do EngajaVR trazidos para a Jornada.', 'ok');
       } catch (e) { if (!e.auth) aviso(e.message, 'erro'); }
-      bh.disabled = false; bh.textContent = 'Trazer acionamentos';
+      bh.disabled = false; bh.textContent = 'Trazer tudo';
     };
   }
 

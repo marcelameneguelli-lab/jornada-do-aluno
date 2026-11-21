@@ -100,8 +100,9 @@ function Modulo_nucleo() {
       usuario_salvar:  (d, eu) => usuarioSalvar_(d, eu),
       usuario_senha:   (d, eu) => usuarioNovaProvisoria_(d, eu),
       historico_engajavr: (d, eu) => trazerHistoricoEngajaVR_(eu),
+      migrar_engajavr: (d, eu) => migrarEngajaVR_(d.url, eu),
     }),
-    admin: ['usuarios_listar', 'usuario_salvar', 'usuario_senha', 'relatorio_previa', 'relatorio_enviar', 'relatorio_ativar', 'historico_engajavr'],
+    admin: ['usuarios_listar', 'usuario_salvar', 'usuario_senha', 'relatorio_previa', 'relatorio_enviar', 'relatorio_ativar', 'historico_engajavr', 'migrar_engajavr'],
     gestao: ['bases_resumo'],
   };
 }
