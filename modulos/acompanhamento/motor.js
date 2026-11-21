@@ -17,7 +17,7 @@
     base: 'impar', alunos: [], todos: 0, regs: {}, fichas: {}, desde: 0,
     aba: 'alunos', pagina: 1, filtro: { busca: '', curso: '', mod: '', situacao: '', extra: '', programa: '', tipo: '', canal: '', atend: '', de: '', ate: '' },
     hist: {}, // acionamentos do Engajamento (todas as bases), por matrícula: entram no "último acionamento"
-    fuQuem: 'meus', periodo: '7', apoio: {},
+    fuQuem: 'meus', periodo: '7', apoio: {}, motivo: '', comEngajamento: true,
   };
   const eu = () => { const s = Api.Sessao.ler(); return (s && s.me) || { nome: '', perfil: '' }; };
 
@@ -387,6 +387,7 @@
     const mats = new Set(E.alunos.map(mat));
     const regs = Object.values(E.regs).filter((x) => mats.has(x.matricula) && (!x.base || x.base === E.base));
     const acionados = new Set(regs.map((x) => x.matricula));
+    if (CFG.historicoEngajamento) E.alunos.forEach((r) => { const m = mat(r); if ((E.hist[m] || []).length) acionados.add(m); });
     const hoje = new Date().toISOString().slice(0, 10);
     const pend = regs.filter((x) => x.fu_status === 'pendente');
     const cobertura = E.alunos.length ? (acionados.size / E.alunos.length * 100) : 0;
@@ -416,20 +417,38 @@
     const lim = E.periodo === 'tudo' ? 0 : (E.periodo === 'hoje' ? new Date(new Date().toDateString()).getTime() : Date.now() - Number(E.periodo) * 86400000);
     const regs = Object.values(E.regs).filter((x) => (!x.base || x.base === E.base) && x.criado >= lim);
     const porAt = {};
-    regs.forEach((x) => {
-      const a = porAt[x.atendente] = porAt[x.atendente] || { n: 0, alunos: new Set(), fu: 0, ultimo: 0 };
-      a.n++; a.alunos.add(x.matricula); if (x.fu_data) a.fu++; a.ultimo = Math.max(a.ultimo, x.criado);
-    });
+    const soma = (nome, mt, ms, origem, fu) => {
+      if (!nome) return;
+      const a = porAt[nome] = porAt[nome] || { n: 0, sis: 0, eng: 0, alunos: new Set(), fu: 0, ultimo: 0 };
+      a.n++; a[origem]++; a.alunos.add(mt); if (fu) a.fu++; a.ultimo = Math.max(a.ultimo, ms);
+    };
+    regs.forEach((x) => soma(x.atendente, x.matricula, x.criado, 'sis', !!x.fu_data));
+    // acionamentos feitos no Engajamento para os alunos deste sistema (como eram registrados antes)
+    const usaEng = CFG.historicoEngajamento && E.comEngajamento;
+    const motivos = new Set();
+    if (CFG.historicoEngajamento) {
+      E.alunos.forEach((r) => { const m = mat(r); (E.hist[m] || []).forEach((h) => {
+        if (h.resultado) motivos.add(h.resultado);
+        if (!usaEng || h.ms < lim || (E.motivo && h.resultado !== E.motivo)) return;
+        soma(h.atend, m, h.ms, 'eng', false);
+      }); });
+    }
     const feitos = {};
     Object.values(E.regs).forEach((x) => { if (x.fu_status === 'feito' && x.atualizado >= lim && (!x.base || x.base === E.base)) feitos[x.quem_atualizou || x.atendente] = (feitos[x.quem_atualizou || x.atendente] || 0) + 1; });
     const nomes = Object.keys(porAt).concat(Object.keys(feitos)).filter((v, i, a) => v && a.indexOf(v) === i).sort((a, b) => ((porAt[b] || {}).n || 0) - ((porAt[a] || {}).n || 0));
+    const vazio = { n: 0, sis: 0, eng: 0, alunos: new Set(), fu: 0, ultimo: 0 };
     $('#area').innerHTML = `
       <div class="filtros"><select id="per">
-        ${[['hoje', 'Hoje'], ['7', 'Últimos 7 dias'], ['30', 'Últimos 30 dias'], ['tudo', 'Todo o período']].map(([v, t]) => `<option value="${v}" ${E.periodo === v ? 'selected' : ''}>${t}</option>`).join('')}
-      </select><span class="total">${esc(nomeBase())}</span></div>
-      <div class="painel"><table class="tabela"><thead><tr><th>Atendente</th><th>Acionamentos</th><th>Alunos diferentes</th><th>Follow-ups agendados</th><th>Follow-ups concluídos</th><th>Último registro</th></tr></thead>
-      <tbody>${nomes.map((n) => { const a = porAt[n] || { n: 0, alunos: new Set(), fu: 0, ultimo: 0 }; return `<tr><td><b>${esc(n)}</b></td><td>${a.n}</td><td>${a.alunos.size}</td><td>${a.fu}</td><td>${feitos[n] || 0}</td><td>${a.ultimo ? dataCurta(a.ultimo) : ''}</td></tr>`; }).join('') || '<tr><td colspan="6" class="vazio">Nenhum acionamento no período.</td></tr>'}</tbody></table></div>`;
+        ${[['hoje', 'Hoje'], ['7', 'Últimos 7 dias'], ['30', 'Últimos 30 dias'], ['90', 'Últimos 90 dias'], ['tudo', 'Todo o período']].map(([v, t]) => `<option value="${v}" ${E.periodo === v ? 'selected' : ''}>${t}</option>`).join('')}
+      </select>
+      ${CFG.historicoEngajamento ? `<label class="rot"><input type="checkbox" id="com-eng" ${E.comEngajamento ? 'checked' : ''} style="width:auto;margin:0"> Incluir acionamentos feitos no Engajamento</label>
+        <select id="motivo" ${E.comEngajamento ? '' : 'disabled'}><option value="">Todos os motivos (Engajamento)</option>${Array.from(motivos).sort().map((x) => `<option ${x === E.motivo ? 'selected' : ''}>${esc(x)}</option>`).join('')}</select>` : ''}
+      <span class="total">${esc(nomeBase())}</span></div>
+      <div class="painel"><table class="tabela"><thead><tr><th>Atendente</th><th>Acionamentos</th>${usaEng ? `<th>Em ${esc(CFG.nome)}</th><th>No Engajamento</th>` : ''}<th>Alunos diferentes</th><th>Follow-ups agendados</th><th>Follow-ups concluídos</th><th>Último registro</th></tr></thead>
+      <tbody>${nomes.map((nm) => { const a = porAt[nm] || vazio; return `<tr><td><b>${esc(nm)}</b></td><td><b>${a.n}</b></td>${usaEng ? `<td>${a.sis}</td><td>${a.eng}</td>` : ''}<td>${a.alunos.size}</td><td>${a.fu}</td><td>${feitos[nm] || 0}</td><td>${a.ultimo ? dataCurta(a.ultimo) : ''}</td></tr>`; }).join('') || `<tr><td colspan="${usaEng ? 8 : 6}" class="vazio">Nenhum acionamento no período.</td></tr>`}</tbody></table></div>
+      ${usaEng ? '<p class="dica">"No Engajamento" são os acionamentos registrados no EngajaVR (ou na tela original) para os alunos deste sistema.</p>' : ''}`;
     $('#per').onchange = (ev) => { E.periodo = ev.target.value; telaProdutividade(); };
+    if ($('#com-eng')) { $('#com-eng').onchange = (ev) => { E.comEngajamento = ev.target.checked; telaProdutividade(); }; $('#motivo').onchange = (ev) => { E.motivo = ev.target.value; telaProdutividade(); }; }
   }
 
   /* ── tela original do EngajaVR (TCE, agendamento de provas, disparo em lote) ── */

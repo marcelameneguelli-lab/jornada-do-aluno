@@ -1,0 +1,24 @@
+const { criar } = require('./mock_gas'); const assert=require('assert'); const fs=require('fs');
+const D='/home/claude/jornada/gas/';
+const g = criar(fs.readdirSync(D).filter(f=>f.endsWith('.gs')).sort().map(f=>D+f));
+const post=o=>JSON.parse(g.doPost({postData:{contents:JSON.stringify(o)}}).t);
+let ok=0; const t=(n,f)=>{ try{ f(); ok++; console.log('ok  '+n);}catch(e){ console.log('FALHOU '+n+': '+e.stack.split('\n').slice(0,2).join(' ')); process.exitCode=1; } };
+g.configurar(); const sh=g._ss.getSheetByName('usuarios');
+sh.appendRow(['Marcela','marques.marcela@estacio.br','admin','todos','sim']);
+sh.appendRow(['Felipe','felipe@estacio.br','coordenador','todos','sim']);
+g.gerarSenhas();
+const login=(email,linha,nova)=>{ const p=sh.d[linha-1][6]; const e=post({acao:'nucleo.entrar',email,senha:p}); return post({acao:'nucleo.trocar_senha',token:e.token,atual:p,nova}).token; };
+const tM=login('marques.marcela@estacio.br',2,'Senha2026a'), tF=login('felipe@estacio.br',3,'Senha2026b');
+t('sem a pasta do EngajaVR avisa', ()=>{ const r=post({acao:'nucleo.historico_engajavr',token:tM}); assert.equal(r.ok,false); assert.match(r.erro,/EngajaVR_Storage/); });
+// pasta do EngajaVR em uso, com acionamentos de agosto a novembro
+const pasta=g.DriveApp.createFolder('EngajaVR_Storage');
+const antigo={'202301000100':[{id:'a1',datetime:'15/08/2026 10:00:00',atend:'Angelica',canal:'WhatsApp',motivo:'academico'},{id:'a2',datetime:'02/10/2026 09:00:00',atend:'Felipe',canal:'Ligação',motivo:'academico'}],'202301000101':[{id:'a3',datetime:'05/09/2026 11:00:00',atend:'Yasmin',canal:'E-mail',motivo:'financeiro'}]};
+pasta.createFile('engajavr_HistoryJSON_impar.json', JSON.stringify(antigo));
+post({acao:'engajamento.saveAction',token:tM,base:'impar',id:'novo1',matricula:'202301000100',atend:'Marcela',canal:'WhatsApp',motivo:'academico'});
+t('traz os acionamentos do EngajaVR para a Jornada', ()=>{ const r=post({acao:'nucleo.historico_engajavr',token:tM}); assert(r.ok,JSON.stringify(r)); assert.equal(r.bases.impar.novos,3); assert.equal(r.bases.par.encontrado,false); });
+t('getHistory passa a ter os antigos e o novo, sem perder nada', ()=>{ const h=post({acao:'provas.getHistory',token:tM,base:'impar'}).data; assert.equal(h['202301000100'].length,3); assert.equal(h['202301000101'].length,1); });
+t('rodar de novo não duplica', ()=>{ const r=post({acao:'nucleo.historico_engajavr',token:tM}); assert.equal(r.bases.impar.novos,0); assert.equal(post({acao:'provas.getHistory',token:tM,base:'impar'}).data['202301000100'].length,3); });
+t('o arquivo do EngajaVR não é alterado', ()=>{ const f=pasta.arqs.filter(x=>x.nome==='engajavr_HistoryJSON_impar.json'); assert.equal(f.length,1); assert.equal(f[0].c, JSON.stringify(antigo)); assert(!f[0].lixo); });
+t('só o admin pode trazer', ()=>{ assert.equal(post({acao:'nucleo.historico_engajavr',token:tF}).permissao,false); });
+t('pelo editor também funciona', ()=>{ const r=g.jornada_trazerHistoricoEngajaVR(); assert(r.ok); });
+console.log(ok+' testes da migração do histórico passaram');

@@ -99,8 +99,9 @@ function Modulo_nucleo() {
       usuarios_listar: () => ({ ok: true, usuarios: listaUsuarios_().map(publicoAdmin_) }),
       usuario_salvar:  (d, eu) => usuarioSalvar_(d, eu),
       usuario_senha:   (d, eu) => usuarioNovaProvisoria_(d, eu),
+      historico_engajavr: (d, eu) => trazerHistoricoEngajaVR_(eu),
     }),
-    admin: ['usuarios_listar', 'usuario_salvar', 'usuario_senha', 'relatorio_previa', 'relatorio_enviar', 'relatorio_ativar'],
+    admin: ['usuarios_listar', 'usuario_salvar', 'usuario_senha', 'relatorio_previa', 'relatorio_enviar', 'relatorio_ativar', 'historico_engajavr'],
     gestao: ['bases_resumo'],
   };
 }

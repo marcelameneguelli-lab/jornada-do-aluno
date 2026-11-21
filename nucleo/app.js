@@ -225,7 +225,20 @@
     });
     h += card('🎓', 'Formandos', r.formandos ? `<b>${n(r.formandos.total)}</b> alunos no painel` : 'Sem informação', 'Formandos (alunos, formados e ENADE)', btn('formandos', '', 'Importar no Formandos'));
     h += card('⭐', 'NPS (Medallia)', r.nps && r.nps.total ? `<b>${n(r.nps.total)}</b> respostas<br>Respostas até ${esc((r.nps.ate || '').split('-').reverse().join('/'))}<br>Última importação: ${fmtData(r.nps.ultima)}` : 'Nenhuma resposta importada', 'NPS', btn('nps', '', 'Importar respostas do Medallia'));
+    if (eu().admin) h += card('🗃️', 'Acionamentos do EngajaVR atual', 'Traz para a Jornada os acionamentos gravados pelo EngajaVR em uso (desde agosto eles ficam só no Drive dele). Só lê o EngajaVR, nada é alterado lá. Pode repetir: não duplica.', 'Engajamento, Provas, Estágio, Financeiro e Financiamentos (último acionamento e produtividade)',
+      '<button class="btn mini primario" id="btn-hist-engajavr" style="margin-top:10px">Trazer acionamentos</button><div id="res-hist-engajavr" class="dica"></div>');
     $('#cards-bases').innerHTML = h + (r.erros && r.erros.length ? `<p class="erro">Não foi possível ler: ${esc(r.erros.join(' | '))}</p>` : '');
+    const bh = $('#btn-hist-engajavr');
+    if (bh) bh.onclick = async () => {
+      bh.disabled = true; bh.textContent = 'Trazendo... (pode levar 1 minuto)';
+      try {
+        const x = await Api.chamar('nucleo.historico_engajavr', {}, { timeout: 300000 });
+        if (!x || !x.ok) throw new Error((x && x.erro) || 'Não foi possível trazer os acionamentos.');
+        $('#res-hist-engajavr').innerHTML = Object.keys(x.bases).map(b => { const v = x.bases[b]; return `${nomesEng[b]}: ${v.encontrado ? `<b>${n(v.novos)}</b> novo(s), ${n(v.total)} no total` : 'sem arquivo no EngajaVR'}`; }).join('<br>');
+        aviso('Acionamentos do EngajaVR trazidos para a Jornada.', 'ok');
+      } catch (e) { if (!e.auth) aviso(e.message, 'erro'); }
+      bh.disabled = false; bh.textContent = 'Trazer acionamentos';
+    };
   }
 
   function telaConfig(area) {
