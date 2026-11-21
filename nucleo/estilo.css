@@ -122,3 +122,6 @@ body.com-sistema #lateral:not(:hover) #menu a span { font-size: 18px; }
 
 .titulo-secao { margin: 28px 0 12px; font-size: 16px; }
 .card-sistema.ferramenta { border-top-color: var(--verde); }
+
+.card-sistema.base { border-top-color: var(--verde); }
+.card-sistema.base .cs-desc { line-height: 1.6; }

@@ -89,7 +89,7 @@ function processar_(acao, d) {
 /** Ações do núcleo (login, usuários, informações gerais). */
 function Modulo_nucleo() {
   return {
-    acoes: {
+    acoes: Object.assign(acoesGestao_(), {
       ping:            () => ({ ok: true, nome: NOME_SISTEMA }),
       entrar:          (d) => entrar_(d),
       sessao:          (d, eu) => ({ ok: true }),
@@ -97,8 +97,8 @@ function Modulo_nucleo() {
       usuarios_listar: () => ({ ok: true, usuarios: listaUsuarios_().map(publicoAdmin_) }),
       usuario_salvar:  (d, eu) => usuarioSalvar_(d, eu),
       usuario_senha:   (d, eu) => usuarioNovaProvisoria_(d, eu),
-    },
-    admin: ['usuarios_listar', 'usuario_salvar', 'usuario_senha'],
-    gestao: [],
+    }),
+    admin: ['usuarios_listar', 'usuario_salvar', 'usuario_senha', 'relatorio_previa', 'relatorio_enviar', 'relatorio_ativar'],
+    gestao: ['bases_resumo'],
   };
 }

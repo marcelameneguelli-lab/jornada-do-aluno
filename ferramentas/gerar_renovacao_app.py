@@ -79,6 +79,22 @@ s=troca(s,"""function abrirAtendentes() {
 ""","""function abrirAtendentes() {
   if (window.parent && window.parent !== window) { window.parent.location.hash = '#/usuarios'; return; }
 """)
+# 6b. atalho da Central de Bases: abrir direto na importação (só para quem pode ver a tela)
+_i=s.rfind('</body>'); s=s[:_i]+'''<script>
+/* Jornada: ?tela=importar vindo da Central de Bases */
+(function () {
+  var t = new URLSearchParams(location.search).get('tela');
+  if (t !== 'importar') return;
+  var tentativas = 0;
+  var abrir = function () {
+    tentativas++;
+    try { if (typeof S !== 'undefined' && S && S.perfil && typeof podeVer === 'function') { if (podeVer('importar')) ir('importar'); return; } } catch (e) {}
+    if (tentativas < 20) setTimeout(abrir, 500);
+  };
+  window.addEventListener('load', function () { setTimeout(abrir, 800); });
+})();
+</script>
+'''+s[_i:]
 # 7. service worker é o da Jornada
 s=troca(s,"// ═══ PWA — registrar o Service Worker (permite instalar como app) ═══\nif('serviceWorker' in navigator) {","// ═══ PWA: o service worker é o da Jornada (tela base) ═══\nif(false) {")
 os.makedirs(os.path.join(RAIZ,'app/modulos/renovacao'),exist_ok=True)

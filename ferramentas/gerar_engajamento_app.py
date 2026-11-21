@@ -111,6 +111,8 @@ s=troca(s,"""  if (!_verificarSessaoApp()) {
       setTimeout(function () { showPage(window.JORNADA_FERRAMENTA); }, 50);
     } else {
       _concluirLogin(_usuarioLogado); // Jornada: inclui a busca da base no servidor
+      // atalho da Central de Bases: abrir direto na importação (só para quem pode importar)
+      if (new URLSearchParams(location.search).get('tela') === 'importar') setTimeout(function () { if (_podeImportar()) showPage('importar'); }, 600);
     }
   }""")
 # 4c. menu do Engajamento sem as telas que saíram (decisão de 20/11/2026):

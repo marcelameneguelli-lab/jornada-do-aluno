@@ -8618,5 +8618,19 @@ function atualizarSistema() {
 setTimeout(verificarVersaoNova, 60 * 1000);
 setInterval(verificarVersaoNova, 30 * 60 * 1000);
 </script>
+<script>
+/* Jornada: ?tela=importar vindo da Central de Bases */
+(function () {
+  var t = new URLSearchParams(location.search).get('tela');
+  if (t !== 'importar') return;
+  var tentativas = 0;
+  var abrir = function () {
+    tentativas++;
+    try { if (typeof S !== 'undefined' && S && S.perfil && typeof podeVer === 'function') { if (podeVer('importar')) ir('importar'); return; } } catch (e) {}
+    if (tentativas < 20) setTimeout(abrir, 500);
+  };
+  window.addEventListener('load', function () { setTimeout(abrir, 800); });
+})();
+</script>
 </body>
 </html>

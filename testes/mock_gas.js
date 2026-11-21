@@ -32,7 +32,7 @@ function criar(arquivos){
     LockService:{ getScriptLock:()=>({waitLock(){},releaseLock(){},tryLock(){return true},hasLock(){return true}}) },
     Logger:{ log(){} },
     Session:{ getScriptTimeZone:()=>'America/Sao_Paulo', getActiveUser:()=>({getEmail:()=>'teste@estacio.br'}), getEffectiveUser:()=>({getEmail:()=>'teste@estacio.br'}) },
-    MailApp:{ sendEmail(){ ctx._emails=(ctx._emails||0)+1; }, getRemainingDailyQuota:()=>100 }, GmailApp:{ sendEmail(){ ctx._emails=(ctx._emails||0)+1; } },
+    MailApp:{ sendEmail(o){ ctx._emails=(ctx._emails||0)+1; ctx._ultimoEmail=o; }, getRemainingDailyQuota:()=>100 }, GmailApp:{ sendEmail(){ ctx._emails=(ctx._emails||0)+1; } },
     UrlFetchApp:{ fetch(){ throw new Error('sem rede no teste'); } }, DriveApp:(function(){ const pastas={}; let seq=0;
       function iter(a){ let i=0; return {hasNext:()=>i<a.length, next:()=>a[i++]}; }
       function Pasta(nome){ const id='pasta'+(++seq); const arqs=[]; const p={ id, nome, arqs, getId:()=>id, getName:()=>nome,
@@ -40,7 +40,7 @@ function criar(arquivos){
         createFile:(n,c)=>{ const f={nome:n,c:String(c),lixo:false,setTrashed(v){this.lixo=v;},getBlob(){const f2=this;return{getDataAsString:()=>f2.c};},getName(){return this.nome;},setContent(c){this.c=c;}}; arqs.push(f); return f; } };
         pastas[id]=p; return p; }
       return { createFolder:(n)=>Pasta(n), getFolderById:(id)=>{ if(!pastas[id]) throw new Error('não achou'); return pastas[id]; }, getFoldersByName:(n)=>iter(Object.values(pastas).filter(p=>p.nome===n)), getFilesByName:()=>iter([]), _pastas:pastas }; })(),
-    ScriptApp:{ getProjectTriggers:()=>[], newTrigger(){ const b={timeBased(){return b},onWeekDay(){return b},atHour(){return b},nearMinute(){return b},inTimezone(){return b},everyMinutes(){return b},create(){return {}}}; return b; }, WeekDay:{MONDAY:1,TUESDAY:2,WEDNESDAY:3,THURSDAY:4,FRIDAY:5,SATURDAY:6,SUNDAY:7} },
+    ScriptApp:{ getProjectTriggers:()=>[], newTrigger(){ const b={timeBased(){return b},onWeekDay(){return b},atHour(h){b.h=h;return b},nearMinute(){return b},inTimezone(){return b},everyMinutes(){return b},everyDays(){return b},create(){ (ctx._gatilhos=ctx._gatilhos||[]).push(b.h); return {}; }}; return b; }, deleteTrigger(){}, WeekDay:{MONDAY:1,TUESDAY:2,WEDNESDAY:3,THURSDAY:4,FRIDAY:5,SATURDAY:6,SUNDAY:7} },
     Utilities:{
       DigestAlgorithm:{SHA_256:'sha256'}, Charset:{UTF_8:'utf8'},
       computeDigest:(a,s)=>toBytes(crypto.createHash('sha256').update(s,'utf8').digest()),

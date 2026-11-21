@@ -99,6 +99,7 @@
     if (me.gestao || me.admin) {
       h += '<div class="menu-grupo">Gestão</div>';
       if (me.gestao) h += '<a href="#/bases" data-rota="bases" title="Central de Bases"><span>🗂️</span>Central de Bases</a>';
+      if (me.admin) h += '<a href="#/relatorio" data-rota="relatorio" title="Relatório diário"><span>📨</span>Relatório diário</a>';
       if (me.admin) h += '<a href="#/usuarios" data-rota="usuarios" title="Usuários e perfis"><span>👥</span>Usuários e perfis</a>';
     }
     $('#menu').innerHTML = h;
@@ -106,7 +107,7 @@
 
   function rota() {
     const r = (location.hash || '#/inicio').replace(/^#\/?/, '') || 'inicio';
-    document.querySelectorAll('#menu a').forEach(a => a.classList.toggle('ativo', a.dataset.rota === r));
+    document.querySelectorAll('#menu a').forEach(a => a.classList.toggle('ativo', a.dataset.rota === r.split('?')[0]));
     document.body.classList.remove('menu-aberto');
     const area = $('#conteudo');
     document.body.classList.remove('com-sistema');
@@ -119,11 +120,12 @@
       const ferr = JORNADA.ferramentas.filter(f => f.id === mf[1])[0];
       if (ferr) return abrirFerramenta(area, ferr);
     }
-    const m = r.match(/^s\/([a-z]+)/);
+    const m = r.match(/^s\/([a-z]+)(?:\?(.*))?/);
     if (m) {
       const sis = sistemasLiberados().filter(s => s.id === m[1])[0];
-      if (sis) return abrirSistema(area, sis);
+      if (sis) return abrirSistema(area, sis, m[2] || '');
     }
+    if (r === 'relatorio' && me.admin) return telaRelatorio(area);
     location.hash = '#/inicio';
   }
 
@@ -148,11 +150,12 @@
   }
 
   /** Abre o sistema numa moldura própria (cada sistema mantém o visual e os scripts dele, sem conflito). */
-  function abrirSistema(area, sis) {
+  function abrirSistema(area, sis, extra) {
     if (!sis.pronto) return emMigracao(area, sis);
     document.body.classList.add('com-sistema');
     const pagina = sis.pagina || `modulos/${sis.id}/index.html`;
-    area.innerHTML = `<iframe class="moldura-sistema" title="${esc(sis.nome)}" src="${pagina}${pagina.indexOf('?') >= 0 ? '&' : '?'}v=${JORNADA.versao}"></iframe>`;
+    const params = (extra ? extra.replace(/[^a-z0-9=&_-]/gi, '') + '&' : '') + 'v=' + JORNADA.versao;
+    area.innerHTML = `<iframe class="moldura-sistema" title="${esc(sis.nome)}" src="${pagina}${pagina.indexOf('?') >= 0 ? '&' : '?'}${params}"></iframe>`;
   }
 
   /** Calendário, Tarefas e Tutoriais: as telas do EngajaVR em modo ferramenta, para toda a equipe. */
@@ -168,10 +171,53 @@
       Até lá, continue usando o sistema atual.</div>`;
   }
 
-  function telaBases(area) {
+  /* ── Central de Bases (gestão) ── */
+  async function telaBases(area) {
     area.innerHTML = `
-      <div class="cabecalho-tela"><h1>🗂️ Central de Bases</h1><p>Importação e conferência das bases de cada sistema.</p></div>
-      <div class="painel aviso-migracao">A Central de Bases entra na etapa 6, depois que os sistemas estiverem migrados.</div>`;
+      <div class="cabecalho-tela"><h1>🗂️ Central de Bases</h1><p>Situação das bases de cada sistema e atalho para importar. A importação continua sendo feita na tela de cada sistema, com as regras que já existiam.</p></div>
+      <div class="grade-sistemas" id="cards-bases"><div class="carregando">Consultando as bases...</div></div>`;
+    let r;
+    try { r = await Api.chamar('nucleo.bases_resumo'); } catch (e) { if (!e.auth) aviso(e.message, 'erro'); return; }
+    if (!r || !r.ok) { aviso((r && r.erro) || 'Não foi possível consultar as bases.', 'erro'); return; }
+    const fmtData = (ms) => ms ? new Date(ms).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' }) : 'nunca importada';
+    const n = (v) => Number(v || 0).toLocaleString('pt-BR');
+    const card = (icone, titulo, linhas, botao) => `<div class="card-sistema base"><div class="cs-icone">${icone}</div><div class="cs-nome">${titulo}</div><div class="cs-desc">${linhas}</div>${botao || ''}</div>`;
+    const btn = (rota, txt) => `<a class="btn mini" href="#/${rota}" style="margin-top:10px;display:inline-block">${txt}</a>`;
+    const ciclos = r.renovacao ? Object.keys(r.renovacao.ciclos).sort() : [];
+    const nomesEng = { impar: 'Ímpar', par: 'Par', ct: 'Técnico' };
+    let h = card('🔄', 'Renovação', ciclos.length ? ciclos.map(c => `Ciclo ${esc(c)}: <b>${n(r.renovacao.ciclos[c])}</b> alunos`).join('<br>') : 'Nenhum ciclo importado', btn('s/renovacao?tela=importar', 'Importar na Renovação'));
+    ['impar', 'par', 'ct'].forEach(b => {
+      const e = (r.engajamento || {})[b] || {};
+      h += card('🤝', 'Engajamento ' + nomesEng[b], `<b>${n(e.total)}</b> alunos<br>Última importação: ${fmtData(e.ts)}<br><small>Também usada por Provas, Estágio, Financeiro e Financiamentos</small>`, btn('s/engajamento?tela=importar', 'Importar no Engajamento'));
+    });
+    h += card('🎓', 'Formandos', r.formandos ? `<b>${n(r.formandos.total)}</b> alunos no painel` : 'Sem informação', btn('s/formandos', 'Abrir Formandos'));
+    h += card('⭐', 'NPS (Medallia)', 'Aguardando o modelo da exportação do Medallia para criar o sistema.', '');
+    $('#cards-bases').innerHTML = h + (r.erros && r.erros.length ? `<p class="erro">Não foi possível ler: ${esc(r.erros.join(' | '))}</p>` : '');
+  }
+
+  /* ── Relatório diário único (admin) ── */
+  async function telaRelatorio(area) {
+    area.innerHTML = `
+      <div class="cabecalho-tela linha">
+        <div><h1>📨 Relatório diário</h1><p id="rel-info">Um único e-mail com todos os sistemas: segunda a sexta às 20h e sábado às 13h.</p></div>
+        <div><button class="btn" id="rel-ativar">Ativar envio automático</button> <button class="btn primario" id="rel-enviar">Enviar agora</button></div>
+      </div>
+      <div class="painel" id="rel-previa"><div class="carregando">Montando a prévia de hoje...</div></div>`;
+    $('#rel-enviar').onclick = async () => {
+      if (!confirmarAcao('Enviar agora o relatório de hoje por e-mail?')) return;
+      try { const r = await Api.chamar('nucleo.relatorio_enviar'); if (r.ok) aviso('Relatório enviado para ' + r.para + '.', 'ok'); else aviso(r.erro || 'Não foi possível enviar.', 'erro'); } catch (e) { if (!e.auth) aviso(e.message, 'erro'); }
+    };
+    $('#rel-ativar').onclick = async () => {
+      try { const r = await Api.chamar('nucleo.relatorio_ativar'); if (r.ok) { aviso('Envio automático ativado.', 'ok'); telaRelatorio(area); } else aviso(r.erro || 'Não foi possível ativar.', 'erro'); } catch (e) { if (!e.auth) aviso(e.message, 'erro'); }
+    };
+    try {
+      const r = await Api.chamar('nucleo.relatorio_previa');
+      if (!r.ok) { $('#rel-previa').innerHTML = `<p class="erro">${esc(r.erro || 'Não foi possível montar a prévia.')}</p>`; return; }
+      $('#rel-info').innerHTML = `Destino: <b>${esc(r.para)}</b> · segunda a sexta às 20h e sábado às 13h · Envio automático: ${r.ativo ? '<span class="selo verde">ativo</span>' : '<span class="selo amarelo">desligado</span>'}`;
+      if (r.ativo) $('#rel-ativar').textContent = 'Reativar envio automático';
+      $('#rel-previa').innerHTML = `<p class="dica">Prévia do e-mail de hoje (${esc(r.assunto)}):</p><iframe id="rel-frame" sandbox style="width:100%;height:520px;border:1px solid var(--borda);border-radius:8px"></iframe>`;
+      $('#rel-frame').srcdoc = r.html;
+    } catch (e) { if (!e.auth) aviso(e.message, 'erro'); }
   }
 
   /* ── usuários e perfis (admin) ── */

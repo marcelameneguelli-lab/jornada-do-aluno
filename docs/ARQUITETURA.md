@@ -45,7 +45,7 @@ Calendário, Tarefas e Tutoriais aparecem no menu e no Início para todos os usu
 
 ## Central de Bases
 
-Uma tela só para importar e conferir as bases, com um cartão por base (Renovação Ímpar, Renovação Par, Engajamento Ímpar, Engajamento Par, Engajamento Técnico, NPS Medallia, Formandos). Cada cartão mostra ciclo, data da última importação, quantidade de alunos e quem importou.
+(Implementada em 20/11/2026: mostra a situação de cada base e leva direto para a tela de importação do sistema, que mantém as regras originais.) Uma tela só para importar e conferir as bases, com um cartão por base (Renovação Ímpar, Renovação Par, Engajamento Ímpar, Engajamento Par, Engajamento Técnico, NPS Medallia, Formandos). Cada cartão mostra ciclo, data da última importação, quantidade de alunos e quem importou.
 
 Dentro de cada sistema, o topo mostra sempre um selo com a base ativa (cor diferente para ímpar e par), para não misturar ciclos.
 
@@ -78,7 +78,7 @@ Um projeto GAS novo com roteador `modulo.acao`.
 - Login único: e-mail institucional e senha (hash com sal), passe assinado, bloqueio após 5 erros, senha provisória com troca obrigatória. Perfis com permissões por sistema e por tela.
 - O código de cada backend atual vira um arquivo dentro do projeto e continua lendo e gravando nas planilhas por ID (nas etapas de teste, nas cópias).
 - Comunicação: POST text/plain como padrão e JSONP como reserva quando o fetch for bloqueado.
-- Relatório diário único às 20h (seg a sex) e 13h (sábado).
+- Relatório diário único às 20h (seg a sex) e 13h (sábado), em 15_Gestao.gs: acionamentos e atividades do dia por atendente em cada sistema, renovados do dia, follow-ups atrasados e quem acessou a Jornada.
 
 ## Endereços atuais
 
