@@ -22,7 +22,9 @@
 
   function url() {
     // 'jornada_gas_url' no navegador: endereço de teste (tem prioridade só quando existe)
-    const u = (localStorage.getItem('jornada_gas_url') || '').trim() || (window.JORNADA.gasUrl || '').trim();
+    let teste = '';
+    try { teste = (localStorage.getItem('jornada_gas_url') || '').trim(); } catch (e) { /* armazenamento indisponível */ }
+    const u = teste || (window.JORNADA.gasUrl || '').trim();
     if (!u) throw Object.assign(new Error('Endereço do servidor não configurado.'), { config: true });
     return u;
   }
@@ -56,7 +58,12 @@
   }
 
   /** Chama uma ação do servidor ("sistema.acao"). Devolve o JSON da resposta. */
+  // Tela que já foi fechada (troca de sistema no menu antes de terminar de carregar): a chamada pendente
+  // é abandonada em silêncio, em vez de mostrar erro na tela nova.
+  const telaFechada = () => !document.defaultView;
+
   async function chamar(acao, dados, opcoes) {
+    if (telaFechada()) return new Promise(() => {});
     const o = Object.assign({ timeout: 40000 }, opcoes || {});
     const s = Sessao.ler();
     const corpo = Object.assign({}, dados || {}, { acao: acao });
@@ -65,11 +72,13 @@
     try {
       r = await porFetch(corpo, o.timeout);
     } catch (e) {
+      if (telaFechada()) return new Promise(() => {});
       if (e.config) throw e;
       const tamanho = JSON.stringify(corpo).length;
       if (tamanho > LIMITE_JSONP) throw new Error(e.name === 'AbortError' ? 'Tempo esgotado. Tente de novo.' : 'Sem resposta do servidor. Confira a internet.');
       r = await porJsonp(corpo, o.timeout);
     }
+    if (telaFechada()) return new Promise(() => {});
     if (r && r.auth === false && acao !== 'nucleo.entrar') {
       if (r.erro === 'trocar') { if (window.App) App.pedirTrocaSenha(); }
       else { Sessao.limpar(); if (window.App) App.mostrarLogin(mensagemAcesso(r.erro)); }

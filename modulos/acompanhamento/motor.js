@@ -22,6 +22,7 @@
   const eu = () => { const s = Api.Sessao.ler(); return (s && s.me) || { nome: '', perfil: '' }; };
 
   function aviso(msg, tipo) {
+    if (!document.defaultView) return; // esta tela já foi fechada (o usuário trocou de sistema)
     if (window.App && window.App.aviso) return window.App.aviso(msg, tipo);
     const el = document.createElement('div'); el.className = 'aviso ' + (tipo || ''); el.textContent = msg;
     $('#avisos').appendChild(el); setTimeout(() => el.remove(), 4000);

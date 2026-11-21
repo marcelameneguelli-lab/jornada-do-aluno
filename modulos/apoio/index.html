@@ -51,7 +51,7 @@
 <div id="avisos"></div>
 
 <script src="../../nucleo/config.js?v=1.2.0"></script>
-<script src="../../nucleo/api.js?v=1.2.0"></script>
+<script src="../../nucleo/api.js?v=1.2.3"></script>
 <script>window.App = (window.parent && window.parent !== window) ? window.parent.App : null;</script>
 <script src="../../nucleo/apoio.js?v=1.2.0"></script>
 <script>
@@ -61,7 +61,7 @@
   const hoje = () => new Date().toISOString().slice(0, 10);
   const dataBR = (iso) => { const m = String(iso || '').match(/^(\d{4})-(\d{2})-(\d{2})/); return m ? `${m[3]}/${m[2]}/${m[1].slice(2)}` : ''; };
   const quando = (ms) => ms ? new Date(ms).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: '2-digit' }) : '';
-  const aviso = (msg, tipo) => { if (window.App && window.App.aviso) return window.App.aviso(msg, tipo); alert(msg); };
+  const aviso = (msg, tipo) => { if (!document.defaultView) return; if (window.App && window.App.aviso) return window.App.aviso(msg, tipo); alert(msg); };
   const precisaRevisar = (o) => o.ativo && (!o.revisao || o.revisao <= hoje());
 
   async function carregar() {
