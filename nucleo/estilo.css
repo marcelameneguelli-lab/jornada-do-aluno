@@ -134,3 +134,10 @@ body.com-sistema #lateral:not(:hover) #menu a span { font-size: 18px; }
 .moldura-central .moldura-sistema { min-height: calc(100vh - 42px); }
 .sem-acesso { display: block; margin-top: 10px; color: #8a94a3; }
 .dica-central { margin-top: 18px; color: #5b6676; font-size: 13px; }
+
+/* Envio da base líquida para o servidor (fica por cima de qualquer tela até terminar) */
+#barra-envio { position: fixed; left: 50%; bottom: 18px; transform: translateX(-50%); z-index: 9999; max-width: 760px; width: calc(100% - 40px);
+  background: #003B71; color: #fff; padding: 12px 18px; border-radius: 10px; box-shadow: 0 6px 24px rgba(0,0,0,.25); font-size: 14px; line-height: 1.4; }
+#barra-envio.ok { background: #2b6a1f; }
+#barra-envio.erro { background: #b42318; }
+#barra-envio[hidden] { display: none; }

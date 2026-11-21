@@ -128,6 +128,20 @@ s=troca(s,'</style>','''  /* Jornada: modo ferramenta (Calendário, Tarefas, Tut
   body.modo-ferramenta #top-count, body.modo-ferramenta .status-dot, body.modo-ferramenta .rodape-engajavr { display: none !important; }
 </style>''')
 s=troca(s,'<div style="text-align:center;padding:10px;font-size:11px;color:var(--text3);border-top:1px solid var(--border);background:var(--surface)">\n  Desenvolvido por','<div class="rodape-engajavr" style="text-align:center;padding:10px;font-size:11px;color:var(--text3);border-top:1px solid var(--border);background:var(--surface)">\n  Desenvolvido por')
+# 4c2. envio da base para o servidor pelo shell da Jornada (não é interrompido ao sair da tela; mostra o andamento)
+_i=s.rfind('</body>'); s=s[:_i]+'''<script>
+(function () {
+  var pai = (window.parent && window.parent !== window) ? window.parent : null;
+  if (!pai || !pai.App || !pai.App.enviarBase) return;
+  _sincronizarBaseGAS = async function (base, db) {
+    if (!db || !db.length) return;
+    var r = await pai.App.enviarBase(base, db);
+    if (r && r.ok && r.ts) { try { localStorage.setItem('crm_base_ts_' + base, String(r.ts)); } catch (e) {} }
+    try { showToast(r && r.ok ? '✅ Base salva no servidor (' + db.length.toLocaleString('pt-BR') + ' alunos).' : '⚠️ A base não foi salva no servidor. Importe de novo.'); } catch (e) {}
+  };
+})();
+</script>
+'''+s[_i:]
 # 4d. importação e área administrativa saíram de dentro do sistema (decisão de 21/11/2026):
 #     ficam na Central de Bases e em Configurações da Jornada (?modo=importar&base=X ou ?modo=config).
 _i=s.rfind('</body>'); s=s[:_i]+'''<style>

@@ -10376,6 +10376,18 @@ function exportarRelatorioXLSX() {
   </div>
 
 
+<script>
+(function () {
+  var pai = (window.parent && window.parent !== window) ? window.parent : null;
+  if (!pai || !pai.App || !pai.App.enviarBase) return;
+  _sincronizarBaseGAS = async function (base, db) {
+    if (!db || !db.length) return;
+    var r = await pai.App.enviarBase(base, db);
+    if (r && r.ok && r.ts) { try { localStorage.setItem('crm_base_ts_' + base, String(r.ts)); } catch (e) {} }
+    try { showToast(r && r.ok ? '✅ Base salva no servidor (' + db.length.toLocaleString('pt-BR') + ' alunos).' : '⚠️ A base não foi salva no servidor. Importe de novo.'); } catch (e) {}
+  };
+})();
+</script>
 <style>
   html.jornada-normal #tab-importar, html.jornada-normal [onclick="showPage('admin')"] { display: none !important; }
   html.jornada-modo .tab-bar, html.jornada-modo #priority-bar, html.jornada-modo #top-count, html.jornada-modo .rodape-engajavr { display: none !important; }

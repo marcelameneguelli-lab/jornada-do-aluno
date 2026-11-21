@@ -417,6 +417,54 @@
     iniciar();
   }
 
-  window.App = { mostrarLogin, pedirTrocaSenha, aviso, abrirModal, fecharModal, esc, sair };
+  /* ── Envio da base líquida para o servidor ──
+   * Roda aqui no shell (e não dentro da tela do sistema), para não ser interrompido quando a pessoa
+   * volta para a Central ou troca de sistema no meio do envio. Mostra o andamento e só dá "pronto"
+   * quando o servidor confirma a última parte. */
+  const NOMES_BASE_ENG = { impar: 'Ímpar', par: 'Par', ct: 'Técnico' };
+  let envioEmAndamento = null;
+  function barraEnvio(txt, tipo) {
+    let b = document.getElementById('barra-envio');
+    if (!b) { b = document.createElement('div'); b.id = 'barra-envio'; document.body.appendChild(b); }
+    b.className = tipo || '';
+    b.innerHTML = txt;
+    b.hidden = !txt;
+  }
+  async function enviarBase(base, dados) {
+    if (envioEmAndamento) await envioEmAndamento.catch(() => {});
+    const nome = NOMES_BASE_ENG[base] || base;
+    const CHUNK = 400, partes = Math.ceil(dados.length / CHUNK);
+    const avisoSaida = (ev) => { ev.preventDefault(); ev.returnValue = ''; };
+    window.addEventListener('beforeunload', avisoSaida);
+    envioEmAndamento = (async () => {
+      try {
+        let ts = 0;
+        for (let p = 0; p < partes; p++) {
+          barraEnvio(`☁️ Enviando a base <b>${nome}</b> para o servidor: parte ${p + 1} de ${partes} (${dados.length.toLocaleString('pt-BR')} alunos). Não feche a Jornada.`);
+          let r = null, erro = '';
+          for (let tent = 0; tent < 3 && !(r && r.ok); tent++) {
+            try { r = await Api.chamar('engajamento.salvarBase', { base, dados: dados.slice(p * CHUNK, (p + 1) * CHUNK), parte: p, total: partes }, { timeout: 180000 }); }
+            catch (e) { if (e.auth) throw e; erro = e.message; r = null; }
+            if (r && !r.ok) erro = r.msg || r.erro || 'erro no servidor';
+          }
+          if (!r || !r.ok) throw new Error(`parte ${p + 1} de ${partes}: ${erro || 'sem resposta do servidor'}`);
+          if (r.ts) ts = r.ts;
+        }
+        barraEnvio(`✅ Base <b>${nome}</b> salva no servidor com ${dados.length.toLocaleString('pt-BR')} alunos. Todos os sistemas já usam esta base.`, 'ok');
+        setTimeout(() => barraEnvio(''), 8000);
+        if (location.hash === '#/bases') rota();
+        return { ok: true, ts, total: dados.length };
+      } catch (e) {
+        barraEnvio(`⚠️ A base <b>${nome}</b> NÃO foi salva no servidor (${esc(e.message)}). Os sistemas continuam com a base anterior. Importe o arquivo de novo.`, 'erro');
+        return { ok: false, erro: e.message };
+      } finally {
+        window.removeEventListener('beforeunload', avisoSaida);
+        envioEmAndamento = null;
+      }
+    })();
+    return envioEmAndamento;
+  }
+
+  window.App = { mostrarLogin, pedirTrocaSenha, aviso, abrirModal, fecharModal, esc, sair, enviarBase };
   document.addEventListener('DOMContentLoaded', preparar);
 })();
