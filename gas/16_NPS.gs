@@ -19,6 +19,7 @@ function abaNps_() {
     sh.getRange(1, 1, 1, CAB_NPS.length).setValues([CAB_NPS]).setFontWeight('bold');
     sh.setFrozenRows(1);
     sh.getRange('A:A').setNumberFormat('@');
+    sh.getRange('C:C').setNumberFormat('@');
   }
   return sh;
 }

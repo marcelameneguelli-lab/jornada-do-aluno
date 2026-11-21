@@ -39,7 +39,9 @@ function basesResumo_() {
     const n = Math.max(sh.getLastRow() - 1, 0);
     const datas = n ? sh.getRange(2, 3, n, 2).getValues() : [];
     r.nps = { total: n, ultima: datas.reduce((m, l) => Math.max(m, Number(l[1]) || 0), 0),
-      ate: datas.reduce((m, l) => (String(l[0]) > m ? String(l[0]) : m), '').slice(0, 10) };
+      // a planilha pode ter transformado a data em Date: volta para aaaa-mm-dd antes de comparar
+      ate: datas.map(l => l[0] instanceof Date ? Utilities.formatDate(l[0], Session.getScriptTimeZone(), 'yyyy-MM-dd') : String(l[0] || '').slice(0, 10))
+        .filter(d => /^\d{4}-\d{2}-\d{2}$/.test(d)).reduce((m, d) => (d > m ? d : m), '') };
   } catch (e) { r.erros.push('NPS: ' + e.message); }
   return r;
 }
