@@ -11,6 +11,8 @@
   const txt = (v) => String(v == null ? '' : v).trim();
   const moeda = (v) => num(v).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
   const data = (v) => { const t = txt(v); if (!t) return ''; const m = t.match(/^(\d{4})-(\d{2})-(\d{2})/); return m ? `${m[3]}/${m[2]}/${m[1]}` : t.split(' ')[0]; };
+  /* dd/mm/aa (NPS) */
+  const dataAA = (v) => { const t = txt(v); if (!t) return ''; const m = t.match(/^(\d{4})-(\d{2})-(\d{2})/); return m ? `${m[3]}/${m[2]}/${m[1].slice(2)}` : t.split(' ')[0]; };
 
   /* Financiamentos: programa do aluno (CLASSE_PAGANTE_SEMESTRE + colunas próprias de Ficou Fácil e Pravaler) */
   function programa(r) {
@@ -135,14 +137,14 @@
     nps: {
       nome: 'NPS', icone: '⭐', original: '',
       subtitulo: 'Pesquisa Medallia: promotores (9 e 10), neutros (7 e 8) e detratores (0 a 6)',
-      fonte: 'respostas', nomeFonte: 'respostas do Medallia', unidade: 'respostas', feminino: true,
+      fonte: 'respostas', nomeFonte: 'respostas do Medallia', unidade: 'respostas', feminino: true, anoCurto: true,
       semDados: 'Nenhuma resposta importada ainda. Use "Importar arquivo do Medallia".',
       chave: (r) => r.id, matriculaVisivel: (r) => r.matricula,
       elegivel: (r) => nota(r) != null,
       ordenar: (a, b) => String(b.data_resposta).localeCompare(String(a.data_resposta)),
       importar: { rotulo: 'Importar arquivo do Medallia', converter: converterMedallia, erroFormato: 'Não encontrei a coluna "ID da Pesquisa". Use a exportação "Survey Export" do Medallia, sem alterar o arquivo.' },
       colunas: [
-        { t: 'Resposta', v: (r) => data(r.data_resposta) },
+        { t: 'Resposta', v: (r) => dataAA(r.data_resposta) },
         { t: 'Nota', v: (r) => nota(r) },
         { t: 'Grupo', v: grupoNps, alerta: (r) => grupoNps(r) === 'Detrator' },
         { t: 'Motivo', v: (r) => txt(r.motivo).slice(0, 45) },
@@ -181,7 +183,7 @@
       },
       detalhe: (r, esc) => {
         const blocos = [];
-        blocos.push(`<div><span>Nota</span><b>${esc(nota(r))}</b> · ${esc(grupoNps(r))} · ${esc(data(r.data_resposta))}</div>`);
+        blocos.push(`<div><span>Nota</span><b>${esc(nota(r))}</b> · ${esc(grupoNps(r))} · ${esc(dataAA(r.data_resposta))}</div>`);
         if (txt(r.motivo)) blocos.push(`<div><span>Motivo principal</span>${esc(r.motivo)}${r.motivo_outros ? ' (' + esc(r.motivo_outros) + ')' : ''}</div>`);
         if (txt(r.comentario)) blocos.push(`<div><span>Comentário</span>${esc(r.comentario)}</div>`);
         TEMAS.forEach(([k, t]) => { if (txt(r['satisf_' + k])) blocos.push(`<div><span>${t}: ${r['satisf_' + k] === 'Sim' ? 'satisfeito' : 'insatisfeito'}</span>${esc(r['driver_' + k])}</div>`); });

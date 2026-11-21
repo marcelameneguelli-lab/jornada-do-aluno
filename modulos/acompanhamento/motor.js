@@ -272,6 +272,8 @@
     const nome = eu().nome;
     return Object.values(E.regs).filter((x) => x.fu_status === 'pendente' && x.fu_data && (!x.base || x.base === E.base) && (E.fuQuem === 'todos' || x.atendente === nome));
   }
+  /* matrícula para mostrar (no NPS a chave é o ID da resposta, não a matrícula) */
+  function matriculaDoReg(x) { const r = E.alunos.filter((a) => mat(a) === x.matricula)[0]; return r ? matVis(r) : x.matricula; }
   function atualizarContadorFu() { const n = pendentes().length; $('#cont-fu').textContent = n; }
 
   function telaFollowup() {
@@ -284,7 +286,7 @@
         <span class="total">${L.length} pendente(s) · ${esc(nomeBase())}</span>
       </div>
       ${grupos.map(([t, lista, cls]) => `<div class="grupo-fu"><h3>${t} (${lista.length})</h3>${lista.map((x) => `
-        <div class="fu ${cls}"><div><b>${esc(x.aluno || x.matricula)}</b> <small>${esc(x.matricula)} · ${dataBR(x.fu_data)} · ${esc(x.atendente)}</small>
+        <div class="fu ${cls}"><div><b>${esc(x.aluno || x.matricula)}</b> <small>${esc(matriculaDoReg(x))} · ${dataBR(x.fu_data)} · ${esc(x.atendente)}</small>
           <small>${esc(x.resultado)}: ${esc(x.obs)}</small></div>
           <button class="btn mini" data-abrir="${esc(x.matricula)}">Abrir aluno</button><button class="btn mini primario" data-feito="${esc(x.id)}">Concluir</button></div>`).join('') || '<p class="dica">Nada aqui.</p>'}</div>`).join('')}`;
     $('#fu-quem').onchange = (ev) => { E.fuQuem = ev.target.value; atualizarContadorFu(); telaFollowup(); };
@@ -364,8 +366,9 @@
   }
 
   /* ── utilidades ── */
-  function dataCurta(ms) { return ms ? new Date(ms).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : ''; }
-  function dataBR(iso) { const m = String(iso || '').match(/^(\d{4})-(\d{2})-(\d{2})/); return m ? `${m[3]}/${m[2]}/${m[1]}` : String(iso || ''); }
+  // sistemas com anoCurto (NPS) mostram as datas como dd/mm/aa
+  function dataCurta(ms) { return ms ? new Date(ms).toLocaleString('pt-BR', CFG && CFG.anoCurto ? { day: '2-digit', month: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit' } : { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : ''; }
+  function dataBR(iso) { const m = String(iso || '').match(/^(\d{4})-(\d{2})-(\d{2})/); return m ? `${m[3]}/${m[2]}/${CFG && CFG.anoCurto ? m[1].slice(2) : m[1]}` : String(iso || ''); }
   function abrirModal(html) { $('#modal-corpo').innerHTML = html; $('#modal').hidden = false; document.querySelectorAll('#modal [data-fechar]').forEach((b) => { b.onclick = fecharModal; }); }
   function fecharModal() { $('#modal').hidden = true; $('#modal-corpo').innerHTML = ''; }
 
