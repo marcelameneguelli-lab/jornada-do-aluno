@@ -151,7 +151,8 @@
   function abrirSistema(area, sis) {
     if (!sis.pronto) return emMigracao(area, sis);
     document.body.classList.add('com-sistema');
-    area.innerHTML = `<iframe class="moldura-sistema" title="${esc(sis.nome)}" src="modulos/${sis.id}/index.html?v=${JORNADA.versao}"></iframe>`;
+    const pagina = sis.pagina || `modulos/${sis.id}/index.html`;
+    area.innerHTML = `<iframe class="moldura-sistema" title="${esc(sis.nome)}" src="${pagina}${pagina.indexOf('?') >= 0 ? '&' : '?'}v=${JORNADA.versao}"></iframe>`;
   }
 
   /** Calendário, Tarefas e Tutoriais: as telas do EngajaVR em modo ferramenta, para toda a equipe. */

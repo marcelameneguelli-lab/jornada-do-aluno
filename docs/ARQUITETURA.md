@@ -29,6 +29,16 @@ CRM único que reúne o RenovaVR, o EngajaVR e o Painel Formandos, com login ún
 
 Cada sistema tem: lista de alunos, modal de acionamento, follow-up, produtividade, dashboard e, quando já existia, Evasão e telas próprias.
 
+## Motor de acompanhamento (Provas, Estágio, Financeiro, Financiamentos)
+
+Uma tela única (`app/modulos/acompanhamento/`) configurada por sistema em `sistemas.js`: quem entra (regra sobre a base do Engajamento), colunas, filtros, resultados de contato, indicadores e, no Financiamentos, a ficha do aluno.
+
+Abas: Alunos (lista, filtros, exportação CSV, ficha e acionamento), Follow-up (atrasados, hoje, próximos; meus ou da equipe), Dashboard (alunos, cobertura, acionamentos, follow-ups, resultados, canais, 14 dias), Produtividade (por atendente e período) e Tela original (a página do EngajaVR, para TCE, agendamento de provas e disparo em lote).
+
+Regras de entrada: Provas = AV ou AVS no polo (QTD_ELEGIVEL_AV_POLO / QTD_ELEGIVEL_AVS_POLO); Estágio = QTD_ELEGIVEL_ESTAGIO; Financeiro = INADIMPLENTE; Financiamentos = CLASSE_PAGANTE_SEMESTRE (PROUNI, FIES, PRAVALER, PAR, BOLSISTA100), BOLSA_FICOU_FACIL ou BOLSA_PRV.
+
+Servidor: 14_Acompanhamento.gs. Abas acomp_<sistema> (acionamentos e follow-ups) e ficha_<sistema> (campos por aluno). O atendente gravado é sempre quem está logado. Cada sistema só acessa as ações do EngajaVR que a sua tela original usa.
+
 ## Ferramentas da equipe
 
 Calendário, Tarefas e Tutoriais aparecem no menu e no Início para todos os usuários logados, sem depender dos sistemas liberados. Usam as telas e os dados do EngajaVR (mesmo armazenamento), abertas em "modo ferramenta" (sem abas, bases nem contador de alunos). No servidor, ficam em 13_Ferramentas.gs (ações ferramentas.*).

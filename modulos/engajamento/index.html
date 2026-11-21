@@ -600,7 +600,15 @@ input[type=checkbox].row-cb,input[type=checkbox]#cb-all{width:15px;height:15px;c
   <script>
   /* Jornada do Aluno: login, avisos e sessão ficam na tela base */
   window.App = (window.parent && window.parent !== window) ? window.parent.App : null;
-  window.JORNADA_FERRAMENTA = (function () { var f = new URLSearchParams(location.search).get('ferramenta'); return ['calendario', 'tarefas', 'tutoriais'].indexOf(f) >= 0 ? f : ''; })();
+  window.JORNADA_FERRAMENTA = (function () { var f = new URLSearchParams(location.search).get('ferramenta'); return ['calendario', 'tarefas', 'tutoriais', 'financeiro', 'estagio', 'polo'].indexOf(f) >= 0 ? f : ''; })();
+  // Tela original de um sistema próprio (Financeiro, Estágio, Provas): fala só com o servidor desse sistema, na base escolhida
+  window.JORNADA_SISTEMA = (function () { var q = new URLSearchParams(location.search), s = q.get('sistema'); return ['financeiro', 'estagio', 'provas'].indexOf(s) >= 0 ? s : ''; })();
+  (function () {
+    var b = new URLSearchParams(location.search).get('base');
+    if (window.JORNADA_SISTEMA && ['impar', 'par', 'ct'].indexOf(b) >= 0) {
+      try { window._jornadaBaseAnterior = localStorage.getItem('crm_active_base'); localStorage.setItem('crm_active_base', b); } catch (e) {}
+    }
+  })();
   (function () {
     try {
       var j = Api.Sessao.ler();
@@ -2203,7 +2211,7 @@ async function gasCall(action, body={}) {
   if (!GAS_URL) return null;
   try {
     const FERR = ['getEventos', 'saveEventos', 'getTarefas', 'saveTarefas', 'getTutoriais', 'saveTutoriais', 'getAtendentes'];
-    const sistema = FERR.indexOf(action) >= 0 ? 'ferramentas.' : 'engajamento.';
+    const sistema = FERR.indexOf(action) >= 0 ? 'ferramentas.' : (window.JORNADA_SISTEMA ? window.JORNADA_SISTEMA + '.' : 'engajamento.');
     const r = await Api.chamar(sistema + action, Object.assign({}, body), { timeout: 30000 });
     if (r && r.permissao === false) { if (!window.JORNADA_FERRAMENTA) showToast('⚠️ ' + (r.erro || 'Seu perfil não pode fazer isso.')); return Object.assign(r, { ok: false, error: r.erro, msg: r.erro }); }
     if (r && r.ok === false && r.erro && !r.error) { r.error = r.erro; if (!r.msg) r.msg = r.erro; }
@@ -2952,7 +2960,16 @@ document.addEventListener('DOMContentLoaded', function() {
       if (el) el.focus();
     }, 100);
   } else {
-    if (window.JORNADA_FERRAMENTA) {
+    if (window.JORNADA_SISTEMA) {
+      // Jornada: tela original de Financeiro, Estágio ou Provas, com a base carregada do servidor
+      document.body.classList.add('modo-ferramenta');
+      try { if (window._jornadaBaseAnterior != null) localStorage.setItem('crm_active_base', window._jornadaBaseAnterior); } catch (e) {}
+      // nesta tela só existe a página do sistema: qualquer pedido de outra página volta para ela
+      var _showPageOriginal = showPage;
+      showPage = function (p) { return _showPageOriginal(window.JORNADA_FERRAMENTA); };
+      _concluirLogin(_usuarioLogado);
+      showPage(window.JORNADA_FERRAMENTA);
+    } else if (window.JORNADA_FERRAMENTA) {
       // Jornada: ferramenta da equipe (Calendário, Tarefas ou Tutoriais), sem a base de alunos
       var _nomes = { calendario: '🗓️ Calendário', tarefas: '✅ Tarefas', tutoriais: '📚 Tutoriais' };
       document.body.classList.add('modo-ferramenta');

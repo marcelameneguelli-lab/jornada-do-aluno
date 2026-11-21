@@ -21,9 +21,12 @@ g.Renovacao_().processarAcao('importar_alunos', { __sess:{nome:'Teste',email:'t@
 const cursos=['Direito','Enfermagem','Administração'];
 g.Engajamento_().acoes.salvarBase({ base:'impar', parte:0, total:1, dados: Array.from({length:6},(_,i)=>({
   COD_MATRICULA:String(202301000100+i), NOM_ALUNO:'Engaja Exemplo '+(i+1), NOM_CURSO:cursos[i%3], MODALIDADE_PP_PC:i%2?'PRESENCIAL':'DIGITAL',
-  VAL_DIVIDA:i===2?'350,00':'0', INADIMPLENTE:i===2?'S':'N', END_EMAIL:'aluno'+i+'@exemplo.com', NUM_TELEF_CELULAR:'2499999000'+i,
+  VAL_DIVIDA:i===2?'350,00':(i===5?'1.250,00':'0'), INADIMPLENTE:i===2||i===5?'1':'0', END_EMAIL:'aluno'+i+'@exemplo.com', NUM_TELEF_CELULAR:'2499999000'+i,
   APROVEITAMENTO_ACADEMICO_ATUAL:i%2?'PARCIAL':'100%', SAFRA:'2023.1', PROPENSAO_EVASAO:i===4?'ALTA':'BAIXA', NOM_SITUACAO_ALUNO:'MATRICULADO',
-  CLASSE_PAGANTE_SEMESTRE:i===1?'PROUNI':'MENSALISTA', QTD_DIAS_ULTIMO_ACESSO:String(i*5) })) });
+  CLASSE_PAGANTE_SEMESTRE:['MENSALISTA','PROUNI','FIES','PRAVALER','PROUNI','MENSALISTA'][i], PCT_APROVACAO_ANT:['','66,67','80','','90',''][i], FAIXA_APROVEITAMENTO:'61% a 80%',
+  QTD_ELEGIVEL_AV_POLO:String([3,0,2,0,1,0][i]), QTD_ELEGIVEL_AVS_POLO:String([1,0,0,0,2,0][i]), FALTA_AGENDAR_AV:i===0?'1':'0', FALTA_AGENDAR_AVS:i===4?'1':'0',
+  QTD_ELEGIVEL_ESTAGIO:i===3||i===5?'1':'', FAIXA_DIVIDA:i===2?'Até R$ 500':'', TIPO_INADIMPLENCIA:i===2?'Mensalidade':'',
+  QTD_DIAS_ULTIMO_ACESSO:String(i*5) })) });
 fs.writeFileSync('/tmp/prov.json', JSON.stringify({admin:sh.d[1][6], atend:sh.d[2][6], eng:sh.d[3][6]}));
 const tipos={'.html':'text/html; charset=utf-8','.js':'application/javascript','.css':'text/css','.png':'image/png','.webmanifest':'application/manifest+json'};
 http.createServer((req,res)=>{
