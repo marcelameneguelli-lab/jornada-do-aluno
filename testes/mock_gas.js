@@ -36,8 +36,8 @@ function criar(arquivos){
     UrlFetchApp:{ fetch(){ throw new Error('sem rede no teste'); } }, DriveApp:(function(){ const pastas={}; let seq=0;
       function iter(a){ let i=0; return {hasNext:()=>i<a.length, next:()=>a[i++]}; }
       function Pasta(nome){ const id='pasta'+(++seq); const arqs=[]; const p={ id, nome, arqs, getId:()=>id, getName:()=>nome,
-        getFilesByName:(n)=>iter(arqs.filter(f=>f.nome===n&&!f.lixo)),
-        createFile:(n,c)=>{ const f={nome:n,c:String(c),lixo:false,setTrashed(v){this.lixo=v;},getBlob(){const f2=this;return{getDataAsString:()=>f2.c};},getName(){return this.nome;},setContent(c){this.c=c;}}; arqs.push(f); return f; } };
+        getFilesByName:(n)=>iter(arqs.filter(f=>f.nome===n)),
+        createFile:(n,c)=>{ const f={nome:n,c:String(c),lixo:false,criado:(globalThis.__relogio=(globalThis.__relogio||1e12)+1000),isTrashed(){return this.lixo;},getLastUpdated(){return new Date(this.criado);},setTrashed(v){this.lixo=v;},getBlob(){const f2=this;return{getDataAsString:()=>f2.c};},getName(){return this.nome;},setContent(c){this.c=c;}}; arqs.push(f); return f; } };
         pastas[id]=p; return p; }
       return { createFolder:(n)=>Pasta(n), getFolderById:(id)=>{ if(!pastas[id]) throw new Error('não achou'); return pastas[id]; }, getFoldersByName:(n)=>iter(Object.values(pastas).filter(p=>p.nome===n)), getFilesByName:()=>iter([]), _pastas:pastas }; })(),
     ScriptApp:{ getProjectTriggers:()=>[], newTrigger(){ const b={timeBased(){return b},onWeekDay(){return b},atHour(h){b.h=h;return b},nearMinute(){return b},inTimezone(){return b},everyMinutes(){return b},everyDays(){return b},create(){ (ctx._gatilhos=ctx._gatilhos||[]).push(b.h); return {}; }}; return b; }, deleteTrigger(){}, WeekDay:{MONDAY:1,TUESDAY:2,WEDNESDAY:3,THURSDAY:4,FRIDAY:5,SATURDAY:6,SUNDAY:7} },

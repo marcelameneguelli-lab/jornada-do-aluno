@@ -116,5 +116,43 @@ function engajamento_enviarRelatorioDiario() {{ Engajamento_().enviarRelatorioDi
 function engajamento_criarTriggerDiario() {{ Engajamento_().criarTriggerDiario(); }}
 function engajamento_testarRelatorio() {{ Engajamento_().testarRelatorio(); }}
 '''
+# Drive: o DriveApp também devolve arquivos da lixeira. Depois de trocar a base, a leitura podia pegar a
+# versão antiga (na lixeira) e o envio em partes juntava pedaços velhos. Lê só o arquivo ativo mais recente,
+# e uma falha ao gravar passa a ser erro (antes o servidor dizia "salvo" mesmo sem salvar).
+_velho_get = """        var files = folder.getFilesByName('engajavr_' + key + '.json');
+        if (files.hasNext()) {
+          var f = files.next();
+          return f.getBlob().getDataAsString('UTF-8');
+        }"""
+_novo_get = """        var files = folder.getFilesByName('engajavr_' + key + '.json');
+        var melhor = null, quando = -1;
+        while (files.hasNext()) {
+          var f = files.next();
+          if (f.isTrashed()) continue;
+          var t = f.getLastUpdated().getTime();
+          if (t > quando) { melhor = f; quando = t; }
+        }
+        if (melhor) return melhor.getBlob().getDataAsString('UTF-8');"""
+assert out.count(_velho_get) == 1, 'driveGet'
+out = out.replace(_velho_get, _novo_get)
+_velho_set = """          var files = folder.getFilesByName(fileName);
+          while (files.hasNext()) { files.next().setTrashed(true); } // remove versão antiga
+          folder.createFile(fileName, value, 'application/json');"""
+_novo_set = """          var antigos = [];
+          var files = folder.getFilesByName(fileName);
+          while (files.hasNext()) { var fa = files.next(); if (!fa.isTrashed()) antigos.push(fa); }
+          folder.createFile(fileName, value, 'application/json'); // grava a nova antes de apagar a antiga
+          antigos.forEach(function (fa) { try { fa.setTrashed(true); } catch (e) {} });"""
+assert out.count(_velho_set) == 1, 'driveSet'
+out = out.replace(_velho_set, _novo_set)
+_velho_falha = """      } catch(e) {
+        Logger.log('driveSet erro: ' + e.message);
+        return false;
+      }"""
+assert out.count(_velho_falha) == 1, 'driveSet falha'
+out = out.replace(_velho_falha, """      } catch(e) {
+        Logger.log('driveSet erro: ' + e.message);
+        throw new Error('Não foi possível gravar no Drive (' + key + '): ' + e.message);
+      }""")
 open(os.path.join(RAIZ,'gas/12_Engajamento.gs'),'w',encoding='utf8').write(out)
 print('ok', len(casos),'ações;', n_ss,'acessos à planilha;', n_p,'usos de propriedades isolados')

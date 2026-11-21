@@ -226,10 +226,14 @@ function Engajamento_() {
       try {
         var folder = getDriveFolder();
         var files = folder.getFilesByName('engajavr_' + key + '.json');
-        if (files.hasNext()) {
+        var melhor = null, quando = -1;
+        while (files.hasNext()) {
           var f = files.next();
-          return f.getBlob().getDataAsString('UTF-8');
+          if (f.isTrashed()) continue;
+          var t = f.getLastUpdated().getTime();
+          if (t > quando) { melhor = f; quando = t; }
         }
+        if (melhor) return melhor.getBlob().getDataAsString('UTF-8');
       } catch(e) { Logger.log('driveGet erro: ' + e.message); }
       return null;
     }
@@ -242,16 +246,18 @@ function Engajamento_() {
         var lock = LockService.getScriptLock();
         try { lock.waitLock(10000); } catch(e) {}
         try {
+          var antigos = [];
           var files = folder.getFilesByName(fileName);
-          while (files.hasNext()) { files.next().setTrashed(true); } // remove versão antiga
-          folder.createFile(fileName, value, 'application/json');
+          while (files.hasNext()) { var fa = files.next(); if (!fa.isTrashed()) antigos.push(fa); }
+          folder.createFile(fileName, value, 'application/json'); // grava a nova antes de apagar a antiga
+          antigos.forEach(function (fa) { try { fa.setTrashed(true); } catch (e) {} });
         } finally {
           try { lock.releaseLock(); } catch(e) {}
         }
         return true;
       } catch(e) {
         Logger.log('driveSet erro: ' + e.message);
-        return false;
+        throw new Error('Não foi possível gravar no Drive (' + key + '): ' + e.message);
       }
     }
 
