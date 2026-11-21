@@ -33,6 +33,7 @@ function abaAcomp_(sis, tipo) {
     sh.getRange(1, 1, 1, cab.length).setValues([cab]).setFontWeight('bold');
     sh.setFrozenRows(1);
     sh.getRange('A:B').setNumberFormat('@'); // id e matrícula como texto
+    if (tipo === 'acomp') sh.getRange('I:I').setNumberFormat('@'); // data do follow-up como texto (aaaa-mm-dd)
   }
   return sh;
 }
@@ -44,7 +45,13 @@ function linhasDe_(sh, ncol) {
 
 function regDeLinha_(l) {
   const o = {};
-  CAB_ACOMP.forEach((c, i) => { o[c] = l[i] instanceof Date ? l[i].getTime() : l[i]; });
+  // a planilha transforma "2026-11-22" em data: o follow-up volta para aaaa-mm-dd, o resto vira milissegundos
+  CAB_ACOMP.forEach((c, i) => {
+    const v = l[i];
+    if (v instanceof Date) o[c] = c === 'fu_data' ? Utilities.formatDate(v, Session.getScriptTimeZone(), 'yyyy-MM-dd') : v.getTime();
+    else o[c] = v;
+  });
+  o.fu_data = o.fu_data ? String(o.fu_data).slice(0, 10) : '';
   o.id = String(o.id); o.matricula = String(o.matricula);
   o.criado = Number(o.criado) || 0; o.atualizado = Number(o.atualizado) || 0;
   return o;

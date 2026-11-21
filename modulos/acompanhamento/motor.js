@@ -95,7 +95,7 @@
     try {
       const r = await chamar('listar', { since: E.desde });
       if (!r || !r.ok) throw new Error((r && r.erro) || 'sem resposta');
-      (r.regs || []).forEach((x) => { E.regs[x.id] = x; });
+      (r.regs || []).forEach((x) => { x.fu_data = normFu(x.fu_data); E.regs[x.id] = x; });
       Object.keys(r.fichas || {}).forEach((m) => { E.fichas[m] = r.fichas[m]; });
       const mudou = E.desde && ((r.regs || []).length || Object.keys(r.fichas || {}).length);
       E.desde = r.agora || Date.now();
@@ -342,6 +342,12 @@
   }
 
   /* ── follow-up ── */
+  /* data do follow-up sempre como aaaa-mm-dd (registros antigos podem ter vindo como número) */
+  function normFu(v) {
+    if (v == null || v === '') return '';
+    if (typeof v === 'number' || /^\d{11,}$/.test(String(v))) { const d = new Date(Number(v)); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; }
+    return String(v).slice(0, 10);
+  }
   function pendentes() {
     const nome = eu().nome;
     return Object.values(E.regs).filter((x) => x.fu_status === 'pendente' && x.fu_data && (!x.base || x.base === E.base) && (E.fuQuem === 'todos' || x.atendente === nome));
