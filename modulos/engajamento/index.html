@@ -684,7 +684,7 @@ input[type=checkbox].row-cb,input[type=checkbox]#cb-all{width:15px;height:15px;c
     <button class="tab" onclick="showPage('dashboard')">Dashboard</button>
     <button class="tab" onclick="showPage('produtividade')">Produtividade</button>
     <button class="tab" onclick="showPage('followup')">📅 Follow-up</button>
-    <button class="tab" onclick="showPage('evasao')" id="tab-evasao">🚪 Evasão</button>
+    
     <button class="tab" id="tab-importar" onclick="showPage('importar')">Importar</button>
     <button class="tab" onclick="showPage('admin')" style="margin-left:auto;border-color:#ffc9c9;color:#c92a2a;background:#fff5f5">🔐 Admin</button>
   </div>
@@ -10457,6 +10457,7 @@ function _jornadaModo() {
     showPage = function (p) {
       if (pai && p === 'importar') { pai.location.hash = '#/bases/engajamento?base=' + (typeof ACTIVE_BASE !== 'undefined' ? ACTIVE_BASE : 'impar'); return; }
       if (pai && p === 'admin') { pai.location.hash = '#/config/engajamento'; return; }
+      if (pai && p === 'evasao') { pai.location.hash = '#/s/evasao'; return; } // Evasão virou sistema próprio
       return _show.apply(this, arguments);
     };
     return;

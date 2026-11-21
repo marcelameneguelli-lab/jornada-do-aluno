@@ -215,6 +215,7 @@ function _jornadaModo() {
     showPage = function (p) {
       if (pai && p === 'importar') { pai.location.hash = '#/bases/engajamento?base=' + (typeof ACTIVE_BASE !== 'undefined' ? ACTIVE_BASE : 'impar'); return; }
       if (pai && p === 'admin') { pai.location.hash = '#/config/engajamento'; return; }
+      if (pai && p === 'evasao') { pai.location.hash = '#/s/evasao'; return; } // Evasão virou sistema próprio
       return _show.apply(this, arguments);
     };
     return;
@@ -232,6 +233,8 @@ function _jornadaModo() {
 }
 </script>
 '''+s[_i:]
+# 4b. Evasão saiu do Engajamento: agora é o sistema Evasão da Jornada (mesmos dados, EvasaoData_<base>)
+s=troca(s,'<button class="tab" onclick="showPage(\'evasao\')" id="tab-evasao">🚪 Evasão</button>','')
 # 5. service worker é o da Jornada
 s=troca(s,"if ('serviceWorker' in navigator && location.protocol === 'https:') {","if (false) { // Jornada: service worker único na tela base")
 os.makedirs(os.path.join(RAIZ,'app/modulos/engajamento'),exist_ok=True)

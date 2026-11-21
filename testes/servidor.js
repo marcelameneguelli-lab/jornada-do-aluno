@@ -31,6 +31,13 @@ g.Engajamento_().acoes.salvarBase({ base:'impar', parte:0, total:1, dados: Array
   QTD_ELEGIVEL_ESTAGIO:i===3||i===5?'1':'', FAIXA_DIVIDA:i===2?'Até R$ 500':'', TIPO_INADIMPLENCIA:i===2?'Mensalidade':'',
   QTD_DIAS_ULTIMO_ACESSO:String(i*5) })) });
 try { g.Engajamento_().acoes.saveAction({ base:'impar', id:'eng1', matricula:'202301000104', atend:'Angelica', canal:'WhatsApp', tipo:'Acionamento', motivo:'Provas', datetime:'10/11/2026 14:30:00', date:'10/11/2026' }); } catch (e) { console.log('sem histórico do Engajamento no exemplo:', e.message); }
+// Evasão: um cancelado na base Par e evadidos na Renovação (ciclo 2025.2 encerrado e um evadido no 2026.1 aberto)
+g.Engajamento_().storeSet('EvasaoData_par', JSON.stringify([{id:'ev_db_202402000201',mat:'202402000201',nome:'Par Cancelada',curso:'Psicologia',base:'par',sit:'cancelado',obj:'',obs:'',atend:'',data:'2026-11-01',divida:'800,00',_ts:0}]));
+(function(){ const S={__sess:{nome:'Teste',email:'t@e',perfil:'admin'}}; const R=g.Renovacao_();
+  R.processarAcao('importar_alunos', Object.assign({ciclo:'2025.2', alunos:[{id:'P1',nome:'Recaptura Exemplo',matricula:'202402000301',curso:'Direito',modalidade:'Presencial',ciclo:'2025.2',status:'pendente'}]},S));
+  R.processarAcao('salvar_acionamento', Object.assign({acionamento:{id:'evp1',alunoId:'P1',nomeAluno:'Recaptura Exemplo',tipo:'WhatsApp',obs:'[Objeção: Mudança de cidade | foi para SP]',stAl:'Evadido',ciclo:'2025.2'}},S));
+  R.processarAcao('salvar_config', Object.assign({chave:'ciclo_cfg',valor:JSON.stringify({'2025.2':{prazo:'31/07/2026',ts:1}})},S));
+})();
 fs.writeFileSync('/tmp/prov.json', JSON.stringify({admin:sh.d[1][6], atend:sh.d[2][6], eng:sh.d[3][6]}));
 const tipos={'.html':'text/html; charset=utf-8','.js':'application/javascript','.css':'text/css','.png':'image/png','.webmanifest':'application/manifest+json'};
 http.createServer((req,res)=>{

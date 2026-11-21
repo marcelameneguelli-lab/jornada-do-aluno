@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Evasão · Jornada do Aluno</title>
+<link rel="icon" type="image/png" href="../../icones/icon-192.png">
+<link rel="stylesheet" href="../../nucleo/estilo.css?v=1.2.0">
+<style>
+  body { background: var(--fundo); }
+  [hidden] { display: none !important; }
+  .topo { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; padding: 14px 22px; background: #fff; border-bottom: 1px solid var(--borda); position: sticky; top: 0; z-index: 5; }
+  .topo h1 { font-size: 19px; margin: 0; } .topo small { display: block; color: var(--texto-2); font-size: 12px; }
+  .periodos { display: flex; gap: 0; margin-left: auto; border: 1px solid var(--borda); border-radius: 8px; overflow: hidden; }
+  .periodos button { border: 0; background: #fff; padding: 8px 16px; font: inherit; font-weight: 600; color: var(--texto-2); cursor: pointer; }
+  .periodos button + button { border-left: 1px solid var(--borda); }
+  .periodos button.ativo { background: var(--azul); color: #fff; }
+  .abas { display: flex; gap: 4px; padding: 0 22px; background: #fff; border-bottom: 1px solid var(--borda); }
+  .abas button { border: 0; background: none; padding: 11px 14px; font: inherit; font-weight: 600; color: var(--texto-2); cursor: pointer; border-bottom: 3px solid transparent; }
+  .abas button.ativa { color: var(--azul); border-bottom-color: var(--verde); }
+  .abas .cont { background: var(--azul-claro); color: var(--azul); border-radius: 10px; padding: 1px 7px; font-size: 11px; margin-left: 4px; }
+  main { padding: 18px 22px; }
+  .lembrete { background: #fff8e6; border: 1px solid #f2d48a; border-radius: 8px; padding: 9px 13px; font-size: 13px; margin-bottom: 14px; color: #6b5200; }
+  .lembrete.azul { background: #eef5fc; border-color: #b9d4ef; color: #1d4b7a; }
+  .filtros { display: flex; gap: 8px; margin-bottom: 12px; align-items: center; flex-wrap: wrap; }
+  .filtros input, .filtros select { width: auto; margin: 0; padding: 7px 10px; font-size: 13px; }
+  .filtros input[type=search] { min-width: 240px; }
+  .total { margin-left: auto; color: var(--texto-2); font-size: 13px; }
+  .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin-bottom: 16px; }
+  .card { background: #fff; border: 1px solid var(--borda); border-radius: 10px; padding: 12px 14px; cursor: pointer; border-top: 4px solid var(--cor, #8aa); }
+  .card b { display: block; font-size: 24px; } .card span { font-size: 12px; color: var(--texto-2); }
+  .card.sel { box-shadow: 0 0 0 2px var(--azul) inset; }
+  .grade-painel { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .bloco { background: #fff; border: 1px solid var(--borda); border-radius: 10px; padding: 14px 16px; margin-bottom: 14px; }
+  .bloco h3 { margin: 0 0 10px; font-size: 15px; }
+  .barra { display: grid; grid-template-columns: minmax(140px, 46%) 1fr 34px; gap: 8px; align-items: center; font-size: 12px; margin: 5px 0; }
+  .barra i { display: block; height: 10px; background: var(--azul); border-radius: 5px; }
+  .barra em { font-style: normal; text-align: right; font-weight: 700; }
+  .tabela td.nome b { display: block; } .tabela td.nome small { color: var(--texto-2); font-family: Consolas, monospace; }
+  .tabela tr.clicavel { cursor: pointer; } .tabela tr.clicavel:hover td { background: #f7f9fc; }
+  .selo { display: inline-block; border-radius: 10px; padding: 2px 9px; font-size: 11px; font-weight: 700; }
+  .s-cancelado { background: #fde8e8; color: #b42318; } .s-trancado { background: #fff0f6; color: #a61e4d; }
+  .s-intencao { background: #f3f0ff; color: #5f3dc4; } .s-revertido { background: #e6f6ea; color: #1e7a38; }
+  .s-evadido { background: #fde8e8; color: #b42318; } .s-trancamento { background: #fff0f6; color: #a61e4d; }
+  .s-aberto { background: #e6f6ea; color: #1e7a38; } .s-encerrado { background: #eceff3; color: #475467; }
+  .sem-obj { color: #b54708; font-size: 12px; }
+  .comparativo td, .comparativo th { text-align: center; } .comparativo td:first-child, .comparativo th:first-child { text-align: left; }
+  .modal-caixa.larga { max-width: 720px; }
+  .grade2 { display: grid; grid-template-columns: 1fr 1fr; gap: 0 12px; }
+  textarea { display: block; width: 100%; margin-top: 5px; padding: 9px 11px; border: 1px solid var(--borda); border-radius: 8px; font: inherit; min-height: 70px; }
+  .historico { font-size: 12px; color: var(--texto-2); margin: 6px 0 0; padding-left: 18px; }
+  .carregando-base { padding: 40px; text-align: center; color: var(--texto-2); }
+  .ciclo-cab { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin: 4px 0 10px; }
+  .ciclo-cab h3 { margin: 0; font-size: 16px; }
+  @media (max-width: 860px) { .grade2, .grade-painel { grid-template-columns: 1fr; } main { padding: 14px 10px; } .periodos { margin-left: 0; } }
+</style>
+</head>
+<body>
+<div class="topo">
+  <div><h1>🚪 Evasão</h1><small>Aluno matriculado e evasão da Renovação, separados por período</small></div>
+  <div class="periodos" id="periodos">
+    <button data-p="impar" class="ativo">Ímpar</button><button data-p="par">Par</button><button data-p="ct">Técnico</button>
+  </div>
+  <button class="btn primario" id="btn-novo">+ Registrar evasão</button>
+</div>
+<nav class="abas" id="abas">
+  <button data-aba="painel" class="ativa">Painel</button>
+  <button data-aba="matriculados">Aluno matriculado <span class="cont" id="c-mat">0</span></button>
+  <button data-aba="renovacao">Renovação <span class="cont" id="c-ren">0</span></button>
+</nav>
+<main id="area"><div class="carregando-base">Carregando...</div></main>
+<div id="modal" hidden><div class="modal-caixa larga" id="modal-corpo"></div></div>
+<div id="avisos"></div>
+
+<script src="../../nucleo/config.js?v=1.4.0"></script>
+<script src="../../nucleo/api.js?v=1.2.3"></script>
+<script>window.App = (window.parent && window.parent !== window) ? window.parent.App : null;</script>
+<script>
+(function () {
+  const $ = (s) => document.querySelector(s);
+  const esc = (t) => String(t == null ? '' : t).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const BASES = ['impar', 'par', 'ct'];
+  const NOME_P = { impar: 'Ímpar', par: 'Par', ct: 'Técnico' };
+  const SIT = { cancelado: 'Cancelado', trancado: 'Trancado', intencao: 'Intenção de saída', revertido: 'Revertido' };
+  const SIT_COR = { cancelado: '#d92d20', trancado: '#c2255c', intencao: '#7048e8', revertido: '#2f9e44' };
+  const OBJ_PADRAO = ['Financeiro: não consegue pagar a mensalidade', 'Financeiro: dívida / negociação não aceita', 'Perda de bolsa, FIES ou ProUni', 'Foi para outra instituição (concorrência)', 'Trabalho / falta de tempo', 'Saúde ou questões pessoais / familiares', 'Mudança de cidade', 'Insatisfação com o curso ou a metodologia', 'Insatisfação com atendimento ou infraestrutura', 'Não se identificou com o curso / vai trocar de curso', 'Pausa temporária (pretende voltar)', 'Sem contato / não respondeu', 'Outro'];
+  const E = { periodo: 'impar', aba: 'painel', mat: {}, ren: null, renErro: '', objecoes: OBJ_PADRAO, reversao: ['Renovado', 'Em negociação', 'Pendente'],
+    busca: '', fSit: '', fObj: '', fCiclo: '', fStatus: '', gestao: false };
+
+  const aviso = (msg, tipo) => { if (!document.defaultView) return; if (window.App && window.App.aviso) return window.App.aviso(msg, tipo); alert(msg); };
+  const dataBR = (iso) => { const m = String(iso || '').match(/^(\d{4})-(\d{2})-(\d{2})/); return m ? `${m[3]}/${m[2]}/${m[1]}` : String(iso || ''); };
+  const hojeISO = () => { const d = new Date(); return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 10); };
+  const objTexto = (r) => r.obj === 'Outro' && r.obj_outro ? 'Outro: ' + r.obj_outro : (r.obj || '');
+  const semObj = (r) => r.sit !== 'revertido' && (!r.obj || r.obj === 'Sem objeção registrada');
+  const contar = (lista, f) => { const c = {}; lista.forEach((x) => { const k = f(x); if (k) c[k] = (c[k] || 0) + 1; }); return Object.keys(c).map((k) => [k, c[k]]).sort((a, b) => b[1] - a[1]); };
+  const barras = (pares, vazio) => {
+    if (!pares.length) return `<p class="dica">${vazio || 'Sem dados.'}</p>`;
+    const max = pares[0][1] || 1;
+    return pares.map(([k, n]) => `<div class="barra"><span>${esc(k)}</span><i style="width:${Math.max(4, Math.round(n / max * 100))}%"></i><em>${n}</em></div>`).join('');
+  };
+
+  /* ---------- dados ---------- */
+  async function carregarMat(base) {
+    try {
+      const r = await Api.chamar('evasao.matriculados', { base }, { timeout: 90000 });
+      if (!r || !r.ok) throw new Error((r && r.erro) || 'Não foi possível carregar.');
+      E.mat[base] = r.dados;
+    } catch (e) { if (!e.auth) aviso(e.message, 'erro'); E.mat[base] = E.mat[base] || []; }
+  }
+  async function carregarRen() {
+    try {
+      const r = await Api.chamar('evasao.renovacao', {}, { timeout: 120000 });
+      if (!r || !r.ok) throw new Error((r && r.erro) || 'Não foi possível carregar a Renovação.');
+      E.ren = r.ciclos || []; E.renErro = '';
+    } catch (e) { E.ren = []; E.renErro = e.auth ? '' : e.message; }
+  }
+  async function carregarTudo() {
+    try { const c = await Api.chamar('evasao.config'); if (c && c.ok) { E.objecoes = c.objecoes; E.reversao = c.reversao; } } catch (e) { /* usa a lista padrão */ }
+    await Promise.all(BASES.map(carregarMat).concat([carregarRen()]));
+    desenhar();
+  }
+
+  const matDoPeriodo = () => E.mat[E.periodo] || [];
+  const ciclosDoPeriodo = () => (E.ren || []).filter((c) => c.paridade === E.periodo);
+
+  /* ---------- tela ---------- */
+  function desenhar() {
+    document.querySelectorAll('#periodos button').forEach((b) => b.classList.toggle('ativo', b.dataset.p === E.periodo));
+    document.querySelectorAll('#abas button').forEach((b) => b.classList.toggle('ativa', b.dataset.aba === E.aba));
+    $('#c-mat').textContent = matDoPeriodo().filter((r) => r.sit !== 'revertido').length;
+    $('#c-ren').textContent = ciclosDoPeriodo().reduce((s, c) => s + c.alunos.length, 0);
+    $('#btn-novo').hidden = E.aba === 'renovacao';
+    if (E.aba === 'painel') painel();
+    else if (E.aba === 'matriculados') matriculados();
+    else renovacao();
+  }
+
+  function painel() {
+    const L = matDoPeriodo(), P = NOME_P[E.periodo];
+    const n = (s) => L.filter((r) => r.sit === s).length;
+    const ativos = L.filter((r) => r.sit !== 'revertido');
+    const semO = ativos.filter(semObj).length;
+    const tratados = L.filter((r) => r.sit !== 'intencao').length;
+    const taxa = tratados ? Math.round(n('revertido') / (n('revertido') + n('cancelado') + n('trancado') || 1) * 100) : 0;
+    const ciclos = ciclosDoPeriodo();
+    const todosRen = [].concat(...ciclos.map((c) => c.alunos.map((a) => Object.assign({ aberto: c.aberto, ciclo: c.ciclo }, a))));
+    // comparativo dos três períodos, lado a lado
+    const comp = BASES.map((b) => {
+      const l = E.mat[b] || [], ren = (E.ren || []).filter((c) => c.paridade === b);
+      const ra = [].concat(...ren.map((c) => c.alunos));
+      return `<tr${b === E.periodo ? ' style="font-weight:700"' : ''}><td>${NOME_P[b]}</td><td>${l.filter((r) => r.sit === 'cancelado').length}</td><td>${l.filter((r) => r.sit === 'trancado').length}</td><td>${l.filter((r) => r.sit === 'intencao').length}</td><td>${l.filter((r) => r.sit === 'revertido').length}</td>
+        <td>${b === 'ct' ? '—' : ra.filter((a) => a.status === 'Evadido').length}</td><td>${b === 'ct' ? '—' : ra.filter((a) => a.status === 'Trancamento').length}</td></tr>`;
+    }).join('');
+    $('#area').innerHTML = `
+      <div class="bloco"><h3>Aluno matriculado · ${P}</h3>
+        <div class="cards">
+          ${['cancelado', 'trancado', 'intencao', 'revertido'].map((s) => `<div class="card" style="--cor:${SIT_COR[s]}" data-ir="matriculados" data-sit="${s}"><b>${n(s)}</b><span>${SIT[s]}</span></div>`).join('')}
+          <div class="card" style="--cor:#f79009" data-ir="matriculados" data-sit="semobj"><b>${semO}</b><span>Sem objeção registrada</span></div>
+          <div class="card" style="--cor:#2f9e44" data-ir="matriculados" data-sit="revertido"><b>${taxa}%</b><span>Reversão (sobre cancelados, trancados e revertidos)</span></div>
+        </div>
+        <div class="grade-painel">
+          <div><h3>Objeções</h3>${barras(contar(ativos, (r) => r.obj && r.obj !== 'Sem objeção registrada' ? r.obj : ''), 'Nenhuma objeção registrada ainda.')}</div>
+          <div><h3>Cursos com mais saídas</h3>${barras(contar(ativos, (r) => r.curso).slice(0, 10))}</div>
+        </div>
+      </div>
+      <div class="bloco"><h3>Renovação · ${P}</h3>
+        ${E.periodo === 'ct' ? '<p class="dica">O Técnico não tem ciclo de renovação separado. Veja Ímpar ou Par.</p>' : E.renErro ? `<p class="dica">${esc(E.renErro)}</p>` : !ciclos.length ? '<p class="dica">Nenhum evadido ou trancamento nos ciclos deste período.</p>' : `
+        <div class="cards">${ciclos.map((c) => `<div class="card" style="--cor:${c.aberto ? '#2f9e44' : '#667085'}" data-ir="renovacao" data-ciclo="${esc(c.ciclo)}"><b>${c.alunos.length}</b>
+          <span>Ciclo ${esc(c.ciclo)} · ${c.aberto ? 'aberto, dá para reverter' : 'encerrado, segue para recaptura'}<br>${c.alunos.filter((a) => a.status === 'Evadido').length} evadido(s), ${c.alunos.filter((a) => a.status === 'Trancamento').length} trancamento(s)</span></div>`).join('')}</div>
+        <div class="grade-painel">
+          <div><h3>Objeções na Renovação</h3>${barras(contar(todosRen, (a) => a.obj), 'Nenhuma objeção registrada nos acionamentos.')}</div>
+          <div><h3>Quem registrou</h3>${barras(contar(todosRen, (a) => a.colab).slice(0, 10))}</div>
+        </div>`}
+      </div>
+      <div class="bloco"><h3>Comparativo dos períodos</h3>
+        <table class="tabela comparativo"><thead><tr><th>Período</th><th>Cancelados</th><th>Trancados</th><th>Intenção</th><th>Revertidos</th><th>Evadidos (Renovação)</th><th>Trancamentos (Renovação)</th></tr></thead><tbody>${comp}</tbody></table>
+      </div>`;
+    document.querySelectorAll('[data-ir]').forEach((c) => { c.onclick = () => {
+      E.aba = c.dataset.ir;
+      if (c.dataset.sit) { E.fSit = c.dataset.sit; E.fObj = ''; }
+      if (c.dataset.ciclo) E.fCiclo = c.dataset.ciclo;
+      desenhar();
+    }; });
+  }
+
+  function filtrarMat() {
+    const b = E.busca.trim().toLowerCase();
+    return matDoPeriodo().filter((r) => {
+      if (E.fSit === 'semobj') { if (!semObj(r)) return false; }
+      else if (E.fSit && r.sit !== E.fSit) return false;
+      if (E.fObj && r.obj !== E.fObj) return false;
+      if (b && String(r.nome).toLowerCase().indexOf(b) < 0 && String(r.mat).indexOf(b) < 0 && String(r.curso).toLowerCase().indexOf(b) < 0) return false;
+      return true;
+    }).sort((a, b) => String(b.data).localeCompare(String(a.data)) || String(a.nome).localeCompare(String(b.nome), 'pt-BR'));
+  }
+
+  function matriculados() {
+    const lista = filtrarMat();
+    $('#area').innerHTML = `
+      <div class="lembrete azul">Cancelados e trancados da base líquida ${NOME_P[E.periodo]} entram aqui sozinhos. Abra o aluno para registrar a objeção. Intenção de saída é registrada por quem atendeu.</div>
+      <div class="filtros">
+        <input type="search" id="busca" placeholder="Nome, matrícula ou curso" value="${esc(E.busca)}">
+        <select id="f-sit"><option value="">Todas as situações</option>${Object.keys(SIT).map((s) => `<option value="${s}" ${E.fSit === s ? 'selected' : ''}>${SIT[s]}</option>`).join('')}<option value="semobj" ${E.fSit === 'semobj' ? 'selected' : ''}>Sem objeção registrada</option></select>
+        <select id="f-obj"><option value="">Todas as objeções</option>${E.objecoes.map((o) => `<option ${E.fObj === o ? 'selected' : ''}>${esc(o)}</option>`).join('')}</select>
+        <button class="btn" id="limpar">Limpar</button>
+        <button class="btn" id="exportar">📥 Exportar</button>
+        <span class="total">${lista.length} aluno(s)</span>
+      </div>
+      <div class="painel"><table class="tabela"><thead><tr><th>Aluno</th><th>Curso</th><th>Situação</th><th>Objeção</th><th>Data</th><th>Dívida</th><th>Registrado por</th></tr></thead>
+      <tbody>${lista.map((r) => `<tr class="clicavel" data-id="${esc(r.id)}">
+        <td class="nome"><b>${esc(r.nome)}</b><small>${esc(r.mat)}</small></td><td>${esc(r.curso)}</td>
+        <td><span class="selo s-${r.sit}">${SIT[r.sit] || esc(r.sit)}</span></td>
+        <td>${semObj(r) ? '<span class="sem-obj">registrar objeção</span>' : esc(objTexto(r))}</td>
+        <td>${dataBR(r.data)}</td><td>${r.divida ? 'R$ ' + esc(r.divida) : ''}</td><td><small>${esc(r.atend || (r._importado ? 'da base' : ''))}</small></td></tr>`).join('') || '<tr><td colspan="7" class="vazio">Nenhum aluno aqui.</td></tr>'}</tbody></table></div>`;
+    const busca = $('#busca'); busca.oninput = () => { E.busca = busca.value; const pos = busca.selectionStart; desenhar(); const n = $('#busca'); n.focus(); n.setSelectionRange(pos, pos); };
+    $('#f-sit').onchange = (e) => { E.fSit = e.target.value; desenhar(); };
+    $('#f-obj').onchange = (e) => { E.fObj = e.target.value; desenhar(); };
+    $('#limpar').onclick = () => { E.busca = ''; E.fSit = ''; E.fObj = ''; desenhar(); };
+    $('#exportar').onclick = () => exportar('evasao_matriculados_' + E.periodo, ['Matrícula', 'Aluno', 'Curso', 'Situação', 'Objeção', 'Detalhe', 'Data', 'Dívida', 'Registrado por'],
+      lista.map((r) => [r.mat, r.nome, r.curso, SIT[r.sit] || r.sit, objTexto(r), r.obs, dataBR(r.data), r.divida, r.atend]));
+    document.querySelectorAll('tr[data-id]').forEach((tr) => { tr.onclick = () => abrirMat(matDoPeriodo().filter((r) => r.id === tr.dataset.id)[0]); });
+  }
+
+  function renovacao() {
+    if (E.periodo === 'ct') { $('#area').innerHTML = '<div class="lembrete azul">O Técnico não tem ciclo de renovação separado. Escolha Ímpar ou Par no alto da tela.</div>'; return; }
+    if (E.renErro) { $('#area').innerHTML = `<div class="lembrete">${esc(E.renErro)}</div>`; return; }
+    const ciclos = ciclosDoPeriodo();
+    if (!ciclos.length) { $('#area').innerHTML = `<div class="lembrete azul">Nenhum aluno com status Evadido ou Trancamento nos ciclos ${NOME_P[E.periodo]}.</div>`; return; }
+    if (!ciclos.some((c) => c.ciclo === E.fCiclo)) E.fCiclo = ciclos[0].ciclo;
+    const c = ciclos.filter((x) => x.ciclo === E.fCiclo)[0];
+    const b = E.busca.trim().toLowerCase();
+    const lista = c.alunos.filter((a) => (!E.fStatus || a.status === E.fStatus) && (!b || String(a.nome).toLowerCase().indexOf(b) >= 0 || String(a.matricula).indexOf(b) >= 0 || String(a.curso).toLowerCase().indexOf(b) >= 0))
+      .sort((x, y) => String(x.nome).localeCompare(String(y.nome), 'pt-BR'));
+    $('#area').innerHTML = `
+      <div class="ciclo-cab">
+        <select id="f-ciclo">${ciclos.map((x) => `<option value="${esc(x.ciclo)}" ${x.ciclo === c.ciclo ? 'selected' : ''}>Ciclo ${esc(x.ciclo)} (${x.alunos.length})</option>`).join('')}</select>
+        <span class="selo s-${c.aberto ? 'aberto' : 'encerrado'}">${c.aberto ? 'Ciclo aberto' : 'Ciclo encerrado'}</span>
+        <span class="dica">${c.prazo ? 'Prazo: ' + esc(c.prazo) : 'Prazo não definido na Renovação'}</span>
+      </div>
+      ${c.aberto ? '<div class="lembrete azul">Ciclo em andamento: abra o aluno para reverter a evasão. O status muda na Renovação e fica registrado o acionamento.</div>'
+        : '<div class="lembrete">Ciclo encerrado: estes alunos seguem para a <b>recaptura</b>, feita por outro setor. Aqui fica só a consulta. Use Exportar para enviar a lista.</div>'}
+      <div class="filtros">
+        <input type="search" id="busca" placeholder="Nome, matrícula ou curso" value="${esc(E.busca)}">
+        <select id="f-status"><option value="">Evadido e Trancamento</option><option ${E.fStatus === 'Evadido' ? 'selected' : ''}>Evadido</option><option ${E.fStatus === 'Trancamento' ? 'selected' : ''}>Trancamento</option></select>
+        <button class="btn" id="exportar">📥 Exportar${c.aberto ? '' : ' para recaptura'}</button>
+        <span class="total">${lista.length} aluno(s)</span>
+      </div>
+      <div class="painel"><table class="tabela"><thead><tr><th>Aluno</th><th>Curso</th><th>Status</th><th>Objeção</th><th>Último acionamento</th><th>Situação</th></tr></thead>
+      <tbody>${lista.map((a) => `<tr class="clicavel" data-id="${esc(a.id)}">
+        <td class="nome"><b>${esc(a.nome)}</b><small>${esc(a.matricula)}</small></td><td>${esc(a.curso)}</td>
+        <td><span class="selo s-${a.status === 'Evadido' ? 'evadido' : 'trancamento'}">${esc(a.status)}</span></td>
+        <td>${a.obj ? esc(a.obj) + (a.detalhe ? `<br><small class="dica">${esc(a.detalhe)}</small>` : '') : '<span class="dica">não registrada</span>'}</td>
+        <td><small>${esc(a.colab)}${a.data ? '<br>' + esc(a.data) : ''}${a.tipo ? ' · ' + esc(a.tipo) : ''}</small></td>
+        <td>${c.aberto ? '<span class="selo s-aberto">pode reverter</span>' : '<span class="selo s-encerrado">recaptura</span>'}</td></tr>`).join('') || '<tr><td colspan="6" class="vazio">Nenhum aluno aqui.</td></tr>'}</tbody></table></div>`;
+    const busca = $('#busca'); busca.oninput = () => { E.busca = busca.value; const pos = busca.selectionStart; desenhar(); const n = $('#busca'); n.focus(); n.setSelectionRange(pos, pos); };
+    $('#f-ciclo').onchange = (e) => { E.fCiclo = e.target.value; desenhar(); };
+    $('#f-status').onchange = (e) => { E.fStatus = e.target.value; desenhar(); };
+    $('#exportar').onclick = () => exportar((c.aberto ? 'evasao_renovacao_' : 'recaptura_') + c.ciclo.replace('.', '_'), ['Matrícula', 'Aluno', 'Curso', 'Modalidade', 'Status', 'Objeção', 'Detalhe', 'Último acionamento', 'Data', 'Ciclo'],
+      lista.map((a) => [a.matricula, a.nome, a.curso, a.modalidade, a.status, a.obj, a.detalhe, a.colab, a.data, c.ciclo]));
+    document.querySelectorAll('tr[data-id]').forEach((tr) => { tr.onclick = () => abrirRen(c, c.alunos.filter((a) => a.id === tr.dataset.id)[0]); });
+  }
+
+  /* ---------- formulários ---------- */
+  function abrirMat(r) {
+    const novo = !r; r = r || { sit: 'intencao', data: hojeISO(), obj: '' };
+    const naLista = E.objecoes.indexOf(r.obj) >= 0 || !r.obj;
+    $('#modal-corpo').innerHTML = `
+      <h2>${novo ? 'Registrar evasão · ' + NOME_P[E.periodo] : esc(r.nome)}</h2>
+      <form id="form-ev">
+        <div class="grade2">
+          <label>Matrícula<input name="mat" value="${esc(r.mat || '')}" ${novo ? '' : 'readonly'} required inputmode="numeric"><small class="dica" id="busca-info">${novo ? 'Digite a matrícula: nome e curso vêm da base líquida.' : ''}</small></label>
+          <label>Nome do aluno<input name="nome" value="${esc(r.nome || '')}" required></label>
+          <label>Curso<input name="curso" value="${esc(r.curso || '')}"></label>
+          <label>Data<input type="date" name="data" value="${esc(r.data || hojeISO())}"></label>
+          <label>Situação<select name="sit">${Object.keys(SIT).map((s) => `<option value="${s}" ${r.sit === s ? 'selected' : ''}>${SIT[s]}</option>`).join('')}</select></label>
+          <label>Dívida (R$)<input name="divida" value="${esc(r.divida || '')}" placeholder="0,00"></label>
+        </div>
+        <label>Objeção (motivo da saída)<select name="obj"><option value="">Selecione...</option>${E.objecoes.map((o) => `<option ${r.obj === o ? 'selected' : ''}>${esc(o)}</option>`).join('')}${naLista ? '' : `<option selected>${esc(r.obj)}</option>`}</select></label>
+        <label id="lbl-outro" ${r.obj === 'Outro' ? '' : 'hidden'}>Qual o motivo?<input name="obj_outro" value="${esc(r.obj_outro || '')}" placeholder="Descreva o motivo que não está na lista" maxlength="200"></label>
+        <label>Detalhe / o que o aluno informou<textarea name="obs">${esc(r.obs || '')}</textarea></label>
+        ${(r.historico || []).length ? `<p class="dica" style="margin:8px 0 0">Situações anteriores:</p><ul class="historico">${r.historico.slice().reverse().map((h) => `<li>${SIT[h.sit] || esc(h.sit)}${h.obj ? ' · ' + esc(h.obj) : ''}${h.quem ? ' · ' + esc(h.quem) : ''}${h.ts ? ' · ' + new Date(h.ts).toLocaleDateString('pt-BR') : ''}</li>`).join('')}</ul>` : ''}
+        <p class="dica">${r._importado ? 'Veio da base líquida. ' : ''}${!novo && r.atend ? 'Último registro: ' + esc(r.atend) + '.' : ''} O registro fica no seu nome.</p>
+        <div class="botoes">
+          ${!novo && !r._importado && E.gestao ? '<button type="button" class="btn" id="btn-excluir" style="color:var(--erro);margin-right:auto">Excluir</button>' : ''}
+          <button type="button" class="btn" data-fechar>Cancelar</button><button class="btn primario" id="btn-salvar">Salvar</button></div>
+      </form>`;
+    $('#modal').hidden = false;
+    const f = $('#form-ev');
+    document.querySelector('[data-fechar]').onclick = fechar;
+    f.obj.onchange = () => { $('#lbl-outro').hidden = f.obj.value !== 'Outro'; if (f.obj.value === 'Outro') f.obj_outro.focus(); };
+    if (novo) {
+      const info = $('#busca-info'); let ultima = '';
+      const buscar = async () => {
+        const m = f.mat.value.replace(/\D/g, '');
+        if (m.length < 9 || m === ultima) return;
+        ultima = m;
+        const ja = matDoPeriodo().filter((x) => String(x.mat) === m)[0];
+        if (ja) { info.textContent = 'Este aluno já está na lista. Abrindo...'; setTimeout(() => abrirMat(ja), 600); return; }
+        info.textContent = 'Procurando na base líquida...';
+        try {
+          const r2 = await Api.chamar('evasao.buscar_aluno', { matricula: m });
+          if (m !== f.mat.value.replace(/\D/g, '')) return;
+          if (r2 && r2.ok && r2.aluno) { f.nome.value = r2.aluno; f.curso.value = r2.curso; info.textContent = '✓ Encontrado na base ' + (NOME_P[r2.base] || '') + '.' + (r2.base && r2.base !== E.periodo ? ' Atenção: o período selecionado é ' + NOME_P[E.periodo] + '.' : ''); }
+          else info.textContent = 'Não encontrei na base líquida. Preencha o nome e o curso.';
+        } catch (e) { if (!e.auth) info.textContent = 'Não foi possível procurar agora. Preencha o nome e o curso.'; }
+      };
+      f.mat.addEventListener('blur', buscar);
+      f.mat.addEventListener('input', () => { if (f.mat.value.replace(/\D/g, '').length >= 12) buscar(); });
+    }
+    const bx = $('#btn-excluir');
+    if (bx) bx.onclick = async () => {
+      if (!confirm('Excluir este registro de evasão? Não dá para desfazer.')) return;
+      try { const x = await Api.chamar('evasao.excluir', { base: E.periodo, id: r.id }); if (!x || !x.ok) throw new Error((x && x.erro) || 'Não foi possível excluir.'); aviso('Registro excluído.', 'ok'); fechar(); await carregarMat(E.periodo); desenhar(); }
+      catch (e) { if (!e.auth) aviso(e.message, 'erro'); }
+    };
+    f.onsubmit = async (ev) => {
+      ev.preventDefault();
+      const registro = { id: r._importado || novo ? '' : r.id, mat: f.mat.value, nome: f.nome.value.trim(), curso: f.curso.value.trim(), data: f.data.value, sit: f.sit.value,
+        divida: f.divida.value.trim(), obj: f.obj.value, obj_outro: f.obj_outro.value.trim(), obs: f.obs.value.trim() };
+      if (registro.sit !== 'revertido' && !registro.obj) { aviso('Escolha a objeção (o motivo da saída).', 'erro'); f.obj.focus(); return; }
+      if (registro.obj === 'Outro' && !registro.obj_outro) { aviso('Em "Outro", descreva o motivo.', 'erro'); f.obj_outro.focus(); return; }
+      const b = $('#btn-salvar'); b.disabled = true; b.textContent = 'Salvando...';
+      try {
+        const x = await Api.chamar('evasao.salvar', { base: E.periodo, registro });
+        if (!x || !x.ok) throw new Error((x && x.erro) || 'Não foi possível salvar.');
+        aviso('Evasão registrada.', 'ok'); fechar(); await carregarMat(E.periodo); desenhar();
+      } catch (e) { if (!e.auth) aviso(e.message, 'erro'); b.disabled = false; b.textContent = 'Salvar'; }
+    };
+  }
+
+  function abrirRen(c, a) {
+    if (!a) return;
+    const info = `<div class="grade2" style="font-size:13px">
+        <p><b>Matrícula:</b> ${esc(a.matricula)}</p><p><b>Curso:</b> ${esc(a.curso)}</p>
+        <p><b>Status:</b> ${esc(a.status)} · ciclo ${esc(c.ciclo)}</p><p><b>Objeção:</b> ${esc(a.obj || 'não registrada')}${a.detalhe ? ' · ' + esc(a.detalhe) : ''}</p>
+        <p><b>Último acionamento:</b> ${esc(a.colab || '—')}${a.data ? ', ' + esc(a.data) : ''}${a.tipo ? ' · ' + esc(a.tipo) : ''}</p></div>`;
+    if (!c.aberto) {
+      $('#modal-corpo').innerHTML = `<h2>${esc(a.nome)}</h2>${info}
+        <div class="lembrete">O ciclo ${esc(c.ciclo)} encerrou${c.prazo ? ' em ' + esc(c.prazo) : ''}. Este aluno segue para a recaptura, feita por outro setor, e o status não pode mais ser revertido por aqui.</div>
+        <div class="botoes"><button type="button" class="btn" data-fechar>Fechar</button></div>`;
+      $('#modal').hidden = false; document.querySelector('[data-fechar]').onclick = fechar; return;
+    }
+    $('#modal-corpo').innerHTML = `<h2>Reverter evasão · ${esc(a.nome)}</h2>${info}
+      <form id="form-rev">
+        <label>Novo status na Renovação<select name="status">${E.reversao.map((s) => `<option>${esc(s)}</option>`).join('')}</select></label>
+        <label>Como foi revertido?<textarea name="obs" required placeholder="Ex.: aceitou a negociação da dívida e vai renovar até o prazo."></textarea></label>
+        <p class="dica">O status muda na Renovação e fica um acionamento "Reversão de evasão" no seu nome.</p>
+        <div class="botoes"><button type="button" class="btn" data-fechar>Cancelar</button><button class="btn primario" id="btn-rev">Reverter</button></div>
+      </form>`;
+    $('#modal').hidden = false;
+    document.querySelector('[data-fechar]').onclick = fechar;
+    $('#form-rev').onsubmit = async (ev) => {
+      ev.preventDefault();
+      const f = ev.target, obs = f.obs.value.trim();
+      if (!obs) { aviso('Descreva como a evasão foi revertida.', 'erro'); return; }
+      const b = $('#btn-rev'); b.disabled = true; b.textContent = 'Revertendo...';
+      try {
+        const x = await Api.chamar('evasao.reverter', { alunoId: a.id, nomeAluno: a.nome, ciclo: c.ciclo, status: f.status.value, obs });
+        if (!x || !x.ok) throw new Error((x && x.erro) || 'Não foi possível reverter.');
+        aviso('Evasão revertida. Status: ' + f.status.value + '.', 'ok'); fechar();
+        c.alunos = c.alunos.filter((y) => y.id !== a.id); desenhar();
+      } catch (e) { if (!e.auth) aviso(e.message, 'erro'); b.disabled = false; b.textContent = 'Reverter'; }
+    };
+  }
+  function fechar() { $('#modal').hidden = true; $('#modal-corpo').innerHTML = ''; }
+
+  function exportar(nome, cab, linhas) {
+    const cel = (v) => { const t = String(v == null ? '' : v); return /[;"\n]/.test(t) ? '"' + t.replace(/"/g, '""') + '"' : t; };
+    const csv = '﻿' + [cab].concat(linhas).map((l) => l.map(cel).join(';')).join('\r\n');
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
+    a.download = nome + '_' + hojeISO() + '.csv'; document.body.appendChild(a); a.click(); a.remove();
+  }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    const s = Api.Sessao.ler();
+    if (!s) { if (window.App) window.App.mostrarLogin('Entre novamente.'); return; }
+    const perfil = (s.me && s.me.perfil) || s.perfil || '';
+    E.gestao = perfil === 'admin' || perfil === 'coordenador';
+    document.querySelectorAll('#abas button').forEach((b) => { b.onclick = () => { E.aba = b.dataset.aba; desenhar(); }; });
+    document.querySelectorAll('#periodos button').forEach((b) => { b.onclick = () => { E.periodo = b.dataset.p; E.fCiclo = ''; desenhar(); }; });
+    $('#btn-novo').onclick = () => abrirMat(null);
+    $('#modal').onclick = (ev) => { if (ev.target.id === 'modal') fechar(); };
+    carregarTudo();
+  });
+  window.TelaEvasao = { estado: E, abrirMat, desenhar };
+})();
+</script>
+</body>
+</html>

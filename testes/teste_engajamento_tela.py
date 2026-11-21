@@ -31,11 +31,13 @@ with sync_playwright() as p:
     fr.evaluate("POLO_DATA['202301000102']={status:'agendado',_ts:Date.now()}; _savePoloData()"); pg.wait_for_timeout(1500)
     r=api({'acao':'engajamento.loadPoloData','token':tok,'base':'impar'}); assert '202301000102' in r['data']; ok('Provas agora grava no servidor')
     paginas=[]
-    for pid in ['dashboard','painel','followup','tarefas','calendario','tutoriais','evasao','financeiro','estagio','polo','produtividade']:
+    for pid in ['dashboard','painel','followup','tarefas','calendario','tutoriais','financeiro','estagio','polo','produtividade']:
         try:
             fr.evaluate(f"showPage('{pid}')"); pg.wait_for_timeout(300)
             if fr.evaluate(f"(document.getElementById('page-{pid}')||{{}}).style ? getComputedStyle(document.getElementById('page-{pid}')).display!=='none' : false"): paginas.append(pid)
         except Exception as e: erros.append(f'{pid}: {e}')
     ok('páginas abertas: '+', '.join(paginas))
+    assert fr.locator('#tab-evasao').count()==0; fr.evaluate("showPage('evasao')"); pg.wait_for_timeout(1500)
+    assert 's/engajamento' not in pg.url, pg.url; ok('aba Evasão saiu do Engajamento e o atalho leva para fora dele: '+pg.url.split('#')[-1])
     br.close()
 print(n,'passos ok'); print('erros:', erros or 'nenhum')
