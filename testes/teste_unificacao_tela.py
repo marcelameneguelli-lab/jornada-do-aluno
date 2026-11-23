@@ -35,10 +35,10 @@ with sync_playwright() as p:
     f.click('#lote-enviar'); f.wait_for_function("document.getElementById('modal').hidden", timeout=30000)
     n_regs=f.evaluate("Object.values(Motor.estado.regs).filter(x=>x.obs.indexOf('Mensagem em lote')===0).length"); assert n_regs>=1, n_regs; ok(f'disparo registra acionamento em nome do usuário ({n_regs})')
     # Provas e Financeiro sem tela original
-    for sis in ['provas','financeiro']:
+    for sis in ['provas']:
         pg.goto(B+'#/s/'+sis); pg.wait_for_timeout(2500); f=[x for x in pg.frames if 'sistema='+sis in x.url][0]; f.wait_for_function("Motor.estado.alunos.length>=0 && document.getElementById('area').innerText.length>50", timeout=15000)
         assert not f.is_visible('#aba-original'); ok(f'{sis}: sem a aba "Tela original"')
-    assert 'VENCIDAS' in f.inner_text('.cartoes').upper(); ok('Financeiro: cartões a vencer, vence hoje, vencidas e dívida alta')
+    pg.goto(B+'#/s/financeiro'); pg.wait_for_timeout(2500); fc=[x for x in pg.frames if 'modulos/cobranca' in x.url][0]; fc.wait_for_selector('.regua', timeout=15000); ok('Financeiro abre a Cobrança (régua de cobrança)')
     # Engajamento: clicar no nome abre a ficha, atendente travado no usuário logado
     pg.goto(B+'#/s/engajamento'); pg.wait_for_timeout(6000); fe=[x for x in pg.frames if 'modulos/engajamento' in x.url][0]
     fe.wait_for_selector('#table-body tr[data-mat]', timeout=20000)

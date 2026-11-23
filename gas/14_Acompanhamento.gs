@@ -190,5 +190,9 @@ function moduloAcompanhamento_(sis) {
 
 function Modulo_provas()         { return moduloAcompanhamento_('provas'); }
 function Modulo_estagio()        { return moduloAcompanhamento_('estagio'); }
-function Modulo_financeiro()     { return moduloAcompanhamento_('financeiro'); }
+function Modulo_financeiro() { // Cobrança: motor + régua, promessas, acordos e evolução (20_Cobranca)
+  const m = moduloAcompanhamento_('financeiro');
+  if (typeof acoesCobranca_ === 'function') Object.assign(m.acoes, acoesCobranca_());
+  return m;
+}
 function Modulo_financiamentos() { return moduloAcompanhamento_('financiamentos'); }

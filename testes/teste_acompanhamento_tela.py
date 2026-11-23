@@ -15,7 +15,7 @@ with sync_playwright() as p:
     pg.wait_for_function("document.body.dataset.tela==='app'")
     tok=lambda: pg.evaluate("JSON.parse(localStorage.getItem('jornada_sessao')).token")
     fr=lambda s: [x for x in pg.frames if 'sistema='+s in x.url and 'acompanhamento' in x.url][0]
-    esperado={'provas':3,'estagio':2,'financeiro':2,'financiamentos':4}
+    esperado={'provas':3,'estagio':2,'financiamentos':4}
     for s,qt in esperado.items():
         pg.goto(B+'#/s/'+s); pg.wait_for_timeout(2500)
         f=fr(s); f.wait_for_function("window.Motor && Motor.estado.alunos.length>0", timeout=15000)
@@ -43,9 +43,8 @@ with sync_playwright() as p:
     f.click('[data-aba=dashboard]'); pg.wait_for_timeout(300); assert '25% de cobertura' in f.inner_text('#area').replace('\xa0',' '), f.inner_text('#area')[:300]; ok('dashboard: 1 de 4 acionados = 25% de cobertura')
     pg.mouse.move(900,400); pg.screenshot(path='/home/claude/testes/tela_financiamentos_dash.png')
     f.click('[data-aba=produtividade]'); pg.wait_for_timeout(300); assert 'Marcela Meneguelli' in f.inner_text('#area'); ok('produtividade mostra a atendente')
-    # Financeiro: sem a tela original (tudo na tela nova)
-    pg.goto(B+'#/s/financeiro'); pg.wait_for_timeout(2500); f=fr('financeiro'); f.wait_for_function("Motor.estado.alunos.length>0")
-    assert not f.is_visible('[data-aba=original]'); ok('Financeiro sem a aba Tela original')
+    # troca de base (Provas)
+    pg.goto(B+'#/s/provas'); pg.wait_for_timeout(2500); f=fr('provas'); f.wait_for_function("Motor.estado.alunos.length>0")
     # troca de base
     f.click('#bases [data-base=par]'); pg.wait_for_timeout(2500); f.click('[data-aba=alunos]'); pg.wait_for_timeout(300); assert f.evaluate("Motor.estado.alunos.length")==0 and 'ainda não foi importada' in f.inner_text('#area'); ok('base Par vazia avisa que não foi importada')
     br.close()

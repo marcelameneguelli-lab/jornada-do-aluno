@@ -1,0 +1,504 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cobrança · Jornada do Aluno</title>
+<link rel="icon" type="image/png" href="../../icones/icon-64.png">
+<link rel="stylesheet" href="../../nucleo/estilo.css?v=1.2.9">
+<style>
+  body { background: var(--fundo); }
+  [hidden] { display: none !important; }
+  .topo { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; padding: 14px 22px; background: #fff; border-bottom: 1px solid var(--borda); position: sticky; top: 0; z-index: 5; }
+  .topo h1 { font-size: 19px; margin: 0; } .topo small { display: block; color: var(--texto-2); font-size: 12px; }
+  .periodos { display: flex; margin-left: auto; border: 1px solid var(--borda); border-radius: 8px; overflow: hidden; }
+  .periodos button { border: 0; background: #fff; padding: 8px 16px; font: inherit; font-weight: 600; color: var(--texto-2); cursor: pointer; }
+  .periodos button + button { border-left: 1px solid var(--borda); }
+  .periodos button.ativo { background: var(--azul); color: #fff; }
+  .abas { display: flex; gap: 4px; padding: 0 22px; background: #fff; border-bottom: 1px solid var(--borda); overflow-x: auto; }
+  .abas button { border: 0; background: none; padding: 11px 14px; font: inherit; font-weight: 600; color: var(--texto-2); cursor: pointer; border-bottom: 3px solid transparent; white-space: nowrap; }
+  .abas button.ativa { color: var(--azul); border-bottom-color: var(--verde); }
+  .abas .cont { background: var(--azul-claro); color: var(--azul); border-radius: 10px; padding: 1px 7px; font-size: 11px; margin-left: 4px; }
+  main { padding: 18px 22px; }
+  .lembrete { background: #eef5fc; border: 1px solid #b9d4ef; border-radius: 8px; padding: 9px 13px; font-size: 13px; margin-bottom: 14px; color: #1d4b7a; }
+  .lembrete.amarelo { background: #fff8e6; border-color: #f2d48a; color: #6b5200; }
+  .filtros { display: flex; gap: 8px; margin-bottom: 12px; align-items: center; flex-wrap: wrap; }
+  .filtros input, .filtros select { width: auto; margin: 0; padding: 7px 10px; font-size: 13px; }
+  .filtros input[type=search] { min-width: 230px; }
+  .total { margin-left: auto; color: var(--texto-2); font-size: 13px; }
+  .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 10px; margin-bottom: 16px; }
+  .card { background: #fff; border: 1px solid var(--borda); border-radius: 10px; padding: 12px 14px; border-top: 4px solid var(--cor, #8aa); }
+  .card[data-ir], .card[data-fila] { cursor: pointer; }
+  .card.sel { box-shadow: 0 0 0 2px var(--azul) inset; }
+  .card b { display: block; font-size: 22px; } .card span { font-size: 12px; color: var(--texto-2); } .card small { display: block; font-size: 12px; color: var(--texto-2); margin-top: 2px; }
+  .bloco { background: #fff; border: 1px solid var(--borda); border-radius: 10px; padding: 14px 16px; margin-bottom: 14px; }
+  .bloco h3 { margin: 0 0 10px; font-size: 15px; }
+  .grade2c { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .regua { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; margin-bottom: 14px; }
+  .regua div { background: #fff; border: 1px solid var(--borda); border-radius: 10px; padding: 10px 12px; font-size: 12px; cursor: pointer; }
+  .regua div.sel { box-shadow: 0 0 0 2px var(--azul) inset; }
+  .regua b { display: block; font-size: 13px; color: var(--azul); } .regua em { font-style: normal; color: var(--texto-2); display: block; }
+  .regua strong { font-size: 20px; display: block; margin-top: 4px; }
+  .tabela td.nome b { display: block; } .tabela td.nome small { color: var(--texto-2); font-family: Consolas, monospace; }
+  .tabela tr.clicavel { cursor: pointer; } .tabela tr.clicavel:hover td { background: #f7f9fc; }
+  .tabela td.num { text-align: right; white-space: nowrap; }
+  .selo { display: inline-block; border-radius: 10px; padding: 2px 9px; font-size: 11px; font-weight: 700; white-space: nowrap; }
+  .s-verde { background: #e6f6ea; color: #1e7a38; } .s-vermelho { background: #fde8e8; color: #b42318; } .s-amarelo { background: #fff4e5; color: #b54708; }
+  .s-azul { background: #e7f0fb; color: #1d4b7a; } .s-cinza { background: #eceff3; color: #475467; } .s-roxo { background: #f3f0ff; color: #5f3dc4; }
+  .barra { display: grid; grid-template-columns: 110px 1fr 90px; gap: 8px; align-items: center; font-size: 12px; margin: 5px 0; }
+  .barra .pista { display: flex; height: 12px; background: #f1f3f5; border-radius: 6px; overflow: hidden; }
+  .barra .pista i { display: block; height: 100%; } .barra em { font-style: normal; text-align: right; }
+  .leg { display: flex; gap: 14px; font-size: 12px; color: var(--texto-2); margin-bottom: 6px; } .leg i { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 4px; vertical-align: -1px; }
+  .modal-caixa.larga { max-width: 780px; }
+  .acoes-ficha { display: flex; gap: 8px; flex-wrap: wrap; margin: 10px 0 4px; }
+  .acoes-ficha .btn.ativo { background: var(--azul); color: #fff; }
+  .dados-aluno { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px 14px; font-size: 13px; background: #f7f9fc; border: 1px solid var(--borda); border-radius: 8px; padding: 10px 12px; }
+  .dados-aluno span { color: var(--texto-2); font-size: 11px; display: block; }
+  .grade2 { display: grid; grid-template-columns: 1fr 1fr; gap: 0 12px; } .grade3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0 12px; }
+  textarea { display: block; width: 100%; margin-top: 5px; padding: 9px 11px; border: 1px solid var(--borda); border-radius: 8px; font: inherit; min-height: 64px; }
+  .linha-tempo { list-style: none; padding: 0; margin: 8px 0 0; font-size: 13px; max-height: 260px; overflow: auto; }
+  .linha-tempo li { border-left: 3px solid var(--borda); padding: 4px 0 8px 10px; margin-left: 4px; }
+  .linha-tempo li small { color: var(--texto-2); display: block; }
+  .parcelas { width: 100%; font-size: 12px; border-collapse: collapse; margin-top: 6px; }
+  .parcelas td { padding: 4px 6px; border-top: 1px solid var(--borda); } .parcelas input { width: auto; margin: 0; }
+  .lote-lista { max-height: 320px; overflow: auto; border: 1px solid var(--borda); border-radius: 8px; margin-top: 8px; }
+  .lote-lista div { display: flex; align-items: center; gap: 10px; padding: 7px 10px; border-top: 1px solid var(--borda); font-size: 13px; }
+  .lote-lista div:first-child { border-top: 0; } .lote-lista div span { flex: 1; } .lote-lista .feito { color: #1e7a38; font-weight: 700; }
+  .col-sel { width: 30px; text-align: center; } .col-sel input { width: auto; margin: 0; }
+  .barra-lote { display: flex; gap: 10px; align-items: center; background: #eef3f9; border: 1px solid #c9d6e6; border-radius: 10px; padding: 8px 12px; margin-bottom: 10px; }
+  .carregando-base { padding: 40px; text-align: center; color: var(--texto-2); }
+  @media (max-width: 900px) { .grade2, .grade3, .grade2c, .dados-aluno { grid-template-columns: 1fr; } .regua { grid-template-columns: 1fr 1fr; } main { padding: 14px 10px; } .periodos { margin-left: 0; } }
+</style>
+</head>
+<body>
+<div class="topo">
+  <div><h1>💰 Cobrança</h1><small id="sub">Régua de cobrança, promessas, acordos e evolução da inadimplência</small></div>
+  <div class="periodos" id="periodos"><button data-p="impar" class="ativo">Ímpar</button><button data-p="par">Par</button><button data-p="ct">Técnico</button></div>
+</div>
+<nav class="abas" id="abas">
+  <button data-aba="fila" class="ativa">Fila do dia <span class="cont" id="c-fila">0</span></button>
+  <button data-aba="carteira">Carteira <span class="cont" id="c-cart">0</span></button>
+  <button data-aba="promessas">Promessas <span class="cont" id="c-prom">0</span></button>
+  <button data-aba="acordos">Acordos <span class="cont" id="c-acor">0</span></button>
+  <button data-aba="evolucao">Evolução</button>
+</nav>
+<main id="area"><div class="carregando-base">Carregando a carteira...</div></main>
+<div id="modal" hidden><div class="modal-caixa larga" id="modal-corpo"></div></div>
+
+<script src="../../nucleo/config.js?v=1.4.1"></script>
+<script src="../../nucleo/api.js?v=1.2.3"></script>
+<script>window.App = (window.parent && window.parent !== window) ? window.parent.App : null;</script>
+<script>
+(function () {
+  const $ = (s) => document.querySelector(s);
+  const esc = (t) => String(t == null ? '' : t).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const NOME_P = { impar: 'Ímpar', par: 'Par', ct: 'Técnico' };
+  const moeda = (v) => (Number(v) || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+  const num = (v) => { const t = String(v == null ? '' : v).trim(); if (!t) return 0; const n = parseFloat(/,/.test(t) ? t.replace(/\./g, '').replace(',', '.') : t); return isNaN(n) ? 0 : n; };
+  const hojeISO = () => { const d = new Date(); return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 10); };
+  const somaDias = (iso, n) => { const d = new Date(iso + 'T12:00:00'); d.setDate(d.getDate() + n); return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 10); };
+  const difDias = (a, b) => Math.round((new Date(b + 'T12:00:00') - new Date(a + 'T12:00:00')) / 864e5);
+  const dataBR = (iso) => { const m = String(iso || '').match(/^(\d{4})-(\d{2})-(\d{2})/); return m ? `${m[3]}/${m[2]}/${m[1]}` : ''; };
+  const isoDeTs = (ts) => { const d = new Date(Number(ts) || 0); return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 10); };
+  const aviso = (msg, tipo) => { if (window.App && window.App.aviso) return window.App.aviso(msg, tipo); alert(msg); };
+
+  /* Régua de cobrança: conta os dias desde que o aluno entrou na carteira (primeira base em que apareceu devendo). */
+  const REGUA = [
+    { id: 1, de: 0, ate: 3, nome: '1º contato', canal: 'WhatsApp', acao: 'Mensagem cordial lembrando a pendência' },
+    { id: 2, de: 4, ate: 10, nome: '2º contato', canal: 'Ligação', acao: 'Ligar e entender o motivo do atraso' },
+    { id: 3, de: 11, ate: 20, nome: 'Proposta', canal: 'E-mail', acao: 'E-mail formal com proposta de acordo' },
+    { id: 4, de: 21, ate: 40, nome: 'Negociação', canal: 'Ligação', acao: 'Ligar para fechar promessa ou acordo' },
+    { id: 5, de: 41, ate: 99999, nome: 'Crítico', canal: 'Ligação', acao: 'Contato da coordenação e acordo estruturado' },
+  ];
+  const MODELOS = {
+    1: 'Olá, {nome}! Aqui é {atendente}, da Secretaria Acadêmica da Estácio Volta Redonda. Identificamos uma pendência financeira de {divida} no seu curso de {curso}. Aconteceu alguma coisa? Estamos aqui para ajudar você a regularizar e seguir com os estudos.',
+    2: 'Olá, {nome}! Aqui é {atendente}, da Secretaria Acadêmica da Estácio Volta Redonda. Tentamos falar com você sobre a pendência de {divida}. Podemos conversar hoje? É rápido e podemos encontrar a melhor forma de pagamento.',
+    3: 'Olá, {nome}!\n\nSua pendência financeira com a Estácio Volta Redonda está em {divida}. Para você manter seus estudos em dia, podemos montar um acordo com entrada e parcelas que caibam no seu orçamento.\nResponda este e-mail ou fale comigo pelo WhatsApp para combinarmos.\n\n{atendente}\nSecretaria Acadêmica · Estácio Volta Redonda',
+    4: 'Olá, {nome}! Aqui é {atendente}, da Secretaria Acadêmica. Sua pendência de {divida} ainda está em aberto e queremos evitar que ela atrapalhe sua renovação e seus estudos. Consigo uma proposta de acordo para você hoje. Podemos conversar?',
+    5: 'Olá, {nome}! Aqui é {atendente}, da Secretaria Acadêmica da Estácio Volta Redonda. Sua pendência de {divida} precisa ser regularizada para não impedir a renovação da matrícula. Queremos muito que você continue. Vamos fechar um acordo?',
+    promessa: 'Olá, {nome}! Aqui é {atendente}, da Secretaria Acadêmica. Passando para lembrar do pagamento combinado de {valor} para {data}. Qualquer dúvida, é só me chamar por aqui.',
+    parcela: 'Olá, {nome}! Aqui é {atendente}, da Secretaria Acadêmica. Lembrando que a {parcela} do seu acordo, de {valor}, vence em {data}. Qualquer dúvida, é só me chamar.',
+  };
+  const SIT_PROM = { 'no prazo': ['No prazo', 's-azul'], cumprida: ['Cumprida', 's-verde'], parcial: ['Pagou parte', 's-amarelo'], quebrada: ['Quebrada', 's-vermelho'],
+    cancelada: ['Cancelada', 's-cinza'], 'sem informação': ['Saiu da base', 's-cinza'] };
+  const CANAIS = ['WhatsApp', 'Ligação', 'E-mail', 'Presencial', 'SMS'];
+
+  const E = { periodo: 'impar', aba: 'fila', d: {}, regs: [], eu: '', gestao: false, fFila: '', fEtapa: '', busca: '', fFaixa: '', fSit: '', fProm: 'ativas', fAcor: 'ativo', janela: 30, sel: new Set() };
+  const D = () => E.d[E.periodo] || { alunos: [], eventos: [], promessas: [], acordos: [], resultados: [] };
+
+  /* ---------- dados ---------- */
+  async function carregar(base) {
+    try {
+      const r = await Api.chamar('financeiro.cobranca', { base }, { timeout: 120000 });
+      if (!r || !r.ok) throw new Error((r && r.erro) || 'Não foi possível carregar a carteira.');
+      E.d[base] = r;
+    } catch (e) { if (!e.auth) aviso(e.message, 'erro'); E.d[base] = E.d[base] || { alunos: [], eventos: [], promessas: [], acordos: [], resultados: [] }; }
+  }
+  async function carregarRegs() {
+    try { const r = await Api.chamar('financeiro.listar', { since: 0 }, { timeout: 60000 }); E.regs = (r && r.regs) || []; } catch (e) { E.regs = E.regs || []; }
+  }
+  async function recarregar() { await Promise.all([carregar(E.periodo), carregarRegs()]); desenhar(); }
+
+  /* ---------- regras ---------- */
+  const regsDe = (mat) => E.regs.filter((r) => String(r.matricula) === String(mat)).sort((a, b) => b.criado - a.criado);
+  const ultimoContato = (mat) => regsDe(mat)[0];
+  const etapaDe = (a) => { const dias = Math.max(0, difDias(a.entrada || hojeISO(), hojeISO())); return { dias, et: REGUA.filter((x) => dias >= x.de && dias <= x.ate)[0] || REGUA[4] }; };
+  const promAtiva = (mat) => D().promessas.filter((p) => p.mat === mat && p.status === 'ativa').sort((a, b) => b.criado - a.criado)[0];
+  const acordoAtivo = (mat) => D().acordos.filter((a) => a.mat === mat && a.status === 'ativo').sort((a, b) => b.criado - a.criado)[0];
+  function contatoDesde(mat, iso) { return regsDe(mat).some((r) => isoDeTs(r.criado) >= iso); }
+
+  /* O que fazer hoje com cada aluno (um motivo por aluno, do mais urgente para o menos). */
+  function tarefa(a) {
+    const hoje = hojeISO(), p = promAtiva(a.mat), ac = acordoAtivo(a.mat);
+    if (ac) {
+      const pend = ac.parcelas.filter((x) => !x.paga).sort((x, y) => x.venc.localeCompare(y.venc))[0];
+      if (pend && pend.venc < hoje && !contatoDesde(a.mat, pend.venc)) return { tipo: 'parcela_atrasada', rot: 'Parcela do acordo atrasada', cor: '#d92d20', ord: 1, p: pend, ac };
+      if (pend && difDias(hoje, pend.venc) >= 0 && difDias(hoje, pend.venc) <= 2 && !contatoDesde(a.mat, somaDias(pend.venc, -3))) return { tipo: 'parcela_vence', rot: 'Parcela do acordo vence', cor: '#f79009', ord: 3, p: pend, ac };
+      return null; // acordo em dia: sai da régua
+    }
+    if (p) {
+      if (p.situacao === 'quebrada' && !contatoDesde(a.mat, somaDias(p.data, 1))) return { tipo: 'quebrada', rot: 'Promessa quebrada', cor: '#d92d20', ord: 2, prom: p };
+      if (p.situacao === 'no prazo' || p.situacao === 'parcial') {
+        const falta = difDias(hoje, p.data);
+        if (falta >= 0 && falta <= 1 && !contatoDesde(a.mat, somaDias(p.data, -1))) return { tipo: 'lembrar', rot: 'Lembrar a promessa', cor: '#1c7ed6', ord: 4, prom: p };
+        return null; // promessa no prazo: aguarda
+      }
+    }
+    const { et } = etapaDe(a);
+    if (contatoDesde(a.mat, somaDias(a.entrada || hojeISO(), et.de))) return null;
+    return { tipo: 'regua', rot: 'Régua: ' + et.nome, cor: '#7048e8', ord: 5 + et.id, et };
+  }
+  const fila = () => D().alunos.map((a) => ({ a, t: tarefa(a) })).filter((x) => x.t);
+
+  function situacaoAluno(a) {
+    const ac = acordoAtivo(a.mat); if (ac) return ac.parcelas.some((x) => !x.paga && x.venc < hojeISO()) ? ['Acordo atrasado', 's-vermelho'] : ['Em acordo', 's-verde'];
+    const p = promAtiva(a.mat); if (p) return SIT_PROM[p.situacao] ? ['Promessa: ' + SIT_PROM[p.situacao][0].toLowerCase(), SIT_PROM[p.situacao][1]] : ['Promessa', 's-azul'];
+    return ultimoContato(a.mat) ? ['Contatado', 's-cinza'] : ['Sem contato', 's-amarelo'];
+  }
+
+  /* ---------- tela ---------- */
+  function desenhar() {
+    document.querySelectorAll('#periodos button').forEach((b) => b.classList.toggle('ativo', b.dataset.p === E.periodo));
+    document.querySelectorAll('#abas button').forEach((b) => b.classList.toggle('ativa', b.dataset.aba === E.aba));
+    const d = D();
+    $('#sub').textContent = `${NOME_P[E.periodo]} · ${d.alunos.length} inadimplente(s) · ${moeda(d.alunos.reduce((s, a) => s + a.valor, 0))}` + (d.dataBase ? ` · base de ${dataBR(d.dataBase)}` : '');
+    $('#c-fila').textContent = fila().length;
+    $('#c-cart').textContent = d.alunos.length;
+    $('#c-prom').textContent = d.promessas.filter((p) => p.status === 'ativa' && (p.situacao === 'no prazo' || p.situacao === 'parcial')).length;
+    $('#c-acor').textContent = d.acordos.filter((a) => a.status === 'ativo').length;
+    ({ fila: telaFila, carteira: telaCarteira, promessas: telaPromessas, acordos: telaAcordos, evolucao: telaEvolucao })[E.aba]();
+  }
+
+  function linhaAluno(a, extra) {
+    const [st, cls] = situacaoAluno(a), u = ultimoContato(a.mat), { dias, et } = etapaDe(a);
+    return `<tr class="clicavel" data-mat="${esc(a.mat)}">
+      ${extra && extra.sel ? `<td class="col-sel"><input type="checkbox" class="sel" value="${esc(a.mat)}" ${E.sel.has(a.mat) ? 'checked' : ''}></td>` : ''}
+      <td class="nome"><b>${esc(a.nome)}</b><small>${esc(a.mat)}</small></td><td>${esc(a.curso)}</td>
+      <td class="num"><b>${moeda(a.valor)}</b>${a.pago ? `<br><small class="dica">pagou ${moeda(a.pago)}</small>` : ''}</td>
+      <td>${esc(et.nome)}<br><small class="dica">${dias} dia(s) na carteira</small></td>
+      ${extra && extra.tarefa ? `<td><span class="selo" style="background:${extra.tarefa.cor}1a;color:${extra.tarefa.cor}">${esc(extra.tarefa.rot)}</span>${extra.tarefa.prom ? `<br><small class="dica">${moeda(extra.tarefa.prom.valor)} até ${dataBR(extra.tarefa.prom.data)}</small>` : ''}${extra.tarefa.p ? `<br><small class="dica">${esc(extra.tarefa.p.rotulo)} ${moeda(extra.tarefa.p.valor)} · ${dataBR(extra.tarefa.p.venc)}</small>` : ''}</td>` : ''}
+      <td><span class="selo ${cls}">${esc(st)}</span></td>
+      <td><small>${u ? esc(u.atendente) + '<br>' + dataBR(isoDeTs(u.criado)) + ' · ' + esc(u.resultado || u.canal) : '<span class="dica">nunca</span>'}</small></td></tr>`;
+  }
+  function ligarLinhas() { document.querySelectorAll('tr[data-mat]').forEach((tr) => { tr.onclick = (ev) => { if (ev.target.classList.contains('sel')) return; abrirFicha(tr.dataset.mat); }; }); }
+
+  function telaFila() {
+    const L = fila().sort((x, y) => x.t.ord - y.t.ord || y.a.valor - x.a.valor);
+    const grupos = {}; L.forEach((x) => { const k = x.t.tipo === 'regua' ? 'r' + x.t.et.id : x.t.tipo; grupos[k] = grupos[k] || { rot: x.t.rot, cor: x.t.cor, n: 0, v: 0 }; grupos[k].n++; grupos[k].v += x.a.valor; });
+    const vis = L.filter((x) => !E.fFila || (x.t.tipo === 'regua' ? 'r' + x.t.et.id : x.t.tipo) === E.fFila);
+    $('#area').innerHTML = `
+      <div class="lembrete">A fila mostra só quem precisa de contato hoje: parcelas e promessas vencendo, promessas quebradas e a etapa da régua que ainda não teve contato. Quem tem promessa no prazo ou acordo em dia sai da fila até a data combinada.</div>
+      <div class="regua">${REGUA.map((r) => `<div data-fila="r${r.id}" class="${E.fFila === 'r' + r.id ? 'sel' : ''}"><b>${esc(r.nome)}</b><em>${r.ate > 999 ? 'a partir de ' + r.de + ' dias' : r.de + ' a ' + r.ate + ' dias'} · ${esc(r.canal)}</em><em>${esc(r.acao)}</em><strong>${(grupos['r' + r.id] || {}).n || 0}</strong></div>`).join('')}</div>
+      <div class="cards">${[['parcela_atrasada', 'Parcela do acordo atrasada', '#d92d20'], ['quebrada', 'Promessa quebrada', '#d92d20'], ['parcela_vence', 'Parcela do acordo vence', '#f79009'], ['lembrar', 'Lembrar a promessa', '#1c7ed6']].map(([k, t, c]) => `<div class="card ${E.fFila === k ? 'sel' : ''}" data-fila="${k}" style="--cor:${c}"><b>${(grupos[k] || {}).n || 0}</b><span>${t}</span></div>`).join('')}</div>
+      <div class="filtros">${E.fFila ? `<button class="btn" id="ver-tudo">Ver a fila inteira</button>` : ''}
+        <button class="btn" id="btn-lote">✉️ Mensagem em lote (${vis.length})</button>
+        <span class="total">${vis.length} aluno(s) · ${moeda(vis.reduce((s, x) => s + x.a.valor, 0))}</span></div>
+      <div class="painel"><table class="tabela"><thead><tr><th>Aluno</th><th>Curso</th><th class="num">Dívida</th><th>Régua</th><th>Fazer hoje</th><th>Situação</th><th>Último contato</th></tr></thead>
+      <tbody>${vis.map((x) => linhaAluno(x.a, { tarefa: x.t })).join('') || '<tr><td colspan="7" class="vazio">Fila zerada. 🎉</td></tr>'}</tbody></table></div>`;
+    document.querySelectorAll('[data-fila]').forEach((c) => { c.onclick = () => { E.fFila = E.fFila === c.dataset.fila ? '' : c.dataset.fila; desenhar(); }; });
+    const vt = $('#ver-tudo'); if (vt) vt.onclick = () => { E.fFila = ''; desenhar(); };
+    $('#btn-lote').onclick = () => abrirLote(vis.map((x) => x.a), (a) => { const t = tarefa(a); return t; });
+    ligarLinhas();
+  }
+
+  function telaCarteira() {
+    const b = E.busca.trim().toLowerCase();
+    const L = D().alunos.filter((a) => {
+      if (b && a.nome.toLowerCase().indexOf(b) < 0 && a.mat.indexOf(b) < 0 && a.curso.toLowerCase().indexOf(b) < 0) return false;
+      if (E.fEtapa && String(etapaDe(a).et.id) !== E.fEtapa) return false;
+      if (E.fFaixa) { const v = a.valor; if (E.fFaixa === '500' && v > 500) return false; if (E.fFaixa === '1000' && (v <= 500 || v > 1000)) return false; if (E.fFaixa === '3000' && (v <= 1000 || v > 3000)) return false; if (E.fFaixa === 'mais' && v <= 3000) return false; }
+      if (E.fSit && situacaoAluno(a)[0].toLowerCase().indexOf(E.fSit) !== 0) return false;
+      return true;
+    }).sort((x, y) => y.valor - x.valor);
+    $('#area').innerHTML = `
+      <div class="filtros">
+        <input type="search" id="busca" placeholder="Nome, matrícula ou curso" value="${esc(E.busca)}">
+        <select id="f-etapa"><option value="">Todas as etapas</option>${REGUA.map((r) => `<option value="${r.id}" ${E.fEtapa === String(r.id) ? 'selected' : ''}>${esc(r.nome)}</option>`).join('')}</select>
+        <select id="f-faixa"><option value="">Qualquer valor</option><option value="500" ${E.fFaixa === '500' ? 'selected' : ''}>Até R$ 500</option><option value="1000" ${E.fFaixa === '1000' ? 'selected' : ''}>R$ 500 a R$ 1.000</option><option value="3000" ${E.fFaixa === '3000' ? 'selected' : ''}>R$ 1.000 a R$ 3.000</option><option value="mais" ${E.fFaixa === 'mais' ? 'selected' : ''}>Acima de R$ 3.000</option></select>
+        <select id="f-sit"><option value="">Qualquer situação</option>${['sem contato', 'contatado', 'promessa', 'em acordo', 'acordo atrasado'].map((s) => `<option value="${s}" ${E.fSit === s ? 'selected' : ''}>${s.charAt(0).toUpperCase() + s.slice(1)}</option>`).join('')}</select>
+        <button class="btn" id="exportar">📥 Exportar</button>
+        <span class="total">${L.length} aluno(s) · ${moeda(L.reduce((s, a) => s + a.valor, 0))}</span>
+      </div>
+      <div class="barra-lote" ${E.sel.size ? '' : 'hidden'}><b>${E.sel.size} selecionado(s)</b><button class="btn mini primario" id="lote-sel">✉️ Mensagem em lote</button><button class="btn mini" id="lote-limpar">Limpar seleção</button></div>
+      <div class="painel"><table class="tabela"><thead><tr><th class="col-sel"><input type="checkbox" id="sel-todos" title="Marcar todos desta lista"></th><th>Aluno</th><th>Curso</th><th class="num">Dívida</th><th>Régua</th><th>Situação</th><th>Último contato</th></tr></thead>
+      <tbody>${L.slice(0, 400).map((a) => linhaAluno(a, { sel: true })).join('') || '<tr><td colspan="7" class="vazio">Nenhum inadimplente com esses filtros.</td></tr>'}</tbody></table>
+      ${L.length > 400 ? `<p class="dica" style="padding:8px 12px">Mostrando os 400 maiores valores. Use os filtros para achar os demais.</p>` : ''}</div>`;
+    const busca = $('#busca'); busca.oninput = () => { E.busca = busca.value; const pos = busca.selectionStart; desenhar(); const n = $('#busca'); n.focus(); n.setSelectionRange(pos, pos); };
+    $('#f-etapa').onchange = (e) => { E.fEtapa = e.target.value; desenhar(); };
+    $('#f-faixa').onchange = (e) => { E.fFaixa = e.target.value; desenhar(); };
+    $('#f-sit').onchange = (e) => { E.fSit = e.target.value; desenhar(); };
+    $('#exportar').onclick = () => exportar('cobranca_carteira_' + E.periodo, ['Matrícula', 'Aluno', 'Curso', 'Celular', 'E-mail', 'Dívida', 'Já pagou', 'Na carteira desde', 'Etapa', 'Situação', 'Último contato'],
+      L.map((a) => { const u = ultimoContato(a.mat); return [a.mat, a.nome, a.curso, a.cel || a.tel, a.email, a.valor.toFixed(2).replace('.', ','), (a.pago || 0).toFixed(2).replace('.', ','), dataBR(a.entrada), etapaDe(a).et.nome, situacaoAluno(a)[0], u ? u.atendente + ' ' + dataBR(isoDeTs(u.criado)) : '']; }));
+    document.querySelectorAll('.sel').forEach((c) => { c.onchange = () => { c.checked ? E.sel.add(c.value) : E.sel.delete(c.value); desenhar(); }; });
+    $('#sel-todos').onchange = (e) => { L.slice(0, 400).forEach((a) => e.target.checked ? E.sel.add(a.mat) : E.sel.delete(a.mat)); desenhar(); };
+    const ls = $('#lote-sel'); if (ls) ls.onclick = () => abrirLote(D().alunos.filter((a) => E.sel.has(a.mat)), tarefa);
+    const ll = $('#lote-limpar'); if (ll) ll.onclick = () => { E.sel.clear(); desenhar(); };
+    ligarLinhas();
+  }
+
+  function telaPromessas() {
+    const L = D().promessas.filter((p) => E.fProm === 'todas' || (E.fProm === 'ativas' ? p.status === 'ativa' : (p.status === 'ativa' && p.situacao === E.fProm) || (E.fProm === 'cancelada' && p.status === 'cancelada')))
+      .sort((a, b) => a.data.localeCompare(b.data));
+    const at = D().promessas.filter((p) => p.status === 'ativa');
+    const c = (s) => at.filter((p) => p.situacao === s).length;
+    $('#area').innerHTML = `
+      <div class="cards">${[['no prazo', 'No prazo', '#1c7ed6'], ['cumprida', 'Cumpridas', '#2f9e44'], ['parcial', 'Pagou parte', '#f79009'], ['quebrada', 'Quebradas', '#d92d20']].map(([k, t, cor]) => `<div class="card ${E.fProm === k ? 'sel' : ''}" data-prom="${k}" style="--cor:${cor};cursor:pointer"><b>${c(k)}</b><span>${t}</span><small>${moeda(at.filter((p) => p.situacao === k).reduce((s, p) => s + p.valor, 0))}</small></div>`).join('')}</div>
+      <div class="lembrete">A situação é conferida sozinha a cada base nova: se a dívida baixou o valor prometido, a promessa está cumprida. Depois da data, a base tem 3 dias para mostrar o pagamento antes de a promessa contar como quebrada.</div>
+      <div class="filtros"><select id="f-prom"><option value="ativas" ${E.fProm === 'ativas' ? 'selected' : ''}>Promessas ativas</option>${Object.keys(SIT_PROM).filter((k) => k !== 'sem informação').map((k) => `<option value="${k}" ${E.fProm === k ? 'selected' : ''}>${SIT_PROM[k][0]}</option>`).join('')}<option value="todas" ${E.fProm === 'todas' ? 'selected' : ''}>Todas, inclusive substituídas</option></select>
+        <span class="total">${L.length} promessa(s) · ${moeda(L.reduce((s, p) => s + p.valor, 0))}</span></div>
+      <div class="painel"><table class="tabela"><thead><tr><th>Aluno</th><th class="num">Prometido</th><th>Data</th><th class="num">Dívida na hora</th><th>Situação</th><th>Quem registrou</th><th></th></tr></thead>
+      <tbody>${L.map((p) => { const s = p.status === 'ativa' ? (SIT_PROM[p.situacao] || [p.situacao, 's-cinza']) : [p.status === 'cancelada' ? 'Cancelada' : 'Substituída', 's-cinza'];
+        return `<tr class="clicavel" data-mat="${esc(p.mat)}"><td class="nome"><b>${esc(p.nome)}</b><small>${esc(p.mat)}</small></td><td class="num">${moeda(p.valor)}</td><td>${dataBR(p.data)}</td><td class="num">${moeda(p.dividaNaHora)}</td>
+          <td><span class="selo ${s[1]}">${esc(s[0])}</span></td><td><small>${esc(p.quem)}<br>${dataBR(p.dia)}</small>${p.obs ? `<br><small class="dica">${esc(p.obs)}</small>` : ''}</td>
+          <td>${p.status === 'ativa' && p.situacao !== 'cumprida' ? `<button class="btn mini" data-cancelar="${esc(p.id)}">Cancelar</button>` : ''}</td></tr>`; }).join('') || '<tr><td colspan="7" class="vazio">Nenhuma promessa aqui.</td></tr>'}</tbody></table></div>`;
+    document.querySelectorAll('[data-prom]').forEach((c) => { c.onclick = () => { E.fProm = E.fProm === c.dataset.prom ? 'ativas' : c.dataset.prom; desenhar(); }; });
+    $('#f-prom').onchange = (e) => { E.fProm = e.target.value; desenhar(); };
+    document.querySelectorAll('[data-cancelar]').forEach((b) => { b.onclick = async (ev) => { ev.stopPropagation(); if (!confirm('Cancelar esta promessa?')) return; await atualizar({ id: b.dataset.cancelar, status: 'cancelada' }, 'Promessa cancelada.'); }; });
+    ligarLinhas();
+  }
+
+  function telaAcordos() {
+    const hoje = hojeISO();
+    const L = D().acordos.filter((a) => E.fAcor === 'todos' || a.status === E.fAcor || (E.fAcor === 'atrasado' && a.atrasada)).sort((a, b) => b.criado - a.criado);
+    const n = (s) => D().acordos.filter((a) => a.status === s).length;
+    $('#area').innerHTML = `
+      <div class="cards">${[['ativo', 'Ativos', '#1c7ed6'], ['atrasado', 'Com parcela atrasada', '#d92d20'], ['cumprido', 'Cumpridos', '#2f9e44'], ['quebrado', 'Quebrados', '#868e96']].map(([k, t, cor]) => `<div class="card ${E.fAcor === k ? 'sel' : ''}" data-acor="${k}" style="--cor:${cor};cursor:pointer"><b>${k === 'atrasado' ? D().acordos.filter((a) => a.atrasada).length : n(k)}</b><span>${t}</span></div>`).join('')}</div>
+      <div class="filtros"><select id="f-acor">${[['ativo', 'Ativos'], ['atrasado', 'Com parcela atrasada'], ['cumprido', 'Cumpridos'], ['quebrado', 'Quebrados'], ['todos', 'Todos']].map(([k, t]) => `<option value="${k}" ${E.fAcor === k ? 'selected' : ''}>${t}</option>`).join('')}</select><span class="total">${L.length} acordo(s) · ${moeda(L.reduce((s, a) => s + a.total, 0))}</span></div>
+      ${L.map((a) => `<div class="bloco"><div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap"><h3 style="margin:0;cursor:pointer" data-mat="${esc(a.mat)}" class="abre">${esc(a.nome)} <small class="dica">${esc(a.mat)}</small></h3>
+          <span class="selo ${a.status === 'ativo' ? (a.atrasada ? 's-vermelho' : 's-azul') : a.status === 'cumprido' ? 's-verde' : 's-cinza'}">${a.status === 'ativo' ? (a.atrasada ? 'Parcela atrasada' : 'Ativo') : a.status === 'cumprido' ? 'Cumprido' : 'Quebrado'}</span>
+          ${a.quitou ? '<span class="selo s-verde">A base já mostra a dívida quitada</span>' : ''}
+          <span class="dica" style="margin-left:auto">${moeda(a.total)} · fechado por ${esc(a.quem)} em ${dataBR(a.dia)}</span></div>
+          ${a.obs ? `<p class="dica" style="margin:6px 0 0">${esc(a.obs)}</p>` : ''}
+          <table class="parcelas">${a.parcelas.map((p) => `<tr><td><label style="display:flex;gap:6px;align-items:center;margin:0;font-weight:400"><input type="checkbox" data-acordo="${esc(a.id)}" data-parcela="${p.n}" ${p.paga ? 'checked' : ''} ${a.status === 'quebrado' ? 'disabled' : ''}> ${esc(p.rotulo)}</label></td><td>${moeda(p.valor)}</td><td>${dataBR(p.venc)}</td>
+            <td>${p.paga ? `<span class="selo s-verde">Paga</span> <small class="dica">${esc(p.quem || '')}</small>` : p.venc < hoje ? '<span class="selo s-vermelho">Atrasada</span>' : '<span class="selo s-cinza">A vencer</span>'}</td></tr>`).join('')}</table>
+          <div class="acoes-ficha">${a.status === 'ativo' ? `<button class="btn mini" data-st="quebrado" data-id="${esc(a.id)}">Marcar como quebrado</button><button class="btn mini" data-st="cumprido" data-id="${esc(a.id)}">Marcar como cumprido</button>` : `<button class="btn mini" data-st="ativo" data-id="${esc(a.id)}">Reabrir</button>`}</div>
+        </div>`).join('') || '<p class="vazio">Nenhum acordo aqui.</p>'}`;
+    document.querySelectorAll('[data-acor]').forEach((c) => { c.onclick = () => { E.fAcor = c.dataset.acor; desenhar(); }; });
+    $('#f-acor').onchange = (e) => { E.fAcor = e.target.value; desenhar(); };
+    document.querySelectorAll('[data-parcela]').forEach((c) => { c.onchange = () => atualizar({ id: c.dataset.acordo, parcela: Number(c.dataset.parcela), paga: c.checked }, c.checked ? 'Parcela marcada como paga.' : 'Parcela desmarcada.'); });
+    document.querySelectorAll('[data-st]').forEach((b) => { b.onclick = () => { if (b.dataset.st === 'quebrado' && !confirm('Marcar o acordo como quebrado? O aluno volta para a régua.')) return; atualizar({ id: b.dataset.id, status: b.dataset.st }, 'Acordo atualizado.'); }; });
+    document.querySelectorAll('.abre').forEach((h) => { h.onclick = () => abrirFicha(h.dataset.mat); });
+  }
+
+  /* Evolução: quem acertou o valor, quem pagou parte, promessas e acordos, por semana e por atendente. */
+  function telaEvolucao() {
+    const d = D(), hoje = hojeISO(), ini = somaDias(hoje, -E.janela);
+    const ev = d.eventos.filter((e) => e.d >= ini);
+    const quit = ev.filter((e) => e.t === 'quitou'), parc = ev.filter((e) => e.t === 'parcial'), entr = ev.filter((e) => e.t === 'entrou' || e.t === 'voltou');
+    const soma = (l) => l.reduce((s, e) => s + e.v, 0);
+    const proms = d.promessas.filter((p) => p.dia >= ini && p.status !== 'substituida');
+    const pc = (s) => proms.filter((p) => p.status === 'ativa' && p.situacao === s);
+    const vencidas = proms.filter((p) => p.status === 'ativa' && ['cumprida', 'parcial', 'quebrada'].indexOf(p.situacao) >= 0 && (p.situacao !== 'parcial' || p.data < hoje));
+    const taxa = vencidas.length ? Math.round(pc('cumprida').length / vencidas.length * 100) : null;
+    const acs = d.acordos.filter((a) => a.dia >= ini);
+    // semanas (segunda a domingo)
+    const semana = (iso) => { const dt = new Date(iso + 'T12:00:00'); const dow = (dt.getDay() + 6) % 7; return somaDias(iso, -dow); };
+    const sem = {}; for (let s = semana(ini); s <= hoje; s = somaDias(s, 7)) sem[s] = { q: 0, vq: 0, p: 0, vp: 0 };
+    quit.forEach((e) => { const k = semana(e.d); if (sem[k]) { sem[k].q++; sem[k].vq += e.v; } });
+    parc.forEach((e) => { const k = semana(e.d); if (sem[k]) { sem[k].p++; sem[k].vp += e.v; } });
+    const maxV = Math.max(1, ...Object.values(sem).map((s) => s.vq + s.vp));
+    // atendente: o pagamento conta para quem fez o último contato nos 30 dias antes
+    const at = {};
+    const credito = (e) => { const r = regsDe(e.m).filter((x) => { const di = isoDeTs(x.criado); return di <= e.d && di >= somaDias(e.d, -30); })[0]; return r ? r.atendente : ''; };
+    ev.filter((e) => e.t === 'quitou' || e.t === 'parcial').forEach((e) => { const n = credito(e) || 'Sem contato antes'; at[n] = at[n] || { q: 0, p: 0, v: 0, prom: 0, cump: 0, acord: 0 }; e.t === 'quitou' ? at[n].q++ : at[n].p++; at[n].v += e.v; });
+    proms.forEach((p) => { at[p.quem] = at[p.quem] || { q: 0, p: 0, v: 0, prom: 0, cump: 0, acord: 0 }; at[p.quem].prom++; if (p.situacao === 'cumprida') at[p.quem].cump++; });
+    acs.forEach((a) => { at[a.quem] = at[a.quem] || { q: 0, p: 0, v: 0, prom: 0, cump: 0, acord: 0 }; at[a.quem].acord++; });
+    $('#area').innerHTML = `
+      <div class="filtros"><select id="janela">${[30, 60, 90, 120].map((n) => `<option value="${n}" ${E.janela === n ? 'selected' : ''}>Últimos ${n} dias</option>`).join('')}</select>
+        <span class="dica">Período ${NOME_P[E.periodo]}. A evolução começa a contar a partir de ${dataBR(d.inicio)}, quando a carteira foi fotografada pela primeira vez, e é atualizada a cada base nova.</span></div>
+      <div class="cards">
+        <div class="card" style="--cor:#2f9e44"><b>${quit.length}</b><span>Acertaram o valor (quitaram)</span><small>${moeda(soma(quit))}</small></div>
+        <div class="card" style="--cor:#f79009"><b>${parc.length}</b><span>Acertaram parcial</span><small>${moeda(soma(parc))} pagos</small></div>
+        <div class="card" style="--cor:#1c7ed6"><b>${moeda(soma(quit) + soma(parc))}</b><span>Recuperado no período</span></div>
+        <div class="card" style="--cor:#d92d20"><b>${entr.length}</b><span>Entraram na carteira</span><small>${moeda(soma(entr))}</small></div>
+      </div>
+      <div class="grade2c">
+        <div class="bloco"><h3>Promessas de pagamento (${proms.length})</h3>
+          <div class="cards" style="grid-template-columns:repeat(2,1fr)">
+            <div class="card" style="--cor:#2f9e44"><b>${pc('cumprida').length}</b><span>Cumpridas</span><small>${moeda(pc('cumprida').reduce((s, p) => s + p.valor, 0))}</small></div>
+            <div class="card" style="--cor:#f79009"><b>${pc('parcial').length}</b><span>Pagou parte</span></div>
+            <div class="card" style="--cor:#d92d20"><b>${pc('quebrada').length}</b><span>Quebradas</span><small>${moeda(pc('quebrada').reduce((s, p) => s + p.valor, 0))}</small></div>
+            <div class="card" style="--cor:#1c7ed6"><b>${pc('no prazo').length}</b><span>No prazo</span></div>
+          </div>
+          <p class="dica" style="margin:0">${taxa == null ? 'Ainda não há promessas vencidas para medir o cumprimento.' : `<b>${taxa}%</b> das promessas que já venceram foram cumpridas.`}</p></div>
+        <div class="bloco"><h3>Acordos (${acs.length})</h3>
+          <div class="cards" style="grid-template-columns:repeat(2,1fr)">
+            <div class="card" style="--cor:#1c7ed6"><b>${acs.filter((a) => a.status === 'ativo').length}</b><span>Ativos</span><small>${moeda(acs.filter((a) => a.status === 'ativo').reduce((s, a) => s + a.total, 0))}</small></div>
+            <div class="card" style="--cor:#2f9e44"><b>${acs.filter((a) => a.status === 'cumprido').length}</b><span>Cumpridos</span></div>
+            <div class="card" style="--cor:#d92d20"><b>${acs.filter((a) => a.atrasada).length}</b><span>Com parcela atrasada</span></div>
+            <div class="card" style="--cor:#868e96"><b>${acs.filter((a) => a.status === 'quebrado').length}</b><span>Quebrados</span></div>
+          </div></div>
+      </div>
+      <div class="bloco"><h3>Semana a semana</h3>
+        <div class="leg"><span><i style="background:#2f9e44"></i>Quitaram</span><span><i style="background:#f79009"></i>Pagaram parte</span></div>
+        ${Object.keys(sem).map((k) => { const s = sem[k]; return `<div class="barra"><span>${dataBR(k).slice(0, 5)} a ${dataBR(somaDias(k, 6)).slice(0, 5)}</span><div class="pista"><i style="width:${s.vq / maxV * 100}%;background:#2f9e44"></i><i style="width:${s.vp / maxV * 100}%;background:#f79009"></i></div><em>${s.q + s.p ? `${s.q} + ${s.p} · ${moeda(s.vq + s.vp)}` : '—'}</em></div>`; }).join('')}
+      </div>
+      <div class="bloco"><h3>Por atendente</h3><p class="dica" style="margin-top:-4px">O pagamento conta para quem fez o último contato com o aluno nos 30 dias antes de a base mostrar o pagamento.</p>
+        <table class="tabela"><thead><tr><th>Atendente</th><th class="num">Quitaram</th><th class="num">Parcial</th><th class="num">Recuperado</th><th class="num">Promessas</th><th class="num">Cumpridas</th><th class="num">Acordos</th></tr></thead>
+        <tbody>${Object.keys(at).sort((a, b) => at[b].v - at[a].v).map((n) => `<tr><td>${esc(n)}</td><td class="num">${at[n].q}</td><td class="num">${at[n].p}</td><td class="num">${moeda(at[n].v)}</td><td class="num">${at[n].prom}</td><td class="num">${at[n].cump}</td><td class="num">${at[n].acord}</td></tr>`).join('') || '<tr><td colspan="7" class="vazio">Sem movimento no período.</td></tr>'}</tbody></table></div>
+      <div class="bloco"><h3>Quem acertou no período</h3>
+        <table class="tabela"><thead><tr><th>Aluno</th><th>O que aconteceu</th><th class="num">Valor</th><th>Base de</th><th>Último contato antes</th></tr></thead>
+        <tbody>${ev.filter((e) => e.t === 'quitou' || e.t === 'parcial').sort((a, b) => b.d.localeCompare(a.d)).slice(0, 200).map((e) => `<tr><td class="nome"><b>${esc(e.n)}</b><small>${esc(e.m)}</small></td><td>${e.t === 'quitou' ? '<span class="selo s-verde">Quitou</span>' : '<span class="selo s-amarelo">Pagou parte</span>'}</td><td class="num">${moeda(e.v)}</td><td>${dataBR(e.d)}</td><td>${esc(credito(e) || '—')}</td></tr>`).join('') || '<tr><td colspan="5" class="vazio">Ninguém acertou ainda neste período. A evolução aparece a partir da próxima base importada.</td></tr>'}</tbody></table></div>`;
+    $('#janela').onchange = (e) => { E.janela = Number(e.target.value); desenhar(); };
+  }
+
+  /* ---------- ficha do aluno ---------- */
+  function mensagem(modelo, a, extra) {
+    const vars = Object.assign({ nome: String(a.nome || '').split(' ')[0], curso: a.curso, atendente: E.eu, divida: moeda(a.valor) }, extra || {});
+    return String(modelo || '').replace(/\{(\w+)\}/g, (m, k) => (k in vars ? vars[k] : m));
+  }
+  const foneWa = (a) => { let n = String(a.cel || a.tel || '').replace(/\D/g, ''); if (!n) return ''; if (n.length <= 11) n = '55' + n; return n; };
+  function modeloPara(a, t) {
+    if (t && t.tipo === 'lembrar') return mensagem(MODELOS.promessa, a, { valor: moeda(t.prom.valor), data: dataBR(t.prom.data) });
+    if (t && (t.tipo === 'parcela_vence' || t.tipo === 'parcela_atrasada')) return mensagem(MODELOS.parcela, a, { parcela: t.p.rotulo.toLowerCase(), valor: moeda(t.p.valor), data: dataBR(t.p.venc) });
+    return mensagem(MODELOS[etapaDe(a).et.id], a);
+  }
+
+  function abrirFicha(mat, modo) {
+    const a = D().alunos.filter((x) => x.mat === mat)[0];
+    if (!a) { aviso('Este aluno não está mais na carteira de inadimplentes da base atual.', 'erro'); return; }
+    const { dias, et } = etapaDe(a), t = tarefa(a);
+    const regs = regsDe(mat), proms = D().promessas.filter((p) => p.mat === mat), acs = D().acordos.filter((x) => x.mat === mat);
+    const tempo = [].concat(
+      regs.map((r) => ({ ts: r.criado, h: `<b>${esc(r.resultado || 'Contato')}</b> · ${esc(r.canal)} · ${esc(r.atendente)}<small>${dataBR(isoDeTs(r.criado))}${r.fu_data ? ' · retorno ' + dataBR(r.fu_data) : ''}</small>${esc(r.obs)}` })),
+      proms.map((p) => ({ ts: p.criado, h: `<b>Promessa ${moeda(p.valor)} até ${dataBR(p.data)}</b> <span class="selo ${(SIT_PROM[p.situacao] || ['', 's-cinza'])[1]}">${p.status === 'ativa' ? esc((SIT_PROM[p.situacao] || [p.situacao])[0]) : esc(p.status)}</span><small>${esc(p.quem)} · ${dataBR(p.dia)}</small>` })),
+      acs.map((x) => ({ ts: x.criado, h: `<b>Acordo ${moeda(x.total)}</b> (${x.entrada ? 'entrada ' + moeda(x.entrada) + (x.nParcelas ? ' + ' : '') : ''}${x.nParcelas ? x.nParcelas + 'x' : ''}) <span class="selo s-azul">${esc(x.status)}</span><small>${esc(x.quem)} · ${dataBR(x.dia)}</small>` }))
+    ).sort((x, y) => y.ts - x.ts);
+    const wa = foneWa(a);
+    $('#modal-corpo').innerHTML = `
+      <h2>${esc(a.nome)}</h2>
+      <div class="dados-aluno">
+        <div><span>Matrícula</span>${esc(a.mat)}</div><div><span>Curso</span>${esc(a.curso)}</div><div><span>Dívida atual</span><b>${moeda(a.valor)}</b>${a.pago ? ` <small class="dica">(já pagou ${moeda(a.pago)})</small>` : ''}</div>
+        <div><span>Celular</span>${esc(a.cel || a.tel || '—')}</div><div><span>E-mail</span>${esc(a.email || '—')}</div><div><span>Dia de vencimento</span>${esc(a.diaVenc || '—')}</div>
+        <div><span>Na carteira desde</span>${dataBR(a.entrada)} (${dias} dias)</div><div><span>Etapa da régua</span>${esc(et.nome)} · ${esc(et.canal)}</div><div><span>Tipo / faixa</span>${esc([a.tipo, a.faixa].filter(Boolean).join(' · ') || '—')}</div>
+      </div>
+      ${t ? `<div class="lembrete amarelo" style="margin:10px 0 0">Fazer hoje: <b>${esc(t.rot)}</b>${t.et ? ' · ' + esc(t.et.acao) : ''}</div>` : ''}
+      <div class="acoes-ficha">
+        ${wa ? `<a class="btn" target="_blank" rel="noopener" id="abrir-wa" href="https://wa.me/${wa}?text=${encodeURIComponent(modeloPara(a, t))}">💬 WhatsApp com mensagem pronta</a>` : ''}
+        <button class="btn ${modo === 'contato' || !modo ? 'ativo' : ''}" data-modo="contato">📞 Registrar contato</button>
+        <button class="btn ${modo === 'promessa' ? 'ativo' : ''}" data-modo="promessa">🤝 Promessa de pagamento</button>
+        <button class="btn ${modo === 'acordo' ? 'ativo' : ''}" data-modo="acordo">📄 Registrar acordo</button>
+      </div>
+      <div id="form-area"></div>
+      <h3 style="font-size:14px;margin:14px 0 0">Histórico de cobrança</h3>
+      <ul class="linha-tempo">${tempo.map((x) => `<li>${x.h}</li>`).join('') || '<li class="dica">Nenhum contato registrado ainda.</li>'}</ul>
+      <div class="botoes"><button type="button" class="btn" data-fechar>Fechar</button></div>`;
+    $('#modal').hidden = false;
+    document.querySelector('[data-fechar]').onclick = fechar;
+    document.querySelectorAll('[data-modo]').forEach((b) => { b.onclick = () => abrirFicha(mat, b.dataset.modo); });
+    formulario(a, modo || 'contato', t);
+  }
+
+  function formulario(a, modo, t) {
+    const area = $('#form-area'), hoje = hojeISO();
+    const resultados = (D().resultados && D().resultados.length ? D().resultados : ['Prometeu pagar', 'Acordo fechado', 'Pagou', 'Quer negociar', 'Encaminhado ao ADM.FIN', 'Sem retorno', 'Número errado', 'Outro']).filter((r) => r !== 'Prometeu pagar' && r !== 'Acordo fechado');
+    const canalPadrao = t && t.et ? t.et.canal : 'WhatsApp';
+    const selCanal = `<label>Canal<select name="canal">${CANAIS.map((c) => `<option ${c === canalPadrao ? 'selected' : ''}>${c}</option>`).join('')}</select></label>`;
+    if (modo === 'contato') {
+      area.innerHTML = `<form id="f"><div class="grade3">${selCanal}<label>Resultado<select name="resultado">${resultados.map((r) => `<option>${esc(r)}</option>`).join('')}</select></label><label>Retornar em<input type="date" name="fu" min="${hoje}"></label></div>
+        <label>O que foi conversado<textarea name="obs" required></textarea></label><div class="botoes"><button class="btn primario">Salvar contato</button></div></form>`;
+      $('#f').onsubmit = async (ev) => { ev.preventDefault(); const f = ev.target; if (!f.obs.value.trim()) return aviso('Escreva o que foi conversado.', 'erro');
+        await enviar('financeiro.registrar', { reg: { matricula: a.mat, base: E.periodo, aluno: a.nome, canal: f.canal.value, resultado: f.resultado.value, obs: f.obs.value.trim(), fu_data: f.fu.value } }, 'Contato registrado.', f); };
+    } else if (modo === 'promessa') {
+      area.innerHTML = `<form id="f"><div class="grade3">${selCanal}<label>Valor prometido (R$)<input name="valor" inputmode="decimal" value="${a.valor.toFixed(2).replace('.', ',')}" required></label><label>Paga até<input type="date" name="data" min="${hoje}" required></label></div>
+        <label>Observação<textarea name="obs" placeholder="Ex.: vai pagar no PIX depois do salário"></textarea></label>
+        <p class="dica">A promessa vira um acionamento "Prometeu pagar" com retorno na data. O aluno sai da fila até lá e volta se a base não mostrar o pagamento.</p>
+        <div class="botoes"><button class="btn primario">Salvar promessa</button></div></form>`;
+      $('#f').onsubmit = async (ev) => { ev.preventDefault(); const f = ev.target;
+        await enviar('financeiro.promessa', { base: E.periodo, promessa: { mat: a.mat, nome: a.nome, canal: f.canal.value, valor: f.valor.value, data: f.data.value, obs: f.obs.value.trim() } }, 'Promessa registrada.', f); };
+    } else {
+      area.innerHTML = `<form id="f"><div class="grade3">${selCanal}<label>Valor total do acordo (R$)<input name="total" inputmode="decimal" value="${a.valor.toFixed(2).replace('.', ',')}" required></label><label>Entrada (R$)<input name="entrada" inputmode="decimal" placeholder="0,00"></label></div>
+        <div class="grade3"><label>Vencimento da entrada<input type="date" name="entradaVenc" min="${hoje}"></label><label>Nº de parcelas (sem a entrada)<input type="number" name="parcelas" min="0" max="36" value="0"></label><label>1ª parcela vence em<input type="date" name="primeiroVenc" min="${hoje}"></label></div>
+        <p class="dica" id="simula"></p>
+        <label>Observação<textarea name="obs" placeholder="Ex.: acordo fechado no portal, boleto enviado por e-mail"></textarea></label>
+        <div class="botoes"><button class="btn primario">Salvar acordo</button></div></form>`;
+      const f = $('#f');
+      const sim = () => { const tot = num(f.total.value), en = num(f.entrada.value), n = parseInt(f.parcelas.value, 10) || 0; $('#simula').textContent = n ? `${en ? 'Entrada de ' + moeda(en) + ' + ' : ''}${n}x de ${moeda((tot - en) / n)}` : (en ? (en < tot ? 'Falta informar as parcelas para o restante.' : 'Pagamento à vista na entrada.') : ''); };
+      ['total', 'entrada', 'parcelas'].forEach((k) => { f[k].oninput = sim; }); sim();
+      f.onsubmit = async (ev) => { ev.preventDefault();
+        await enviar('financeiro.acordo', { base: E.periodo, acordo: { mat: a.mat, nome: a.nome, canal: f.canal.value, total: f.total.value, entrada: f.entrada.value, entradaVenc: f.entradaVenc.value, parcelas: f.parcelas.value, primeiroVenc: f.primeiroVenc.value, obs: f.obs.value.trim() } }, 'Acordo registrado.', f); };
+    }
+  }
+
+  async function enviar(acao, dados, ok, form) {
+    const b = form.querySelector('button.primario'); b.disabled = true; const t = b.textContent; b.textContent = 'Salvando...';
+    try {
+      const r = await Api.chamar(acao, dados);
+      if (!r || !r.ok) throw new Error((r && r.erro) || 'Não foi possível salvar.');
+      aviso(ok, 'ok'); fechar(); await recarregar();
+    } catch (e) { if (!e.auth) aviso(e.message, 'erro'); b.disabled = false; b.textContent = t; }
+  }
+  async function atualizar(dados, ok) {
+    try { const r = await Api.chamar('financeiro.cobranca_atualizar', Object.assign({ base: E.periodo }, dados)); if (!r || !r.ok) throw new Error((r && r.erro) || 'Não foi possível atualizar.'); aviso(ok, 'ok'); await recarregar(); }
+    catch (e) { if (!e.auth) aviso(e.message, 'erro'); await recarregar(); }
+  }
+  function fechar() { $('#modal').hidden = true; $('#modal-corpo').innerHTML = ''; }
+
+  /* ---------- mensagem em lote: abre o WhatsApp de cada aluno com a mensagem da etapa e registra o contato ---------- */
+  function abrirLote(alunos, tarefaDe) {
+    alunos = alunos.filter((a) => foneWa(a));
+    if (!alunos.length) { aviso('Nenhum aluno com celular nesta lista.', 'erro'); return; }
+    $('#modal-corpo').innerHTML = `<h2>Mensagem em lote · WhatsApp</h2>
+      <p class="dica">Cada aluno recebe a mensagem da sua etapa da régua (ou o lembrete da promessa ou da parcela). Clique em "Abrir" para cada um: o WhatsApp abre com o texto pronto e o contato fica registrado no seu nome.</p>
+      <div class="lote-lista">${alunos.map((a) => `<div><span><b>${esc(a.nome)}</b> · ${moeda(a.valor)}<br><small class="dica">${esc((tarefaDe(a) || {}).rot || etapaDe(a).et.nome)}</small></span><button class="btn mini primario" data-lote="${esc(a.mat)}">Abrir</button></div>`).join('')}</div>
+      <div class="botoes"><button type="button" class="btn" data-fechar>Fechar</button></div>`;
+    $('#modal').hidden = false;
+    let mudou = false;
+    document.querySelector('[data-fechar]').onclick = async () => { fechar(); E.sel.clear(); if (mudou) await recarregar(); };
+    document.querySelectorAll('[data-lote]').forEach((b) => { b.onclick = async () => {
+      const a = alunos.filter((x) => x.mat === b.dataset.lote)[0], t = tarefaDe(a), msg = modeloPara(a, t);
+      window.open('https://wa.me/' + foneWa(a) + '?text=' + encodeURIComponent(msg), '_blank', 'noopener');
+      b.disabled = true; b.textContent = 'Registrando...';
+      try {
+        const r = await Api.chamar('financeiro.registrar', { reg: { matricula: a.mat, base: E.periodo, aluno: a.nome, canal: 'WhatsApp', resultado: 'Mensagem enviada', obs: (t ? t.rot + ': ' : '') + msg } });
+        if (!r || !r.ok) throw new Error((r && r.erro) || 'erro');
+        b.replaceWith(Object.assign(document.createElement('span'), { className: 'feito', textContent: '✓ enviado' })); mudou = true;
+      } catch (e) { b.disabled = false; b.textContent = 'Tentar de novo'; }
+    }; });
+  }
+
+  function exportar(nome, cab, linhas) {
+    const cel = (v) => { const t = String(v == null ? '' : v); return /[;"\n]/.test(t) ? '"' + t.replace(/"/g, '""') + '"' : t; };
+    const csv = '﻿' + [cab].concat(linhas).map((l) => l.map(cel).join(';')).join('\r\n');
+    const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
+    a.download = nome + '_' + hojeISO() + '.csv'; document.body.appendChild(a); a.click(); a.remove();
+  }
+
+  document.addEventListener('DOMContentLoaded', async () => {
+    const s = Api.Sessao.ler();
+    if (!s) { if (window.App) window.App.mostrarLogin('Entre novamente.'); return; }
+    E.eu = (s.me && s.me.nome) || s.nome || '';
+    document.querySelectorAll('#abas button').forEach((b) => { b.onclick = () => { E.aba = b.dataset.aba; desenhar(); }; });
+    document.querySelectorAll('#periodos button').forEach((b) => { b.onclick = async () => {
+      E.periodo = b.dataset.p; E.sel.clear(); E.fFila = '';
+      if (!E.d[E.periodo]) { $('#area').innerHTML = '<div class="carregando-base">Carregando a carteira...</div>'; await carregar(E.periodo); }
+      desenhar();
+    }; });
+    $('#modal').onclick = (ev) => { if (ev.target.id === 'modal') fechar(); };
+    await recarregar();
+  });
+  window.TelaCobranca = { estado: E, abrirFicha, desenhar, tarefa };
+})();
+</script>
+</body>
+</html>
