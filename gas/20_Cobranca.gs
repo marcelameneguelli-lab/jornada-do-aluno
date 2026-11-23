@@ -92,11 +92,31 @@ function cobAvaliarPromessa_(p, a, hoje) {
   return pago > 0 ? 'parcial' : 'quebrada';
 }
 
+/** Matrículas dos alunos ativos no sistema Formandos (sem os apagados e os que já colaram grau). */
+function cobFormandos_() {
+  const mapa = {};
+  try {
+    const sh = Formandos_().aba_('students');
+    const n = Math.max(sh.getLastRow() - 1, 0);
+    if (!n) return mapa;
+    sh.getRange(2, 1, n, 4).getValues().forEach(l => {
+      if (l[3]) return; // apagado
+      let o = {};
+      try { o = JSON.parse(l[1] || '{}') || {}; } catch (e) { o = {}; }
+      if (o.arq) return; // já colou grau
+      const mat = normMatEv_(o.mat || l[0]);
+      if (mat) mapa[mat] = true;
+    });
+  } catch (e) { /* sem Formandos, sem tag */ }
+  return mapa;
+}
+
 function cobDados_(d) {
   const base = cobBaseOk_(d.base) ? d.base : 'impar';
   const linhas = evLerBase_(base);
   const cart = cobProcessar_(base, linhas);
   const A = cart.alunos || {};
+  const formandos = cobFormandos_();
   const lista = [];
   linhas.forEach(r => {
     if (!cobInadimplente_(r)) return;
@@ -110,6 +130,7 @@ function cobDados_(d) {
       diaVenc: String(r.NUM_DIA_VENCTO || '').replace(/\.0$/, ''), promBase: String(r.VENCIMENTO_PROMESSA || ''),
       propensao: String(r.PROPENSAO_EVASAO || ''), situacao: String(r.NOM_SITUACAO_ALUNO || ''),
       entrada: a.dIni || cart.inicio, inicial: a.ini || cobValor_(r), pago: a.pago || 0,
+      formando: !!formandos[mat],
     });
   });
   const reg = cobLerJson_('CobAcordos_' + base, { promessas: [], acordos: [] });

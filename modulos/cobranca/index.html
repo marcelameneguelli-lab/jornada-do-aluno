@@ -44,7 +44,7 @@
   .tabela td.num { text-align: right; white-space: nowrap; }
   .selo { display: inline-block; border-radius: 10px; padding: 2px 9px; font-size: 11px; font-weight: 700; white-space: nowrap; }
   .s-verde { background: #e6f6ea; color: #1e7a38; } .s-vermelho { background: #fde8e8; color: #b42318; } .s-amarelo { background: #fff4e5; color: #b54708; }
-  .s-azul { background: #e7f0fb; color: #1d4b7a; } .s-cinza { background: #eceff3; color: #475467; } .s-roxo { background: #f3f0ff; color: #5f3dc4; }
+  .s-azul { background: #e7f0fb; color: #1d4b7a; } .tag-formando { display: inline-block; background: #fff3bf; color: #7a5b00; border: 1px solid #ffe066; border-radius: 10px; padding: 0 7px; font-size: 11px; font-weight: 700; margin-left: 6px; vertical-align: 1px; } .s-cinza { background: #eceff3; color: #475467; } .s-roxo { background: #f3f0ff; color: #5f3dc4; }
   .barra { display: grid; grid-template-columns: 110px 1fr 90px; gap: 8px; align-items: center; font-size: 12px; margin: 5px 0; }
   .barra .pista { display: flex; height: 12px; background: #f1f3f5; border-radius: 6px; overflow: hidden; }
   .barra .pista i { display: block; height: 100%; } .barra em { font-style: normal; text-align: right; }
@@ -193,13 +193,14 @@
     const [st, cls] = situacaoAluno(a), u = ultimoContato(a.mat), { dias, et } = etapaDe(a);
     return `<tr class="clicavel" data-mat="${esc(a.mat)}">
       ${extra && extra.sel ? `<td class="col-sel"><input type="checkbox" class="sel" value="${esc(a.mat)}" ${E.sel.has(a.mat) ? 'checked' : ''}></td>` : ''}
-      <td class="nome"><b>${esc(a.nome)}</b><small>${esc(a.mat)}</small></td><td>${esc(a.curso)}</td>
+      <td class="nome"><b>${esc(a.nome)}${tagFormando(a)}</b><small>${esc(a.mat)}</small></td><td>${esc(a.curso)}</td>
       <td class="num"><b>${moeda(a.valor)}</b>${a.pago ? `<br><small class="dica">pagou ${moeda(a.pago)}</small>` : ''}</td>
       <td>${esc(et.nome)}<br><small class="dica">${dias} dia(s) na carteira</small></td>
       ${extra && extra.tarefa ? `<td><span class="selo" style="background:${extra.tarefa.cor}1a;color:${extra.tarefa.cor}">${esc(extra.tarefa.rot)}</span>${extra.tarefa.prom ? `<br><small class="dica">${moeda(extra.tarefa.prom.valor)} até ${dataBR(extra.tarefa.prom.data)}</small>` : ''}${extra.tarefa.p ? `<br><small class="dica">${esc(extra.tarefa.p.rotulo)} ${moeda(extra.tarefa.p.valor)} · ${dataBR(extra.tarefa.p.venc)}</small>` : ''}</td>` : ''}
       <td><span class="selo ${cls}">${esc(st)}</span></td>
       <td><small>${u ? esc(u.atendente) + '<br>' + dataBR(isoDeTs(u.criado)) + ' · ' + esc(u.resultado || u.canal) : '<span class="dica">nunca</span>'}</small></td></tr>`;
   }
+  function tagFormando(a) { return a && a.formando ? '<span class="tag-formando" title="Está no sistema Formandos">🎓 Formando</span>' : ''; }
   function ligarLinhas() { document.querySelectorAll('tr[data-mat]').forEach((tr) => { tr.onclick = (ev) => { if (ev.target.classList.contains('sel')) return; abrirFicha(tr.dataset.mat); }; }); }
 
   function telaFila() {
@@ -227,7 +228,8 @@
       if (b && a.nome.toLowerCase().indexOf(b) < 0 && a.mat.indexOf(b) < 0 && a.curso.toLowerCase().indexOf(b) < 0) return false;
       if (E.fEtapa && String(etapaDe(a).et.id) !== E.fEtapa) return false;
       if (E.fFaixa) { const v = a.valor; if (E.fFaixa === '500' && v > 500) return false; if (E.fFaixa === '1000' && (v <= 500 || v > 1000)) return false; if (E.fFaixa === '3000' && (v <= 1000 || v > 3000)) return false; if (E.fFaixa === 'mais' && v <= 3000) return false; }
-      if (E.fSit && situacaoAluno(a)[0].toLowerCase().indexOf(E.fSit) !== 0) return false;
+      if (E.fSit === 'formando') { if (!a.formando) return false; }
+      else if (E.fSit && situacaoAluno(a)[0].toLowerCase().indexOf(E.fSit) !== 0) return false;
       return true;
     }).sort((x, y) => y.valor - x.valor);
     $('#area').innerHTML = `
@@ -235,7 +237,7 @@
         <input type="search" id="busca" placeholder="Nome, matrícula ou curso" value="${esc(E.busca)}">
         <select id="f-etapa"><option value="">Todas as etapas</option>${REGUA.map((r) => `<option value="${r.id}" ${E.fEtapa === String(r.id) ? 'selected' : ''}>${esc(r.nome)}</option>`).join('')}</select>
         <select id="f-faixa"><option value="">Qualquer valor</option><option value="500" ${E.fFaixa === '500' ? 'selected' : ''}>Até R$ 500</option><option value="1000" ${E.fFaixa === '1000' ? 'selected' : ''}>R$ 500 a R$ 1.000</option><option value="3000" ${E.fFaixa === '3000' ? 'selected' : ''}>R$ 1.000 a R$ 3.000</option><option value="mais" ${E.fFaixa === 'mais' ? 'selected' : ''}>Acima de R$ 3.000</option></select>
-        <select id="f-sit"><option value="">Qualquer situação</option>${['sem contato', 'contatado', 'promessa', 'em acordo', 'acordo atrasado'].map((s) => `<option value="${s}" ${E.fSit === s ? 'selected' : ''}>${s.charAt(0).toUpperCase() + s.slice(1)}</option>`).join('')}</select>
+        <select id="f-sit"><option value="">Qualquer situação</option><option value="formando" ${E.fSit === 'formando' ? 'selected' : ''}>🎓 Só formandos</option>${['sem contato', 'contatado', 'promessa', 'em acordo', 'acordo atrasado'].map((s) => `<option value="${s}" ${E.fSit === s ? 'selected' : ''}>${s.charAt(0).toUpperCase() + s.slice(1)}</option>`).join('')}</select>
         <button class="btn" id="exportar">📥 Exportar</button>
         <span class="total">${L.length} aluno(s) · ${moeda(L.reduce((s, a) => s + a.valor, 0))}</span>
       </div>
@@ -247,8 +249,8 @@
     $('#f-etapa').onchange = (e) => { E.fEtapa = e.target.value; desenhar(); };
     $('#f-faixa').onchange = (e) => { E.fFaixa = e.target.value; desenhar(); };
     $('#f-sit').onchange = (e) => { E.fSit = e.target.value; desenhar(); };
-    $('#exportar').onclick = () => exportar('cobranca_carteira_' + E.periodo, ['Matrícula', 'Aluno', 'Curso', 'Celular', 'E-mail', 'Dívida', 'Já pagou', 'Na carteira desde', 'Etapa', 'Situação', 'Último contato'],
-      L.map((a) => { const u = ultimoContato(a.mat); return [a.mat, a.nome, a.curso, a.cel || a.tel, a.email, a.valor.toFixed(2).replace('.', ','), (a.pago || 0).toFixed(2).replace('.', ','), dataBR(a.entrada), etapaDe(a).et.nome, situacaoAluno(a)[0], u ? u.atendente + ' ' + dataBR(isoDeTs(u.criado)) : '']; }));
+    $('#exportar').onclick = () => exportar('cobranca_carteira_' + E.periodo, ['Matrícula', 'Aluno', 'Formando', 'Curso', 'Celular', 'E-mail', 'Dívida', 'Já pagou', 'Na carteira desde', 'Etapa', 'Situação', 'Último contato'],
+      L.map((a) => { const u = ultimoContato(a.mat); return [a.mat, a.nome, a.formando ? 'Sim' : '', a.curso, a.cel || a.tel, a.email, a.valor.toFixed(2).replace('.', ','), (a.pago || 0).toFixed(2).replace('.', ','), dataBR(a.entrada), etapaDe(a).et.nome, situacaoAluno(a)[0], u ? u.atendente + ' ' + dataBR(isoDeTs(u.criado)) : '']; }));
     document.querySelectorAll('.sel').forEach((c) => { c.onchange = () => { c.checked ? E.sel.add(c.value) : E.sel.delete(c.value); desenhar(); }; });
     $('#sel-todos').onchange = (e) => { L.slice(0, 400).forEach((a) => e.target.checked ? E.sel.add(a.mat) : E.sel.delete(a.mat)); desenhar(); };
     const ls = $('#lote-sel'); if (ls) ls.onclick = () => abrirLote(D().alunos.filter((a) => E.sel.has(a.mat)), tarefa);
@@ -386,7 +388,8 @@
     ).sort((x, y) => y.ts - x.ts);
     const wa = foneWa(a);
     $('#modal-corpo').innerHTML = `
-      <h2>${esc(a.nome)}</h2>
+      <h2>${esc(a.nome)}${tagFormando(a)}</h2>
+      ${a.formando ? '<div class="lembrete amarelo" style="margin-bottom:8px">Aluno formando: a pendência financeira pode travar a colação de grau. Vale priorizar.</div>' : ''}
       <div class="dados-aluno">
         <div><span>Matrícula</span>${esc(a.mat)}</div><div><span>Curso</span>${esc(a.curso)}</div><div><span>Dívida atual</span><b>${moeda(a.valor)}</b>${a.pago ? ` <small class="dica">(já pagou ${moeda(a.pago)})</small>` : ''}</div>
         <div><span>Celular</span>${esc(a.cel || a.tel || '—')}</div><div><span>E-mail</span>${esc(a.email || '—')}</div><div><span>Dia de vencimento</span>${esc(a.diaVenc || '—')}</div>
@@ -460,7 +463,7 @@
     if (!alunos.length) { aviso('Nenhum aluno com celular nesta lista.', 'erro'); return; }
     $('#modal-corpo').innerHTML = `<h2>Mensagem em lote · WhatsApp</h2>
       <p class="dica">Cada aluno recebe a mensagem da sua etapa da régua (ou o lembrete da promessa ou da parcela). Clique em "Abrir" para cada um: o WhatsApp abre com o texto pronto e o contato fica registrado no seu nome.</p>
-      <div class="lote-lista">${alunos.map((a) => `<div><span><b>${esc(a.nome)}</b> · ${moeda(a.valor)}<br><small class="dica">${esc((tarefaDe(a) || {}).rot || etapaDe(a).et.nome)}</small></span><button class="btn mini primario" data-lote="${esc(a.mat)}">Abrir</button></div>`).join('')}</div>
+      <div class="lote-lista">${alunos.map((a) => `<div><span><b>${esc(a.nome)}</b>${tagFormando(a)} · ${moeda(a.valor)}<br><small class="dica">${esc((tarefaDe(a) || {}).rot || etapaDe(a).et.nome)}</small></span><button class="btn mini primario" data-lote="${esc(a.mat)}">Abrir</button></div>`).join('')}</div>
       <div class="botoes"><button type="button" class="btn" data-fechar>Fechar</button></div>`;
     $('#modal').hidden = false;
     let mudou = false;

@@ -16,12 +16,15 @@ with sync_playwright() as p:
     pg.wait_for_selector('#form-troca:not([hidden])'); pg.fill('#troca-atual',prov['admin']); pg.fill('#troca-nova','Admin2026b'); pg.fill('#troca-conf','Admin2026b'); pg.click('#form-troca button.primario')
     pg.wait_for_function("document.body.dataset.tela==='app'")
     assert 'Cobrança' in pg.inner_text('#menu'); ok('menu mostra Cobrança no lugar do Financeiro')
+    tok0=pg.evaluate("JSON.parse(localStorage.getItem('jornada_sessao')).token")
+    r=api({'acao':'formandos.ops','token':tok0,'ops':[{'op':'set','col':'students','id':'202301000105','data':{'id':'202301000105','mat':'202301000105','nome':'Engaja Exemplo 6','upd':1}}]}); assert r.get('ok'), r
     pg.goto(B+'#/s/financeiro'); pg.wait_for_timeout(2500)
     f=[x for x in pg.frames if 'modulos/cobranca' in x.url][0]; f.wait_for_selector('.regua', timeout=15000)
     f.wait_for_function("document.querySelectorAll('tr[data-mat]').length===2", timeout=15000)
     assert '1º contato' in f.inner_text('.regua') and f.inner_text('#c-fila')=='2'; ok('fila do dia: 2 inadimplentes na 1ª etapa da régua')
     assert '2 inadimplente(s)' in f.inner_text('#sub') and '1.600,00' in f.inner_text('#sub'); ok('carteira Ímpar: 2 inadimplentes, R$ 1.600,00')
     pg.screenshot(path='/home/claude/testes/tela_cobranca_fila.png')
+    assert '🎓 Formando' in f.inner_text('tr[data-mat="202301000105"]') and '🎓' not in f.inner_text('tr[data-mat="202301000102"]'); ok('tag de formando só no aluno que está no Formandos')
     mats=f.evaluate("[...document.querySelectorAll('tr[data-mat]')].map(t=>t.dataset.mat)")
     m1,m2=mats[0],mats[1]
     f.click(f'tr[data-mat="{m1}"]'); f.wait_for_selector('#f')

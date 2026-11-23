@@ -28,4 +28,10 @@ t('mesma base de novo não duplica a evolução', ()=>{ const r2=post({acao:'fin
 t('parcela paga e acordo cumprido quando todas pagas', ()=>{ const ac=r.acordos[0]; let x; for (const p of ac.parcelas) x=post({acao:'financeiro.cobranca_atualizar',token:tF,base:'impar',id:ac.id,parcela:p.n,paga:true}); assert(x.ok); assert.equal(x.acordo.status,'cumprido'); });
 t('promessa vencida sem pagamento é quebrada', ()=>{ const c=g.Engajamento_(); const reg=JSON.parse(c.storeGet('CobAcordos_impar')); reg.promessas.push({id:'pX',mat:'202501000006',data:'2026-01-10',valor:250,dividaNaHora:250,dia:'2026-01-05',status:'ativa'}); c.storeSet('CobAcordos_impar',JSON.stringify(reg)); const p=post({acao:'financeiro.cobranca',token:tF,base:'impar'}).promessas.find(x=>x.id==='pX'); assert.equal(p.situacao,'quebrada'); });
 t('voltou a dever depois de quitar', ()=>{ subir([al('202501000001','S','150,00'),al('202501000002','S','400,00'),al('202501000003','S','400,00'),al('202501000006','S','250,00')]); const e=post({acao:'financeiro.cobranca',token:tF,base:'impar'}).eventos.filter(x=>x.m==='202501000001').map(x=>x.t); assert.deepEqual(e,['quitou','voltou']); });
+t('tag de formando: só quem está ativo no Formandos (sem apagados e sem quem colou grau)', ()=>{ const sh=g.Formandos_().aba_('students');
+  sh.appendRow(['202501000002',JSON.stringify({mat:'202501000002',nome:'Aluno 2'}),Date.now(),'']);
+  sh.appendRow(['202501000003',JSON.stringify({mat:'202501000003',arq:true}),Date.now(),'']);
+  sh.appendRow(['202501000006',JSON.stringify({mat:'202501000006'}),Date.now(),Date.now()]);
+  const l=post({acao:'financeiro.cobranca',token:tF,base:'impar'}).alunos; const f=m=>l.find(x=>x.mat===m).formando;
+  assert.equal(f('202501000002'),true); assert.equal(f('202501000003'),false); assert.equal(f('202501000006'),false); assert.equal(f('202501000001'),false); });
 console.log(ok+' testes da Cobrança passaram');
