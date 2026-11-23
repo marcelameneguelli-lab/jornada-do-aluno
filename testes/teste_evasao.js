@@ -37,5 +37,15 @@ t('filtro por período (ímpar)', ()=>{ const r=post({acao:'evasao.renovacao',to
 t('ciclo encerrado não reverte: vai para recaptura', ()=>{ const r=post({acao:'evasao.reverter',token:tF,alunoId:'R3',ciclo:'2025.2',status:'Renovado',obs:'voltou'}); assert.equal(r.ok,false); assert(/recaptura/.test(r.erro)); });
 t('reverter exige descrever', ()=>{ assert.equal(post({acao:'evasao.reverter',token:tF,alunoId:'R1',ciclo:'2026.1',status:'Em negociação',obs:''}).ok,false); });
 t('ciclo aberto reverte o status e registra o acionamento', ()=>{ const r=post({acao:'evasao.reverter',token:tF,alunoId:'R1',nomeAluno:'Aluno R1',ciclo:'2026.1',status:'Em negociação',obs:'Aceitou negociar'}); assert(r.ok,JSON.stringify(r)); const c1=post({acao:'evasao.renovacao',token:tF}).ciclos.find(c=>c.ciclo==='2026.1'); assert.equal(c1.alunos.length,1); const ac=g._ss.getSheetByName('Acionamentos').d.find(l=>String(l[4])==='Reversão de evasão'); assert(ac && ac[3]==='Felipe'); });
+post({acao:'engajamento.salvarBase',token:tM,base:'ct',dados:[
+  {COD_MATRICULA:'202503000001',NOM_ALUNO:'He Sim',NOM_CURSO:'Enfermagem',NOM_SITUACAO_ALUNO:'MATRICULADO',SOLICITAR_HE:'1',INDICIO_EVASAO:'',DT_AGEND_TRANC:'',STATUS_AGEND_TRANC:''},
+  {COD_MATRICULA:'202503000002',NOM_ALUNO:'Indicio Alto',NOM_CURSO:'Enfermagem',NOM_SITUACAO_ALUNO:'MATRICULADO',SOLICITAR_HE:'0',INDICIO_EVASAO:'ALTO',DT_AGEND_TRANC:'2026-12-10',STATUS_AGEND_TRANC:'AGENDADO'},
+  {COD_MATRICULA:'202503000003',NOM_ALUNO:'Sem Sinal',NOM_CURSO:'Enfermagem',NOM_SITUACAO_ALUNO:'MATRICULADO',SOLICITAR_HE:'0',INDICIO_EVASAO:'NÃO',DT_AGEND_TRANC:'',STATUS_AGEND_TRANC:'-'},
+  {COD_MATRICULA:'202503000004',NOM_ALUNO:'Trancou Com HE',NOM_CURSO:'Enfermagem',NOM_SITUACAO_ALUNO:'TRANCADO',SOLICITAR_HE:'1'}],parte:0,total:1});
+t('indícios da base: HE = 1, INDICIO_EVASAO e trancamento agendado', ()=>{ const r=post({acao:'evasao.matriculados',token:tF,base:'ct'}); assert.equal(r.dados.length,3,JSON.stringify(r.dados.map(x=>x.nome))); assert.equal(r.comIndicio,2);
+  const a=r.dados.find(x=>x.mat==='202503000001'); assert.equal(a.sit,'indicio'); assert.deepEqual(a.indicios.map(i=>i.texto),['Solicitou HE']);
+  const b=r.dados.find(x=>x.mat==='202503000002'); assert.deepEqual(b.indicios.map(i=>i.texto),['Indício: ALTO','Trancamento agendado 10/12/2026 (AGENDADO)']);
+  const c=r.dados.find(x=>x.mat==='202503000004'); assert.equal(c.sit,'trancado'); assert.equal(c.indicios[0].tipo,'he'); });
+t('indício pode ser salvo sem objeção e continua mostrando os sinais', ()=>{ const s=post({acao:'evasao.salvar',token:tF,base:'ct',registro:{mat:'202503000001',nome:'He Sim',sit:'indicio',obs:'Liguei, vai pensar'}}); assert(s.ok,JSON.stringify(s)); const a=post({acao:'evasao.matriculados',token:tF,base:'ct'}).dados.find(x=>x.mat==='202503000001'); assert(!a._importado); assert.equal(a.atend,'Felipe'); assert.equal(a.indicios[0].texto,'Solicitou HE'); });
 t('config traz a lista de objeções com "Outro"', ()=>{ const r=post({acao:'evasao.config',token:tF}); assert(r.objecoes.includes('Outro') && r.objecoes.length===13); });
 console.log(ok+' testes da Evasão passaram');

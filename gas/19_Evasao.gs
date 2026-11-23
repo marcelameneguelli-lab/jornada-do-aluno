@@ -5,7 +5,8 @@
  *  1) Aluno matriculado: cancelados, trancados e intenções de saída da base líquida.
  *     Os registros ficam em EvasaoData_<base> (o mesmo armazenamento que a aba Evasão do
  *     EngajaVR usava, então nada se perde). Cancelados e trancados da base aparecem sozinhos,
- *     sem objeção, até alguém registrar o motivo.
+ *     sem objeção, até alguém registrar o motivo. Alunos ativos com indício na base (SOLICITAR_HE = 1,
+ *     INDICIO_EVASAO, trancamento agendado) aparecem como "Indício de evasão" para a equipe agir antes da saída.
  *
  *  2) Renovação: alunos com status Evadido ou Trancamento nos ciclos de renovação.
  *     Com o ciclo aberto (prazo não passou) dá para reverter o status. Com o ciclo encerrado,
@@ -29,7 +30,7 @@ const OBJECOES_EVASAO = [
   'Sem contato / não respondeu',
   'Outro',
 ];
-const SITUACOES_EVASAO = ['cancelado', 'trancado', 'intencao', 'revertido'];
+const SITUACOES_EVASAO = ['indicio', 'intencao', 'trancado', 'cancelado', 'revertido'];
 const STATUS_EVASAO_RENOV = ['Evadido', 'Trancamento'];
 const STATUS_REVERSAO_RENOV = ['Renovado', 'Em negociação', 'Pendente'];
 const NOME_PERIODO_EVASAO = { impar: 'Ímpar', par: 'Par', ct: 'Técnico' };
@@ -54,28 +55,67 @@ function evNumero_(v) {
   return isNaN(n) ? 0 : n;
 }
 
-/** Registros do período + cancelados e trancados da base líquida que ainda não têm registro. */
+/** Valor "vazio" de indicador na base: em branco, 0, N, NÃO, FALSE, traço... */
+function evSemValor_(v) {
+  const t = String(v == null ? '' : v).trim().toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  return !t || /^(0|0\.0|N|NAO|FALSE|FALSO|-|—|NULL|NA|N\/A|SEM INDICIO|SEM)$/.test(t);
+}
+
+function evDataBase_(v) {
+  if (v == null || v === '') return '';
+  if (v instanceof Date) return Utilities.formatDate(v, Session.getScriptTimeZone(), 'dd/MM/yyyy');
+  const t = String(v).trim();
+  let m = t.match(/^(\d{4})-(\d{2})-(\d{2})/); if (m) return m[3] + '/' + m[2] + '/' + m[1];
+  m = t.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})/); if (m) return ('0' + m[1]).slice(-2) + '/' + ('0' + m[2]).slice(-2) + '/' + (m[3].length === 2 ? '20' + m[3] : m[3]);
+  if (/^\d{5}(\.\d+)?$/.test(t)) { const dt = new Date(Math.round((parseFloat(t) - 25569) * 864e5)); return Utilities.formatDate(dt, 'UTC', 'dd/MM/yyyy'); }
+  return t.slice(0, 20);
+}
+
+/**
+ * Indícios de evasão da base líquida:
+ *  SOLICITAR_HE = 1, INDICIO_EVASAO preenchido, trancamento agendado (DT_AGEND_TRANC / STATUS_AGEND_TRANC).
+ */
+function evIndicios_(r) {
+  const l = [];
+  const he = String(r.SOLICITAR_HE == null ? '' : r.SOLICITAR_HE).trim().toUpperCase();
+  if (/^(1|1\.0|S|SIM|TRUE|VERDADEIRO)$/.test(he)) l.push({ tipo: 'he', texto: 'Solicitou HE' });
+  if (!evSemValor_(r.INDICIO_EVASAO)) {
+    const v = String(r.INDICIO_EVASAO).trim();
+    l.push({ tipo: 'indicio', texto: /^(1|1\.0|S|SIM|TRUE)$/i.test(v) ? 'Indício de evasão' : 'Indício: ' + v.slice(0, 60) });
+  }
+  const dt = evSemValor_(r.DT_AGEND_TRANC) ? '' : evDataBase_(r.DT_AGEND_TRANC);
+  const st = evSemValor_(r.STATUS_AGEND_TRANC) ? '' : String(r.STATUS_AGEND_TRANC).trim().slice(0, 40);
+  if (dt || st) l.push({ tipo: 'tranc', texto: 'Trancamento agendado' + (dt ? ' ' + dt : '') + (st ? ' (' + st + ')' : '') });
+  return l;
+}
+
+/** Registros do período + da base líquida: cancelados, trancados e alunos com indício de evasão. */
 function evMatriculados_(d) {
   const base = BASES_ENGAJAMENTO.indexOf(d.base) >= 0 ? d.base : 'impar';
   const lista = evLerRegistros_(base).filter(e => e && e.id);
-  const ja = {};
-  lista.forEach(e => { const m = normMatEv_(e.mat); if (m) ja[m] = true; });
+  const porMat = {};
+  lista.forEach(e => { const m = normMatEv_(e.mat); if (m) porMat[m] = e; });
   const hoje = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'yyyy-MM-dd');
-  let daBase = 0;
+  let daBase = 0, comIndicio = 0;
   evLerBase_(base).forEach(r => {
     const mat = normMatEv_(r && (r.COD_MATRICULA || r.MATRICULA));
-    if (!mat || ja[mat]) return;
+    if (!mat) return;
+    const ind = evIndicios_(r);
+    if (porMat[mat]) { if (ind.length) porMat[mat].indicios = ind; return; } // já registrado: só mostra os sinais atuais
     const sit = String(r.NOM_SITUACAO_ALUNO || r.SITUACAO_ALUNO || '').toUpperCase();
     let s = '';
     if (/CANCELAD|CANCELAMENTO/.test(sit)) s = 'cancelado';
     else if (/TRANCAD|TRANCAMENTO/.test(sit)) s = 'trancado';
+    else if (ind.length) s = 'indicio';
     if (!s) return;
     const div = evNumero_(r.DIVIDA || r.VLR_DIVIDA || r.VALOR_DIVIDA);
-    lista.push({ id: 'ev_db_' + mat, mat: mat, nome: String(r.NOM_ALUNO || ''), curso: String(r.NOM_CURSO || ''), base: base, sit: s,
-      obj: '', obs: '', atend: '', data: hoje, divida: div > 0 ? div.toFixed(2).replace('.', ',') : '', _importado: true, _ts: 0 });
-    ja[mat] = true; daBase++;
+    const reg = { id: 'ev_db_' + mat, mat: mat, nome: String(r.NOM_ALUNO || ''), curso: String(r.NOM_CURSO || ''), base: base, sit: s,
+      obj: '', obs: '', atend: '', data: hoje, divida: div > 0 ? div.toFixed(2).replace('.', ',') : '', _importado: true, _ts: 0 };
+    if (ind.length) reg.indicios = ind;
+    lista.push(reg); porMat[mat] = reg;
+    if (s === 'indicio') comIndicio++; else daBase++;
   });
-  return { ok: true, base: base, periodo: NOME_PERIODO_EVASAO[base], dados: lista, daBase: daBase };
+  return { ok: true, base: base, periodo: NOME_PERIODO_EVASAO[base], dados: lista, daBase: daBase, comIndicio: comIndicio };
 }
 
 function evSalvar_(d, eu) {
@@ -87,7 +127,7 @@ function evSalvar_(d, eu) {
   if (SITUACOES_EVASAO.indexOf(r.sit) < 0) return { ok: false, erro: 'Situação inválida.' };
   let obj = String(r.obj || '').trim();
   const objOutro = String(r.obj_outro || '').trim().slice(0, 200);
-  if (r.sit !== 'revertido' && !obj) return { ok: false, erro: 'Escolha a objeção (o motivo da saída).' };
+  if (r.sit !== 'revertido' && r.sit !== 'indicio' && !obj) return { ok: false, erro: 'Escolha a objeção (o motivo da saída).' };
   if (obj && OBJECOES_EVASAO.indexOf(obj) < 0 && obj !== 'Sem objeção registrada') return { ok: false, erro: 'Objeção fora da lista. Use "Outro" e descreva o motivo.' };
   if (obj === 'Outro' && !objOutro) return { ok: false, erro: 'Em "Outro", descreva o motivo.' };
   const reg = {

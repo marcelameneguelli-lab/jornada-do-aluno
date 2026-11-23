@@ -32,6 +32,7 @@ g.Engajamento_().acoes.salvarBase({ base:'impar', parte:0, total:1, dados: Array
   QTD_DIAS_ULTIMO_ACESSO:String(i*5) })) });
 try { g.Engajamento_().acoes.saveAction({ base:'impar', id:'eng1', matricula:'202301000104', atend:'Angelica', canal:'WhatsApp', tipo:'Acionamento', motivo:'Provas', datetime:'10/11/2026 14:30:00', date:'10/11/2026' }); } catch (e) { console.log('sem histórico do Engajamento no exemplo:', e.message); }
 // Evasão: um cancelado na base Par e evadidos na Renovação (ciclo 2025.2 encerrado e um evadido no 2026.1 aberto)
+g.Engajamento_().acoes.salvarBase({ base:'ct', parte:0, total:1, dados:[{COD_MATRICULA:'202503000101',NOM_ALUNO:'Tecnico Pediu HE',NOM_CURSO:'Enfermagem',NOM_SITUACAO_ALUNO:'MATRICULADO',SOLICITAR_HE:'1',INDICIO_EVASAO:'',DT_AGEND_TRANC:'10/12/2026',STATUS_AGEND_TRANC:'AGENDADO'}] });
 g.Engajamento_().storeSet('EvasaoData_par', JSON.stringify([{id:'ev_db_202402000201',mat:'202402000201',nome:'Par Cancelada',curso:'Psicologia',base:'par',sit:'cancelado',obj:'',obs:'',atend:'',data:'2026-11-01',divida:'800,00',_ts:0}]));
 (function(){ const S={__sess:{nome:'Teste',email:'t@e',perfil:'admin'}}; const R=g.Renovacao_();
   R.processarAcao('importar_alunos', Object.assign({ciclo:'2025.2', alunos:[{id:'P1',nome:'Recaptura Exemplo',matricula:'202402000301',curso:'Direito',modalidade:'Presencial',ciclo:'2025.2',status:'pendente'}]},S));

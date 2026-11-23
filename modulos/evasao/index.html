@@ -40,7 +40,8 @@
   .tabela tr.clicavel { cursor: pointer; } .tabela tr.clicavel:hover td { background: #f7f9fc; }
   .selo { display: inline-block; border-radius: 10px; padding: 2px 9px; font-size: 11px; font-weight: 700; }
   .s-cancelado { background: #fde8e8; color: #b42318; } .s-trancado { background: #fff0f6; color: #a61e4d; }
-  .s-intencao { background: #f3f0ff; color: #5f3dc4; } .s-revertido { background: #e6f6ea; color: #1e7a38; }
+  .s-intencao { background: #f3f0ff; color: #5f3dc4; } .s-indicio { background: #fff4e5; color: #b54708; }
+  .chip { display: inline-block; background: #fff4e5; color: #93370d; border: 1px solid #fedf89; border-radius: 10px; padding: 1px 7px; font-size: 11px; margin: 2px 3px 0 0; } .s-revertido { background: #e6f6ea; color: #1e7a38; }
   .s-evadido { background: #fde8e8; color: #b42318; } .s-trancamento { background: #fff0f6; color: #a61e4d; }
   .s-aberto { background: #e6f6ea; color: #1e7a38; } .s-encerrado { background: #eceff3; color: #475467; }
   .sem-obj { color: #b54708; font-size: 12px; }
@@ -81,17 +82,18 @@
   const esc = (t) => String(t == null ? '' : t).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const BASES = ['impar', 'par', 'ct'];
   const NOME_P = { impar: 'Ímpar', par: 'Par', ct: 'Técnico' };
-  const SIT = { cancelado: 'Cancelado', trancado: 'Trancado', intencao: 'Intenção de saída', revertido: 'Revertido' };
-  const SIT_COR = { cancelado: '#d92d20', trancado: '#c2255c', intencao: '#7048e8', revertido: '#2f9e44' };
+  const SIT = { indicio: 'Indício de evasão', intencao: 'Intenção de saída', trancado: 'Trancado', cancelado: 'Cancelado', revertido: 'Revertido' };
+  const IND = { he: 'Solicitou HE', indicio: 'Indício de evasão (base)', tranc: 'Trancamento agendado' };
+  const SIT_COR = { indicio: '#f79009', cancelado: '#d92d20', trancado: '#c2255c', intencao: '#7048e8', revertido: '#2f9e44' };
   const OBJ_PADRAO = ['Financeiro: não consegue pagar a mensalidade', 'Financeiro: dívida / negociação não aceita', 'Perda de bolsa, FIES ou ProUni', 'Foi para outra instituição (concorrência)', 'Trabalho / falta de tempo', 'Saúde ou questões pessoais / familiares', 'Mudança de cidade', 'Insatisfação com o curso ou a metodologia', 'Insatisfação com atendimento ou infraestrutura', 'Não se identificou com o curso / vai trocar de curso', 'Pausa temporária (pretende voltar)', 'Sem contato / não respondeu', 'Outro'];
   const E = { periodo: 'impar', aba: 'painel', mat: {}, ren: null, renErro: '', objecoes: OBJ_PADRAO, reversao: ['Renovado', 'Em negociação', 'Pendente'],
-    busca: '', fSit: '', fObj: '', fCiclo: '', fStatus: '', gestao: false };
+    busca: '', fSit: '', fObj: '', fInd: '', fCiclo: '', fStatus: '', gestao: false };
 
   const aviso = (msg, tipo) => { if (!document.defaultView) return; if (window.App && window.App.aviso) return window.App.aviso(msg, tipo); alert(msg); };
   const dataBR = (iso) => { const m = String(iso || '').match(/^(\d{4})-(\d{2})-(\d{2})/); return m ? `${m[3]}/${m[2]}/${m[1]}` : String(iso || ''); };
   const hojeISO = () => { const d = new Date(); return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 10); };
   const objTexto = (r) => r.obj === 'Outro' && r.obj_outro ? 'Outro: ' + r.obj_outro : (r.obj || '');
-  const semObj = (r) => r.sit !== 'revertido' && (!r.obj || r.obj === 'Sem objeção registrada');
+  const semObj = (r) => r.sit !== 'revertido' && r.sit !== 'indicio' && (!r.obj || r.obj === 'Sem objeção registrada');
   const contar = (lista, f) => { const c = {}; lista.forEach((x) => { const k = f(x); if (k) c[k] = (c[k] || 0) + 1; }); return Object.keys(c).map((k) => [k, c[k]]).sort((a, b) => b[1] - a[1]); };
   const barras = (pares, vazio) => {
     if (!pares.length) return `<p class="dica">${vazio || 'Sem dados.'}</p>`;
@@ -138,7 +140,8 @@
   function painel() {
     const L = matDoPeriodo(), P = NOME_P[E.periodo];
     const n = (s) => L.filter((r) => r.sit === s).length;
-    const ativos = L.filter((r) => r.sit !== 'revertido');
+    const ativos = L.filter((r) => r.sit !== 'revertido' && r.sit !== 'indicio');
+    const comInd = L.filter((r) => (r.indicios || []).length);
     const semO = ativos.filter(semObj).length;
     const tratados = L.filter((r) => r.sit !== 'intencao').length;
     const taxa = tratados ? Math.round(n('revertido') / (n('revertido') + n('cancelado') + n('trancado') || 1) * 100) : 0;
@@ -148,13 +151,13 @@
     const comp = BASES.map((b) => {
       const l = E.mat[b] || [], ren = (E.ren || []).filter((c) => c.paridade === b);
       const ra = [].concat(...ren.map((c) => c.alunos));
-      return `<tr${b === E.periodo ? ' style="font-weight:700"' : ''}><td>${NOME_P[b]}</td><td>${l.filter((r) => r.sit === 'cancelado').length}</td><td>${l.filter((r) => r.sit === 'trancado').length}</td><td>${l.filter((r) => r.sit === 'intencao').length}</td><td>${l.filter((r) => r.sit === 'revertido').length}</td>
+      return `<tr${b === E.periodo ? ' style="font-weight:700"' : ''}><td>${NOME_P[b]}</td><td>${l.filter((r) => r.sit === 'indicio').length}</td><td>${l.filter((r) => r.sit === 'cancelado').length}</td><td>${l.filter((r) => r.sit === 'trancado').length}</td><td>${l.filter((r) => r.sit === 'intencao').length}</td><td>${l.filter((r) => r.sit === 'revertido').length}</td>
         <td>${b === 'ct' ? '—' : ra.filter((a) => a.status === 'Evadido').length}</td><td>${b === 'ct' ? '—' : ra.filter((a) => a.status === 'Trancamento').length}</td></tr>`;
     }).join('');
     $('#area').innerHTML = `
       <div class="bloco"><h3>Aluno matriculado · ${P}</h3>
         <div class="cards">
-          ${['cancelado', 'trancado', 'intencao', 'revertido'].map((s) => `<div class="card" style="--cor:${SIT_COR[s]}" data-ir="matriculados" data-sit="${s}"><b>${n(s)}</b><span>${SIT[s]}</span></div>`).join('')}
+          ${['indicio', 'intencao', 'trancado', 'cancelado', 'revertido'].map((s) => `<div class="card" style="--cor:${SIT_COR[s]}" data-ir="matriculados" data-sit="${s}"><b>${n(s)}</b><span>${SIT[s]}</span></div>`).join('')}
           <div class="card" style="--cor:#f79009" data-ir="matriculados" data-sit="semobj"><b>${semO}</b><span>Sem objeção registrada</span></div>
           <div class="card" style="--cor:#2f9e44" data-ir="matriculados" data-sit="revertido"><b>${taxa}%</b><span>Reversão (sobre cancelados, trancados e revertidos)</span></div>
         </div>
@@ -162,6 +165,8 @@
           <div><h3>Objeções</h3>${barras(contar(ativos, (r) => r.obj && r.obj !== 'Sem objeção registrada' ? r.obj : ''), 'Nenhuma objeção registrada ainda.')}</div>
           <div><h3>Cursos com mais saídas</h3>${barras(contar(ativos, (r) => r.curso).slice(0, 10))}</div>
         </div>
+        <h3 style="margin-top:14px">Sinais de evasão na base (${comInd.length} aluno(s))</h3>
+        <div class="cards">${Object.keys(IND).map((k) => `<div class="card" style="--cor:#f79009" data-ir="matriculados" data-ind="${k}"><b>${comInd.filter((r) => r.indicios.some((i) => i.tipo === k)).length}</b><span>${IND[k]}</span></div>`).join('')}</div>
       </div>
       <div class="bloco"><h3>Renovação · ${P}</h3>
         ${E.periodo === 'ct' ? '<p class="dica">O Técnico não tem ciclo de renovação separado. Veja Ímpar ou Par.</p>' : E.renErro ? `<p class="dica">${esc(E.renErro)}</p>` : !ciclos.length ? '<p class="dica">Nenhum evadido ou trancamento nos ciclos deste período.</p>' : `
@@ -173,11 +178,12 @@
         </div>`}
       </div>
       <div class="bloco"><h3>Comparativo dos períodos</h3>
-        <table class="tabela comparativo"><thead><tr><th>Período</th><th>Cancelados</th><th>Trancados</th><th>Intenção</th><th>Revertidos</th><th>Evadidos (Renovação)</th><th>Trancamentos (Renovação)</th></tr></thead><tbody>${comp}</tbody></table>
+        <table class="tabela comparativo"><thead><tr><th>Período</th><th>Indícios</th><th>Cancelados</th><th>Trancados</th><th>Intenção</th><th>Revertidos</th><th>Evadidos (Renovação)</th><th>Trancamentos (Renovação)</th></tr></thead><tbody>${comp}</tbody></table>
       </div>`;
     document.querySelectorAll('[data-ir]').forEach((c) => { c.onclick = () => {
       E.aba = c.dataset.ir;
-      if (c.dataset.sit) { E.fSit = c.dataset.sit; E.fObj = ''; }
+      if (c.dataset.sit) { E.fSit = c.dataset.sit; E.fObj = ''; E.fInd = ''; }
+      if (c.dataset.ind) { E.fInd = c.dataset.ind; E.fSit = ''; E.fObj = ''; }
       if (c.dataset.ciclo) E.fCiclo = c.dataset.ciclo;
       desenhar();
     }; });
@@ -189,6 +195,7 @@
       if (E.fSit === 'semobj') { if (!semObj(r)) return false; }
       else if (E.fSit && r.sit !== E.fSit) return false;
       if (E.fObj && r.obj !== E.fObj) return false;
+      if (E.fInd && !(r.indicios || []).some((i) => i.tipo === E.fInd)) return false;
       if (b && String(r.nome).toLowerCase().indexOf(b) < 0 && String(r.mat).indexOf(b) < 0 && String(r.curso).toLowerCase().indexOf(b) < 0) return false;
       return true;
     }).sort((a, b) => String(b.data).localeCompare(String(a.data)) || String(a.nome).localeCompare(String(b.nome), 'pt-BR'));
@@ -197,10 +204,11 @@
   function matriculados() {
     const lista = filtrarMat();
     $('#area').innerHTML = `
-      <div class="lembrete azul">Cancelados e trancados da base líquida ${NOME_P[E.periodo]} entram aqui sozinhos. Abra o aluno para registrar a objeção. Intenção de saída é registrada por quem atendeu.</div>
+      <div class="lembrete azul">Da base líquida ${NOME_P[E.periodo]} entram sozinhos os cancelados, os trancados e os alunos com indício de evasão (pediu HE, indício na base ou trancamento agendado). Abra o aluno para registrar o contato e a objeção. Intenção de saída é registrada por quem atendeu.</div>
       <div class="filtros">
         <input type="search" id="busca" placeholder="Nome, matrícula ou curso" value="${esc(E.busca)}">
         <select id="f-sit"><option value="">Todas as situações</option>${Object.keys(SIT).map((s) => `<option value="${s}" ${E.fSit === s ? 'selected' : ''}>${SIT[s]}</option>`).join('')}<option value="semobj" ${E.fSit === 'semobj' ? 'selected' : ''}>Sem objeção registrada</option></select>
+        <select id="f-ind"><option value="">Todos os sinais</option>${Object.keys(IND).map((k) => `<option value="${k}" ${E.fInd === k ? 'selected' : ''}>${IND[k]}</option>`).join('')}</select>
         <select id="f-obj"><option value="">Todas as objeções</option>${E.objecoes.map((o) => `<option ${E.fObj === o ? 'selected' : ''}>${esc(o)}</option>`).join('')}</select>
         <button class="btn" id="limpar">Limpar</button>
         <button class="btn" id="exportar">📥 Exportar</button>
@@ -209,15 +217,16 @@
       <div class="painel"><table class="tabela"><thead><tr><th>Aluno</th><th>Curso</th><th>Situação</th><th>Objeção</th><th>Data</th><th>Dívida</th><th>Registrado por</th></tr></thead>
       <tbody>${lista.map((r) => `<tr class="clicavel" data-id="${esc(r.id)}">
         <td class="nome"><b>${esc(r.nome)}</b><small>${esc(r.mat)}</small></td><td>${esc(r.curso)}</td>
-        <td><span class="selo s-${r.sit}">${SIT[r.sit] || esc(r.sit)}</span></td>
-        <td>${semObj(r) ? '<span class="sem-obj">registrar objeção</span>' : esc(objTexto(r))}</td>
+        <td><span class="selo s-${r.sit}">${SIT[r.sit] || esc(r.sit)}</span>${(r.indicios || []).map((i) => `<br><span class="chip">${esc(i.texto)}</span>`).join('')}</td>
+        <td>${semObj(r) ? '<span class="sem-obj">registrar objeção</span>' : r.sit === 'indicio' && !r.obj ? '<span class="dica">contatar o aluno</span>' : esc(objTexto(r))}</td>
         <td>${dataBR(r.data)}</td><td>${r.divida ? 'R$ ' + esc(r.divida) : ''}</td><td><small>${esc(r.atend || (r._importado ? 'da base' : ''))}</small></td></tr>`).join('') || '<tr><td colspan="7" class="vazio">Nenhum aluno aqui.</td></tr>'}</tbody></table></div>`;
     const busca = $('#busca'); busca.oninput = () => { E.busca = busca.value; const pos = busca.selectionStart; desenhar(); const n = $('#busca'); n.focus(); n.setSelectionRange(pos, pos); };
     $('#f-sit').onchange = (e) => { E.fSit = e.target.value; desenhar(); };
     $('#f-obj').onchange = (e) => { E.fObj = e.target.value; desenhar(); };
-    $('#limpar').onclick = () => { E.busca = ''; E.fSit = ''; E.fObj = ''; desenhar(); };
-    $('#exportar').onclick = () => exportar('evasao_matriculados_' + E.periodo, ['Matrícula', 'Aluno', 'Curso', 'Situação', 'Objeção', 'Detalhe', 'Data', 'Dívida', 'Registrado por'],
-      lista.map((r) => [r.mat, r.nome, r.curso, SIT[r.sit] || r.sit, objTexto(r), r.obs, dataBR(r.data), r.divida, r.atend]));
+    $('#f-ind').onchange = (e) => { E.fInd = e.target.value; desenhar(); };
+    $('#limpar').onclick = () => { E.busca = ''; E.fSit = ''; E.fObj = ''; E.fInd = ''; desenhar(); };
+    $('#exportar').onclick = () => exportar('evasao_matriculados_' + E.periodo, ['Matrícula', 'Aluno', 'Curso', 'Situação', 'Sinais na base', 'Objeção', 'Detalhe', 'Data', 'Dívida', 'Registrado por'],
+      lista.map((r) => [r.mat, r.nome, r.curso, SIT[r.sit] || r.sit, (r.indicios || []).map((i) => i.texto).join(' | '), objTexto(r), r.obs, dataBR(r.data), r.divida, r.atend]));
     document.querySelectorAll('tr[data-id]').forEach((tr) => { tr.onclick = () => abrirMat(matDoPeriodo().filter((r) => r.id === tr.dataset.id)[0]); });
   }
 
@@ -266,6 +275,7 @@
     const naLista = E.objecoes.indexOf(r.obj) >= 0 || !r.obj;
     $('#modal-corpo').innerHTML = `
       <h2>${novo ? 'Registrar evasão · ' + NOME_P[E.periodo] : esc(r.nome)}</h2>
+      ${(r.indicios || []).length ? `<p>${r.indicios.map((i) => `<span class="chip">${esc(i.texto)}</span>`).join(' ')}</p>` : ''}
       <form id="form-ev">
         <div class="grade2">
           <label>Matrícula<input name="mat" value="${esc(r.mat || '')}" ${novo ? '' : 'readonly'} required inputmode="numeric"><small class="dica" id="busca-info">${novo ? 'Digite a matrícula: nome e curso vêm da base líquida.' : ''}</small></label>
@@ -275,7 +285,7 @@
           <label>Situação<select name="sit">${Object.keys(SIT).map((s) => `<option value="${s}" ${r.sit === s ? 'selected' : ''}>${SIT[s]}</option>`).join('')}</select></label>
           <label>Dívida (R$)<input name="divida" value="${esc(r.divida || '')}" placeholder="0,00"></label>
         </div>
-        <label>Objeção (motivo da saída)<select name="obj"><option value="">Selecione...</option>${E.objecoes.map((o) => `<option ${r.obj === o ? 'selected' : ''}>${esc(o)}</option>`).join('')}${naLista ? '' : `<option selected>${esc(r.obj)}</option>`}</select></label>
+        <label>Objeção (motivo da saída)${r.sit === 'indicio' ? ' <small class="dica">opcional enquanto for só indício</small>' : ''}<select name="obj"><option value="">Selecione...</option>${E.objecoes.map((o) => `<option ${r.obj === o ? 'selected' : ''}>${esc(o)}</option>`).join('')}${naLista ? '' : `<option selected>${esc(r.obj)}</option>`}</select></label>
         <label id="lbl-outro" ${r.obj === 'Outro' ? '' : 'hidden'}>Qual o motivo?<input name="obj_outro" value="${esc(r.obj_outro || '')}" placeholder="Descreva o motivo que não está na lista" maxlength="200"></label>
         <label>Detalhe / o que o aluno informou<textarea name="obs">${esc(r.obs || '')}</textarea></label>
         ${(r.historico || []).length ? `<p class="dica" style="margin:8px 0 0">Situações anteriores:</p><ul class="historico">${r.historico.slice().reverse().map((h) => `<li>${SIT[h.sit] || esc(h.sit)}${h.obj ? ' · ' + esc(h.obj) : ''}${h.quem ? ' · ' + esc(h.quem) : ''}${h.ts ? ' · ' + new Date(h.ts).toLocaleDateString('pt-BR') : ''}</li>`).join('')}</ul>` : ''}
@@ -317,7 +327,7 @@
       ev.preventDefault();
       const registro = { id: r._importado || novo ? '' : r.id, mat: f.mat.value, nome: f.nome.value.trim(), curso: f.curso.value.trim(), data: f.data.value, sit: f.sit.value,
         divida: f.divida.value.trim(), obj: f.obj.value, obj_outro: f.obj_outro.value.trim(), obs: f.obs.value.trim() };
-      if (registro.sit !== 'revertido' && !registro.obj) { aviso('Escolha a objeção (o motivo da saída).', 'erro'); f.obj.focus(); return; }
+      if (registro.sit !== 'revertido' && registro.sit !== 'indicio' && !registro.obj) { aviso('Escolha a objeção (o motivo da saída).', 'erro'); f.obj.focus(); return; }
       if (registro.obj === 'Outro' && !registro.obj_outro) { aviso('Em "Outro", descreva o motivo.', 'erro'); f.obj_outro.focus(); return; }
       const b = $('#btn-salvar'); b.disabled = true; b.textContent = 'Salvando...';
       try {
