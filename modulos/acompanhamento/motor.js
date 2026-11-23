@@ -81,7 +81,8 @@
   const matVis = (r) => CFG && CFG.matriculaVisivel ? CFG.matriculaVisivel(r) : mat(r);
   const unidade = () => (CFG && CFG.unidade) || 'alunos';
   const nomeBase = () => (CFG && CFG.fonte) ? CFG.nomeFonte : 'base ' + NOMES_BASE[E.base];
-  const regsDoAluno = (m) => Object.values(E.regs).filter((x) => x.matricula === m && (!x.base || x.base === E.base)).sort((a, b) => b.criado - a.criado);
+  const daBase = (x) => !!(CFG && CFG.fonte) || !x.base || x.base === E.base; // sistemas com arquivo próprio (NPS, Estágio) não separam por base
+  const regsDoAluno = (m) => Object.values(E.regs).filter((x) => x.matricula === m && daBase(x)).sort((a, b) => b.criado - a.criado);
   const fichaDe = (m) => (E.fichas[m] && E.fichas[m].dados) || {};
 
   async function carregarBase() {
@@ -264,7 +265,7 @@
         if (canal === 'WhatsApp' ? !tel : !email) { sem++; continue; }
         b.textContent = `Enviando ${i + 1} de ${alunos.length}...`;
         window.open(canal === 'WhatsApp' ? `https://wa.me/55${tel}?text=${encodeURIComponent(msg)}` : `mailto:${email}?subject=${encodeURIComponent(assunto)}&body=${encodeURIComponent(msg)}`, '_blank');
-        const reg = { id: 'l' + Date.now() + Math.random().toString(36).slice(2, 7), matricula: m, aluno: r.NOM_ALUNO, base: E.base,
+        const reg = { id: 'l' + Date.now() + Math.random().toString(36).slice(2, 7), matricula: m, aluno: r.NOM_ALUNO, base: CFG.fonte ? (r.base_engajamento || '') : E.base,
           canal, resultado: CFG.lote.resultado || 'Mensagem enviada', obs: 'Mensagem em lote: ' + msg.slice(0, 300), fu_data: '' };
         try { const r2 = await chamar('registrar', { reg }); if (r2 && r2.ok) { E.regs[reg.id] = Object.assign(reg, { atendente: eu().nome, criado: Date.now(), atualizado: Date.now(), fu_status: '' }); ok++; } } catch (e) { if (e.auth) return; }
         await new Promise((res) => setTimeout(res, 1500));
@@ -371,7 +372,7 @@
       const f = ev.target, btn = $('#btn-ac');
       if (!f.obs.value.trim()) { $('#ac-erro').textContent = 'Preencha a observação do atendimento.'; return; }
       btn.disabled = true; btn.textContent = 'Registrando...';
-      const reg = { id: 'a' + Date.now() + Math.random().toString(36).slice(2, 7), matricula: m, aluno: r.NOM_ALUNO, base: E.base,
+      const reg = { id: 'a' + Date.now() + Math.random().toString(36).slice(2, 7), matricula: m, aluno: r.NOM_ALUNO, base: CFG.fonte ? (r.base_engajamento || '') : E.base,
         canal: f.canal.value, resultado: f.resultado.value, obs: f.obs.value.trim(), fu_data: f.fu.value };
       try {
         const r2 = await chamar('registrar', { reg: reg });
@@ -414,14 +415,15 @@
       const linhas = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { header: 1, raw: true, defval: '' });
       const respostas = CFG.importar.converter(linhas);
       if (!respostas.length) throw new Error(CFG.importar.erroFormato);
-      let novas = 0, atualizadas = 0;
+      let novas = 0, atualizadas = 0, ultimo = null;
+      const partes = Math.ceil(respostas.length / 300);
       for (let i = 0; i < respostas.length; i += 300) {
         btn.textContent = `Enviando ${Math.min(i + 300, respostas.length)} de ${respostas.length}...`;
-        const r = await chamar('importar', { respostas: respostas.slice(i, i + 300) });
+        const r = await chamar('importar', { respostas: respostas.slice(i, i + 300), parte: i / 300, total: partes }, { timeout: 120000 });
         if (!r || !r.ok) throw new Error((r && r.erro) || 'Falha ao enviar.');
-        novas += r.novas; atualizadas += r.atualizadas;
+        novas += r.novas || 0; atualizadas += r.atualizadas || 0; ultimo = r;
       }
-      aviso(`Importação concluída: ${novas} resposta(s) nova(s) e ${atualizadas} atualizada(s).`, 'ok');
+      aviso(CFG.importar.resumo ? CFG.importar.resumo(ultimo, respostas) : `Importação concluída: ${novas} resposta(s) nova(s) e ${atualizadas} atualizada(s).`, 'ok');
       await carregarBase();
     } catch (e) {
       if (!e.auth) aviso(e.message, 'erro');
@@ -438,7 +440,7 @@
   }
   function pendentes() {
     const nome = eu().nome;
-    return Object.values(E.regs).filter((x) => x.fu_status === 'pendente' && x.fu_data && (!x.base || x.base === E.base) && (E.fuQuem === 'todos' || x.atendente === nome));
+    return Object.values(E.regs).filter((x) => x.fu_status === 'pendente' && x.fu_data && daBase(x) && (E.fuQuem === 'todos' || x.atendente === nome));
   }
   /* matrícula para mostrar (no NPS a chave é o ID da resposta, não a matrícula) */
   function matriculaDoReg(x) { const r = E.alunos.filter((a) => mat(a) === x.matricula)[0]; return r ? matVis(r) : x.matricula; }
@@ -480,7 +482,7 @@
   }
   function telaDashboard() {
     const mats = new Set(E.alunos.map(mat));
-    const regs = Object.values(E.regs).filter((x) => mats.has(x.matricula) && (!x.base || x.base === E.base));
+    const regs = Object.values(E.regs).filter((x) => mats.has(x.matricula) && daBase(x));
     const acionados = new Set(regs.map((x) => x.matricula));
     if (CFG.historicoEngajamento) E.alunos.forEach((r) => { const m = mat(r); if ((E.hist[m] || []).length) acionados.add(m); });
     const hoje = new Date().toISOString().slice(0, 10);
@@ -510,7 +512,7 @@
   /* ── produtividade ── */
   function telaProdutividade() {
     const lim = E.periodo === 'tudo' ? 0 : (E.periodo === 'hoje' ? new Date(new Date().toDateString()).getTime() : Date.now() - Number(E.periodo) * 86400000);
-    const regs = Object.values(E.regs).filter((x) => (!x.base || x.base === E.base) && x.criado >= lim);
+    const regs = Object.values(E.regs).filter((x) => daBase(x) && x.criado >= lim);
     const porAt = {};
     const soma = (nome, mt, ms, origem, fu) => {
       if (!nome) return;
@@ -529,7 +531,7 @@
       }); });
     }
     const feitos = {};
-    Object.values(E.regs).forEach((x) => { if (x.fu_status === 'feito' && x.atualizado >= lim && (!x.base || x.base === E.base)) feitos[x.quem_atualizou || x.atendente] = (feitos[x.quem_atualizou || x.atendente] || 0) + 1; });
+    Object.values(E.regs).forEach((x) => { if (x.fu_status === 'feito' && x.atualizado >= lim && daBase(x)) feitos[x.quem_atualizou || x.atendente] = (feitos[x.quem_atualizou || x.atendente] || 0) + 1; });
     const nomes = Object.keys(porAt).concat(Object.keys(feitos)).filter((v, i, a) => v && a.indexOf(v) === i).sort((a, b) => ((porAt[b] || {}).n || 0) - ((porAt[a] || {}).n || 0));
     const vazio = { n: 0, sis: 0, eng: 0, alunos: new Set(), fu: 0, ultimo: 0 };
     $('#area').innerHTML = `

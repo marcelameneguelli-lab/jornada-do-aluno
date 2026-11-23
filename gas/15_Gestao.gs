@@ -35,6 +35,10 @@ function basesResumo_() {
     r.formandos = { total: del.filter(l => !l[0]).length };
   } catch (e) { r.erros.push('Formandos: ' + e.message); }
   try {
+    const o = cobLerJson_('EstagioBI', null);
+    r.estagio = o ? { total: (o.alunos || []).length, disciplinas: (o.alunos || []).reduce((t, a) => t + (a.disciplinas || []).length, 0), ultima: o.ts || 0, quem: o.quem || '' } : { total: 0 };
+  } catch (e) { r.erros.push('Estágio: ' + e.message); }
+  try {
     const sh = abaNps_();
     const n = Math.max(sh.getLastRow() - 1, 0);
     const datas = n ? sh.getRange(2, 3, n, 2).getValues() : [];

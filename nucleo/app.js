@@ -187,6 +187,7 @@
     formandos: { sis: 'formandos', nome: 'Formandos', icone: '🎓', importar: 'modulos/formandos/index.html?modo=importar', config: 'modulos/formandos/index.html?modo=config',
       descConfig: 'Semestre de trabalho e limpeza dos dados do painel.' },
     nps: { sis: 'nps', nome: 'NPS (Medallia)', icone: '⭐', importar: 'modulos/acompanhamento/index.html?sistema=nps&modo=importar' },
+    estagio: { sis: 'estagio', nome: 'Estágio (BI)', icone: '💼', importar: 'modulos/acompanhamento/index.html?sistema=estagio&modo=importar' },
   };
   const liberado = (sis) => sistemasLiberados().some(s => s.id === sis);
 
@@ -221,9 +222,10 @@
     let h = card('🔄', 'Renovação', ciclos.length ? ciclos.map(c => `Ciclo ${esc(c)}: <b>${n(r.renovacao.ciclos[c])}</b> alunos`).join('<br>') : 'Nenhum ciclo importado', 'Renovação', btn('renovacao', '', 'Importar base da Renovação'));
     ['impar', 'par', 'ct'].forEach(b => {
       const e = (r.engajamento || {})[b] || {};
-      h += card('🤝', 'Base líquida ' + nomesEng[b], `<b>${n(e.total)}</b> alunos<br>Última importação: ${fmtData(e.ts)}`, 'Engajamento, Provas, Estágio, Financeiro e Financiamentos', btn('engajamento', 'base=' + b, 'Importar base ' + nomesEng[b]));
+      h += card('🤝', 'Base líquida ' + nomesEng[b], `<b>${n(e.total)}</b> alunos<br>Última importação: ${fmtData(e.ts)}`, 'Engajamento, Provas, Cobrança e Financiamentos (e nome e contatos do Estágio)', btn('engajamento', 'base=' + b, 'Importar base ' + nomesEng[b]));
     });
     h += card('🎓', 'Formandos', r.formandos ? `<b>${n(r.formandos.total)}</b> alunos no painel` : 'Sem informação', 'Formandos (alunos, formados e ENADE)', btn('formandos', '', 'Importar no Formandos'));
+    h += card('💼', 'Estágio (relatório do BI)', r.estagio && r.estagio.total ? `<b>${n(r.estagio.total)}</b> alunos em ${n(r.estagio.disciplinas)} disciplinas de estágio<br>Última importação: ${fmtData(r.estagio.ultima)}` : 'Nenhum relatório importado', 'Estágio', btn('estagio', '', 'Importar relatório do BI'));
     h += card('⭐', 'NPS (Medallia)', r.nps && r.nps.total ? `<b>${n(r.nps.total)}</b> respostas<br>Respostas até ${esc((r.nps.ate || '').split('-').reverse().join('/'))}<br>Última importação: ${fmtData(r.nps.ultima)}` : 'Nenhuma resposta importada', 'NPS', btn('nps', '', 'Importar respostas do Medallia'));
     if (eu().admin) h += card('🗃️', 'Trazer tudo do EngajaVR atual', 'Acionamentos, follow-ups, calendário, tarefas, tutoriais, atendentes, estágio e evasão do EngajaVR em uso. Só lê o EngajaVR, nada é alterado lá. Pode repetir: não duplica.', 'Engajamento, Provas, Estágio, Financeiro, Financiamentos e ferramentas da equipe',
       '<input id="url-engajavr" placeholder="Endereço /exec do Apps Script do EngajaVR" style="margin-top:10px;font-size:12px"><button class="btn mini primario" id="btn-hist-engajavr" style="margin-top:6px">Trazer tudo</button><div id="res-hist-engajavr" class="dica"></div>');
@@ -255,7 +257,7 @@
     area.innerHTML = `
       <div class="cabecalho-tela"><h1>⚙️ Configurações dos sistemas</h1><p>As áreas de administrador que ficavam dentro de cada sistema agora ficam aqui. Usuários, perfis e senhas estão em <a href="#/usuarios">Usuários e perfis</a>, e o relatório da equipe em <a href="#/relatorio">Relatório diário</a>.</p></div>
       <div class="grade-sistemas">${cards}</div>
-      <p class="dica-central">Provas, Estágio, Financeiro, Financiamentos e NPS não têm configurações próprias: usam a base líquida (ou a do Medallia) e os usuários da Jornada.</p>`;
+      <p class="dica-central">Provas, Estágio, Cobrança, Financiamentos e NPS não têm configurações próprias: usam a base líquida (ou o relatório do BI e a base do Medallia) e os usuários da Jornada.</p>`;
   }
 
   /* ── Relatório diário único (admin) ── */

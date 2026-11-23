@@ -44,6 +44,54 @@
 
   const OPC_TERMO = ['', 'Pendente', 'Assinado', 'Não se aplica'];
 
+  /* ── Estágio: relatório do BI (uma linha por aluno e disciplina) ── */
+  const NOME_TCE = { nao_iniciado: 'Sem TCE', andamento: 'Em andamento', indeferido: 'Indeferido', deferido: 'Deferido' };
+  const ORD_TCE = { nao_iniciado: 0, indeferido: 1, andamento: 2, deferido: 3 };
+  const seloTce = (t) => `<span class="sit ${({ nao_iniciado: 'falta', andamento: 'agendou', indeferido: 'faltou', deferido: 'fez' })[t] || 'na'}">${NOME_TCE[t] || t || '—'}</span>`;
+  function tceDe(v) {
+    const t = txt(v).toUpperCase();
+    if (t.indexOf('DEFERIDO') === 0) return 'deferido';
+    if (t.indexOf('INDEFERIDO') >= 0) return 'indeferido';
+    if (t.indexOf('ANDAMENTO') >= 0) return 'andamento';
+    return 'nao_iniciado';
+  }
+  function converterEstagioBI(linhas) {
+    const iCab = linhas.findIndex((l) => l.some((c) => String(c).trim() === 'Matrícula') && l.some((c) => String(c).trim() === 'Possui TCE?'));
+    if (iCab < 0) return [];
+    const cab = linhas[iCab].map((c) => String(c).trim());
+    const pega = (l, nome) => { const i = cab.indexOf(nome); return i < 0 ? '' : String(l[i] == null ? '' : l[i]).replace(/\.0$/, '').trim(); };
+    const dt = (l, nome) => { const i = cab.indexOf(nome); return i < 0 ? '' : isoDe(l[i]).slice(0, 10); };
+    const alunos = {};
+    linhas.slice(iCab + 1).forEach((l) => {
+      const mat = pega(l, 'Matrícula');
+      if (!/^\d{6,}$/.test(mat)) return; // ignora a linha "Filtros aplicados" do BI
+      const d = { disc: pega(l, 'Disciplina'), cod: pega(l, 'Codigo_Disciplina'), curso: pega(l, 'Curso'), turma: pega(l, 'Turma'),
+        tce: tceDe(pega(l, 'Possui TCE?')), tceTxt: pega(l, 'Possui TCE?'), prazo: pega(l, 'Prazo TCE vencido?'), protocolo: pega(l, 'Protocolo'),
+        limTCE: dt(l, 'Data Limite Abertura TCE'), limCampo: dt(l, 'Data Limite Entrada Campo'), aula1: dt(l, 'Data Primeira Aula'),
+        docs: pega(l, 'Entregou a Documentação?'), indevido: /^sim/i.test(pega(l, 'Matriculado Indevidamente')), vezes: pega(l, 'QTD_VEZES_MATRICULADO'),
+        enade: /^sim/i.test(pega(l, 'Disciplina ENADE')), ch: pega(l, 'CH_TOTAL'), hEst: pega(l, 'QTD_HORAS_ESTAGIO'),
+        professor: pega(l, 'Professor'), preceptor: pega(l, 'Preceptor'), status: pega(l, 'Status Final'), nota: pega(l, 'Nota Final'),
+        entrada: pega(l, 'Entrada'), produto: pega(l, 'Produto'), alocacao: pega(l, 'Tempo Alocacao') };
+      const a = alunos[mat] = alunos[mat] || { COD_MATRICULA: mat, NOM_CURSO: d.curso, MODALIDADE_PP_PC: d.produto, entrada: d.entrada, disciplinas: [] };
+      a.disciplinas.push(d);
+    });
+    const hoje = hojeISO();
+    return Object.values(alunos).map((a) => {
+      const validas = a.disciplinas.filter((d) => !d.indevido);
+      const base = validas.length ? validas : a.disciplinas;
+      a.tce = base.reduce((m, d) => (ORD_TCE[d.tce] < ORD_TCE[m] ? d.tce : m), 'deferido');
+      const pend = base.filter((d) => d.tce !== 'deferido');
+      a.foraPrazo = pend.some((d) => d.prazo === 'Fora do Prazo' || (d.limTCE && d.limTCE < hoje));
+      a.limite = pend.map((d) => d.limTCE).filter(Boolean).sort()[0] || '';
+      a.docsPend = base.some((d) => d.tce === 'deferido' && /^n/i.test(d.docs));
+      a.indevido = a.disciplinas.filter((d) => d.indevido).length;
+      a.enade = a.disciplinas.some((d) => d.enade);
+      a.recursando = a.disciplinas.some((d) => Number(d.vezes) > 1);
+      a.importadoEm = hoje;
+      return a;
+    });
+  }
+
   /* matrícula sem ".0" e só com números (chave dos registros do EngajaVR) */
   const mat9 = (r) => String(r.COD_MATRICULA == null ? '' : r.COD_MATRICULA).replace(/\.0$/, '').replace(/\D/g, '');
   /* vencimento da parcela, como no EngajaVR: DATA_VENCIMENTO, promessa ou dia de vencimento do mês atual */
@@ -226,48 +274,73 @@
 
     estagio: {
       nome: 'Estágio', icone: '💼',
-      subtitulo: 'Alunos elegíveis a estágio · abertura e deferimento do TCE',
-      elegivel: (r) => { const v = txt(r.QTD_ELEGIVEL_ESTAGIO || r.ELEGIVEL_ESTAGIO || r.IND_ESTAGIO).toUpperCase(); return !!v && ['0', 'N', 'NAO', 'NÃO'].indexOf(v) < 0; },
-      rotuloTotal: 'Total elegíveis',
+      subtitulo: 'Relatório do BI: TCE, prazos e documentação das disciplinas de estágio',
+      fonte: 'bi', nomeFonte: 'relatório do BI', unidade: 'alunos',
+      semDados: 'Nenhum relatório do BI importado ainda. A coordenação importa na Central de Bases.',
+      elegivel: () => true,
+      rotuloTotal: 'Alunos em estágio',
+      ordenar: (a, b) => (ORD_TCE[a.tce] - ORD_TCE[b.tce]) || String(a.limite || '9').localeCompare(String(b.limite || '9')),
+      importar: { rotulo: 'Importar relatório do BI', converter: converterEstagioBI,
+        ajuda: 'Use a exportação do BI de estágio (uma linha por aluno e disciplina), sem alterar o arquivo. A lista do sistema passa a ser a do arquivo; os acionamentos e follow-ups registrados são mantidos, e o sistema mostra quem mudou de situação no TCE desde a importação anterior.',
+        erroFormato: 'Não encontrei as colunas "Matrícula" e "Possui TCE?". Use a exportação do BI de estágio, sem alterar o arquivo.',
+        resumo: (r) => `Relatório importado: ${r.total} aluno(s), ${r.novas} novo(s), ${r.mudaram} com mudança no TCE${r.sairam ? ' e ' + r.sairam + ' que saíram da lista' : ''}.` },
       colunas: [
-        { t: 'Disciplinas de estágio', v: (r) => txt(r.QTD_ELEGIVEL_ESTAGIO) },
-        { t: 'TCE', html: true, v: (r, c) => { const x = c.extra(r); return x.tce_indeferido ? '<span class="sit faltou">Indeferido</span>' : x.tce_deferido ? '<span class="sit fez">Deferido</span>' : x.tce_aberto ? '<span class="sit agendou">Aberto</span>' : '<span class="sit falta">Sem TCE</span>'; } },
-        { t: 'Documentos', v: (r, c) => { const x = c.extra(r); return x.tce_aberto ? (x.docs_entregues ? 'entregues' : 'pendentes') : ''; } },
-        { t: 'Convalidação', v: (r, c) => (c.extra(r).convalidacao ? 'sim' : '') },
-        { t: 'Observação', v: (r, c) => c.extra(r).obs || '' },
+        { t: 'Disciplinas', v: (r) => (r.disciplinas || []).length },
+        { t: 'TCE', html: true, v: (r) => seloTce(r.tce) + (r.mudou ? `<br><small class="origem">antes: ${NOME_TCE[r.mudou.de] || r.mudou.de}</small>` : '') },
+        { t: 'Prazo do TCE', v: (r) => (r.tce === 'deferido' ? '' : (r.foraPrazo ? 'vencido ' : '') + data(r.limite)), alerta: (r) => r.tce !== 'deferido' && r.foraPrazo },
+        { t: 'Documentação', v: (r) => (r.tce === 'deferido' ? (r.docsPend ? 'pendente' : 'entregue') : ''), alerta: (r) => r.tce === 'deferido' && r.docsPend },
+        { t: 'Atenção', v: (r) => [r.indevido ? 'matrícula indevida' : '', r.enade ? 'ENADE' : '', r.recursando ? 'recursando' : ''].filter(Boolean).join(' · ') },
       ],
-      // acompanhamento do TCE (o mesmo registro da tela antiga do EngajaVR)
-      extras: {
-        ler: 'getTCEData', chave: (r) => mat9(r), titulo: () => 'Acompanhamento do TCE',
-        campos: [
-          { id: 'tce_aberto', t: 'TCE aberto' }, { id: 'tce_deferido', t: 'TCE deferido' }, { id: 'tce_indeferido', t: 'TCE indeferido' },
-          { id: 'convalidacao', t: 'Convalidação' }, { id: 'docs_entregues', t: 'Documentos entregues na disciplina' },
-          { id: 'obs', t: 'Observação', tipo: 'texto' },
-        ],
-        exclusivos: { tce_deferido: ['tce_indeferido'], tce_indeferido: ['tce_deferido'] },
-      },
+      filtroPrograma: (r) => txt(r.NOM_CURSO), filtroProgramaRotulo: 'Todos os cursos',
       filtros: [
-        { id: 'sem_tce', t: 'Sem TCE', card: true, cor: 'amarelo', f: (r, fi, c) => !c.extra(r).tce_aberto },
-        { id: 'aberto', t: 'TCE aberto', card: true, cor: 'azul', f: (r, fi, c) => !!c.extra(r).tce_aberto },
-        { id: 'deferido', t: 'TCE deferido', card: true, cor: 'verde', f: (r, fi, c) => !!c.extra(r).tce_deferido },
-        { id: 'indeferido', t: 'Indeferido', card: true, cor: 'vermelho', f: (r, fi, c) => !!c.extra(r).tce_indeferido },
-        { id: 'docs', t: 'Documentos pendentes', card: true, cor: 'laranja', f: (r, fi, c) => { const x = c.extra(r); return !!x.tce_aberto && !x.docs_entregues; } },
-        { id: 'convalidacao', t: 'Com convalidação', f: (r, fi, c) => !!c.extra(r).convalidacao },
-        { id: 'mais1', t: 'Mais de uma disciplina', f: (r) => num(r.QTD_ELEGIVEL_ESTAGIO) > 1 },
+        { id: 'nao_fora', t: 'Sem TCE · prazo vencido', card: true, cor: 'vermelho', f: (r) => r.tce === 'nao_iniciado' && r.foraPrazo },
+        { id: 'nao_dentro', t: 'Sem TCE · no prazo', card: true, cor: 'amarelo', f: (r) => r.tce === 'nao_iniciado' && !r.foraPrazo },
+        { id: 'andamento', t: 'TCE em andamento', card: true, cor: 'azul', f: (r) => r.tce === 'andamento' },
+        { id: 'indeferido', t: 'TCE indeferido', card: true, cor: 'laranja', f: (r) => r.tce === 'indeferido' },
+        { id: 'docs', t: 'Deferido · documentação pendente', card: true, cor: 'laranja', f: (r) => r.tce === 'deferido' && r.docsPend },
+        { id: 'ok', t: 'Deferido · documentação entregue', card: true, cor: 'verde', f: (r) => r.tce === 'deferido' && !r.docsPend },
+        { id: 'prazo7', t: 'Prazo do TCE nos próximos 7 dias', f: (r) => r.tce !== 'deferido' && !!r.limite && r.limite >= hojeISO() && r.limite <= emDias(7) },
+        { id: 'indevido', t: 'Matrícula indevida em disciplina', card: true, cor: 'cinza', f: (r) => !!r.indevido },
+        { id: 'mudou', t: 'TCE mudou na última importação', f: (r) => !!r.mudou && r.mudou.em === r.importadoEm },
+        { id: 'enade', t: 'Disciplina de ENADE', f: (r) => !!r.enade },
+        { id: 'recursando', t: 'Recursando a disciplina', f: (r) => !!r.recursando },
+        { id: 'semnome', t: 'Sem nome (não está na base líquida)', f: (r) => !txt(r.NOM_ALUNO) },
       ],
       indicadores: [
-        { t: 'Sem TCE', v: (L, c) => L.filter((r) => !c.extra(r).tce_aberto).length },
-        { t: 'TCE deferido', v: (L, c) => L.filter((r) => c.extra(r).tce_deferido).length },
+        { t: 'TCE deferido', v: (L) => { const n = L.filter((r) => r.tce === 'deferido').length; return L.length ? `${n} (${Math.round(n / L.length * 100)}%)` : '0'; } },
+        { t: 'Disciplinas de estágio', v: (L) => L.reduce((t, r) => t + (r.disciplinas || []).length, 0) },
       ],
+      dashboardExtra: (L, esc, barras) => {
+        const cursos = Array.from(new Set(L.map((r) => txt(r.NOM_CURSO)))).sort();
+        const linha = (rot, G) => `<tr><td>${esc(rot)}</td><td>${G.length}</td>${['nao_iniciado', 'andamento', 'indeferido', 'deferido'].map((k) => `<td>${G.filter((r) => r.tce === k).length || ''}</td>`).join('')}<td class="${G.some((r) => r.tce === 'nao_iniciado' && r.foraPrazo) ? 'alerta' : ''}">${G.filter((r) => r.tce !== 'deferido' && r.foraPrazo).length || ''}</td><td>${G.filter((r) => r.tce === 'deferido' && r.docsPend).length || ''}</td></tr>`;
+        const prod = {}; L.forEach((r) => { const k = txt(r.MODALIDADE_PP_PC) || 'Não informado'; prod[k] = (prod[k] || 0) + (r.tce === 'deferido' ? 0 : 1); });
+        const mud = {}; L.filter((r) => r.mudou).forEach((r) => { const k = `${NOME_TCE[r.mudou.de] || r.mudou.de} → ${NOME_TCE[r.mudou.para] || r.mudou.para}`; mud[k] = (mud[k] || 0) + 1; });
+        const prox = L.filter((r) => r.tce !== 'deferido' && r.limite && r.limite >= hojeISO()).sort((a, b) => a.limite.localeCompare(b.limite)).slice(0, 12);
+        return `<div class="painel"><h2>Situação do TCE por curso</h2><table class="tabela"><thead><tr><th>Curso</th><th>Alunos</th><th>Sem TCE</th><th>Em andamento</th><th>Indeferido</th><th>Deferido</th><th>Prazo vencido</th><th>Documentação pendente</th></tr></thead>
+          <tbody>${cursos.map((c) => linha(c, L.filter((r) => txt(r.NOM_CURSO) === c))).join('')}${linha('Total', L)}</tbody></table></div>
+          <div class="duas">
+            <div class="painel"><h2>Ainda sem TCE deferido, por modalidade</h2>${barras(prod)}</div>
+            <div class="painel"><h2>Mudanças no TCE entre as importações</h2>${barras(mud)}</div>
+          </div>
+          <div class="painel"><h2>Próximos prazos de abertura do TCE</h2><table class="tabela"><thead><tr><th>Aluno</th><th>Curso</th><th>TCE</th><th>Prazo</th></tr></thead>
+          <tbody>${prox.map((r) => `<tr><td>${esc(r.NOM_ALUNO || r.COD_MATRICULA)}</td><td>${esc(r.NOM_CURSO)}</td><td>${esc(NOME_TCE[r.tce])}</td><td>${esc(data(r.limite))}</td></tr>`).join('') || '<tr><td colspan="4" class="vazio">Nenhum prazo pela frente.</td></tr>'}</tbody></table></div>`;
+      },
+      detalhe: (r, esc) => `<div class="secao">Disciplinas de estágio (relatório do BI)</div>
+        <table class="tabela"><thead><tr><th>Disciplina</th><th>TCE</th><th>Prazo TCE</th><th>Entrada em campo</th><th>Documentação</th><th>Horas</th><th>Professor</th></tr></thead><tbody>
+        ${(r.disciplinas || []).map((d) => `<tr><td>${esc(d.disc)}<br><small class="origem">${esc(d.cod)} · turma ${esc(d.turma)}${d.indevido ? ' · <b>matrícula indevida</b>' : ''}${d.enade ? ' · ENADE' : ''}${Number(d.vezes) > 1 ? ' · ' + esc(d.vezes) + 'ª vez' : ''}</small></td>
+          <td>${seloTce(d.tce)}${d.protocolo ? `<br><small class="origem">protocolo ${esc(d.protocolo)}</small>` : ''}</td><td>${esc(data(d.limTCE))}${d.tce !== 'deferido' && d.prazo === 'Fora do Prazo' ? '<br><small class="origem">vencido</small>' : ''}</td><td>${esc(data(d.limCampo))}</td>
+          <td>${esc(d.docs)}</td><td>${esc(d.ch || '')}${d.hEst ? `<br><small class="origem">${esc(d.hEst)} h estágio</small>` : ''}</td><td>${esc(d.professor)}${d.preceptor ? `<br><small class="origem">preceptor: ${esc(d.preceptor)}</small>` : ''}</td></tr>`).join('')}
+        </tbody></table>${r.mudou ? `<p class="dica">TCE mudou de <b>${esc(NOME_TCE[r.mudou.de] || r.mudou.de)}</b> para <b>${esc(NOME_TCE[r.mudou.para] || r.mudou.para)}</b> na importação de ${esc(data(r.mudou.em))}.</p>` : ''}`,
       lote: {
-        assunto: 'Estágio: abertura do TCE',
+        assunto: 'Estágio: TCE e documentação',
         resultado: 'Mensagem enviada (estágio)',
+        vars: (r) => ({ prazo: data(r.limite) || 'o prazo da disciplina', situacao: NOME_TCE[r.tce] || '' }),
         modelos: {
-          WhatsApp: () => 'Olá, {nome}! 🎓 Aqui é {atendente}, da Secretaria Acadêmica da Estácio Volta Redonda.\nPassando para informar sobre a abertura do TCE (Termo de Compromisso de Estágio) do seu curso, {curso}.\nSe ainda não iniciou o processo, fale com a gente para receber as orientações.',
-          'E-mail': () => 'Olá, {nome}!\n\nGostaríamos de informar sobre a abertura do TCE (Termo de Compromisso de Estágio) do seu curso, {curso}.\nCaso tenha dúvidas ou precise de orientações para iniciar o processo, estamos à disposição.\n\n{atendente}\nSecretaria Acadêmica · Estácio Volta Redonda',
+          WhatsApp: () => 'Olá, {nome}! 🎓 Aqui é {atendente}, da Secretaria Acadêmica da Estácio Volta Redonda.\nSobre o estágio do seu curso de {curso}: o seu TCE (Termo de Compromisso de Estágio) está como "{situacao}". O prazo para abertura é {prazo}. Posso te ajudar com as orientações?',
+          'E-mail': () => 'Olá, {nome}!\n\nSobre o estágio do seu curso de {curso}: o seu TCE (Termo de Compromisso de Estágio) está como "{situacao}", e o prazo para abertura é {prazo}.\nCaso tenha dúvidas ou precise de orientações, estamos à disposição.\n\n{atendente}\nSecretaria Acadêmica · Estácio Volta Redonda',
         },
       },
-      resultados: ['Vai abrir TCE', 'TCE aberto', 'Documentos pendentes', 'Já estagia', 'Sem interesse', 'Sem retorno', 'Outro'],
+      resultados: ['Orientado a abrir o TCE', 'TCE aberto', 'Documentação pendente', 'Documentação entregue', 'Já estagia', 'Matrícula indevida encaminhada', 'Sem interesse', 'Sem retorno', 'Outro'],
     },
 
     financeiro: {

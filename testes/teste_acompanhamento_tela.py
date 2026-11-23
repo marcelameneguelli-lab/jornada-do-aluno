@@ -15,7 +15,7 @@ with sync_playwright() as p:
     pg.wait_for_function("document.body.dataset.tela==='app'")
     tok=lambda: pg.evaluate("JSON.parse(localStorage.getItem('jornada_sessao')).token")
     fr=lambda s: [x for x in pg.frames if 'sistema='+s in x.url and 'acompanhamento' in x.url][0]
-    esperado={'provas':3,'estagio':2,'financiamentos':4}
+    esperado={'provas':3,'financiamentos':4}
     for s,qt in esperado.items():
         pg.goto(B+'#/s/'+s); pg.wait_for_timeout(2500)
         f=fr(s); f.wait_for_function("window.Motor && Motor.estado.alunos.length>0", timeout=15000)

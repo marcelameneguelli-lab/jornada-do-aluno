@@ -15,18 +15,8 @@ with sync_playwright() as p:
     f=[x for x in pg.frames if 'sistema=provas' in x.url][0]; f.wait_for_function("Motor.estado.alunos.length===3", timeout=15000)
     f.wait_for_timeout(1500)
     pg.context.grant_permissions([]); pg.evaluate("window.open = () => null")
-    # Estágio: TCE na tela nova, sem a tela original
-    pg.goto(B+'#/s/estagio'); pg.wait_for_timeout(3000)
-    f=[x for x in pg.frames if 'sistema=estagio' in x.url][0]; f.wait_for_function("Motor.estado.alunos.length>0", timeout=15000)
-    assert not f.is_visible('#aba-original'); ok('Estágio sem a aba "Tela original"')
-    assert 'SEM TCE' in f.inner_text('.cartoes').upper(); ok('cartões do TCE (sem TCE, aberto, deferido, indeferido, documentos)')
-    m=f.evaluate("Motor.estado.alunos[0].COD_MATRICULA"); f.click(f'tr[data-mat="{m}"] td.nome'); f.wait_for_selector('#extras')
-    f.check('#extras [data-extra="tce_aberto"]'); f.wait_for_timeout(1500)
-    assert 'Atualizado por' in f.inner_text('#extras-quem'); ok('marcar "TCE aberto" na ficha salva na hora')
-    f.click('[data-fechar]') if f.locator('[data-fechar]').count() else None
-    f.evaluate("document.getElementById('modal').hidden=true"); f.click('[data-card="aberto"]'); f.wait_for_timeout(300)
-    assert f.locator('tr[data-mat]').count()==1; ok('cartão "TCE aberto" filtra o aluno marcado')
-    # disparo em lote
+    # disparo em lote (Provas)
+    f=[x for x in pg.frames if 'sistema=provas' in x.url][0]
     f.click('[data-card=""]'); f.wait_for_timeout(300)
     f.evaluate("window.open=()=>null")
     f.check('#sel-pagina'); assert f.is_visible('#barra-lote'); ok('marcar alunos mostra a barra de disparo em lote')
