@@ -1,0 +1,25 @@
+const { criar } = require('./mock_gas'); const assert=require('assert'); const fs=require('fs');
+const D='/home/claude/jornada/gas/';
+const g = criar(fs.readdirSync(D).filter(f=>f.endsWith('.gs')).sort().map(f=>D+f));
+const post=o=>JSON.parse(g.doPost({postData:{contents:JSON.stringify(o)}}).t);
+let ok=0; const t=(n,f)=>{ try{ f(); ok++; console.log('ok  '+n);}catch(e){ console.log('FALHOU '+n+': '+e.stack.split('\n').slice(0,2).join(' ')); process.exitCode=1; } };
+g.configurar(); g.renovacao_configurarPlanilha(); const sh=g._ss.getSheetByName('usuarios');
+sh.appendRow(['Marcela','marques.marcela@estacio.br','admin','todos','sim']);
+sh.appendRow(['Felipe','felipe@estacio.br','atendente','todos','sim']);
+sh.appendRow(['Nae','nae@estacio.br','apoio','apoio','sim']);
+g.gerarSenhas();
+const login=(email,linha,nova)=>{ const p=sh.d[linha-1][6]; const e=post({acao:'nucleo.entrar',email,senha:p}); return post({acao:'nucleo.trocar_senha',token:e.token,atual:p,nova}); };
+const rF=login('felipe@estacio.br',3,'Senha2026b'), tF=rF.token, tN=login('nae@estacio.br',4,'Senha2026c').token;
+t('atendente recebe a permissão de bases (sem virar gestão)', ()=>{ assert.equal(rF.me.bases,true); assert.equal(rF.me.gestao,false); });
+t('atendente vê o resumo da Central de Bases', ()=>{ assert(post({acao:'nucleo.bases_resumo',token:tF}).ok); });
+t('perfil apoio continua sem a Central', ()=>{ assert.equal(post({acao:'nucleo.bases_resumo',token:tN}).permissao,false); });
+t('atendente importa a base líquida', ()=>{ const r=post({acao:'engajamento.salvarBase',token:tF,base:'impar',dados:[{COD_MATRICULA:'202301000001',NOM_ALUNO:'A'}],parte:0,total:1}); assert(r.ok!==false, JSON.stringify(r)); });
+t('atendente importa a base da Renovação', ()=>{ const r=post({acao:'renovacao.importar_alunos',token:tF,ciclo:'2026.1',alunos:[{id:'X1',nome:'Aluno X',matricula:'2026X1',curso:'Direito',modalidade:'Presencial',ciclo:'2026.1',status:'pendente'}]}); assert(r.ok, JSON.stringify(r)); });
+t('atendente continua sem exportar a base da Renovação', ()=>{ const r=post({acao:'renovacao.exportar_csv',token:tF,ciclo:'2026.1'}); assert.equal(r.ok,false); });
+t('atendente importa o relatório do BI e o NPS', ()=>{ assert(post({acao:'estagio.importar',token:tF,respostas:[{COD_MATRICULA:'202301000001',tce:'deferido',disciplinas:[]}],parte:0,total:1}).ok); assert.notEqual(post({acao:'nps.importar',token:tF,respostas:[]}).permissao,false); });
+t('Formandos: importação pela Central grava alunos; fora dela continua bloqueado', ()=>{
+  const op=[{op:'set',col:'students',id:'202301000009',data:{id:'202301000009',mat:'202301000009',nome:'Formando X',upd:1}}];
+  assert.equal(post({acao:'formandos.ops',token:tF,ops:op}).ok,false);
+  const r=post({acao:'formandos.ops',token:tF,ops:op,importacao:true}); assert(r.ok, JSON.stringify(r)); });
+t('atendente continua sem as ações de gestão fora da importação', ()=>{ assert.equal(post({acao:'evasao.excluir',token:tF,base:'impar',id:'x'}).permissao,false); assert.equal(post({acao:'nucleo.usuarios_listar',token:tF}).permissao,false); });
+console.log(ok+' testes da Central de Bases para atendente passaram');

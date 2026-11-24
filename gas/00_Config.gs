@@ -53,13 +53,18 @@ const PLANILHAS = {
 // Financiamentos (ProUni, FIES, Pravaler, Ficou Fácil) e NPS (Medallia) são novos.
 const SISTEMAS = ['renovacao', 'engajamento', 'provas', 'estagio', 'financeiro', 'financiamentos', 'nps', 'formandos', 'apoio', 'evasao'];
 
-// Perfis. "gestao" libera importar bases, exportar e ver a produtividade de todos.
+// Perfis. "gestao" libera exportar e ver a produtividade de todos. "bases" libera a Central de Bases (importar).
 const PERFIS = {
-  admin:       { gestao: true,  admin: true  },
-  coordenador: { gestao: true,  admin: false },
-  atendente:   { gestao: false, admin: false },
-  apoio:       { gestao: false, admin: false },
+  admin:       { gestao: true,  admin: true,  bases: true  },
+  coordenador: { gestao: true,  admin: false, bases: true  },
+  atendente:   { gestao: false, admin: false, bases: true  },
+  apoio:       { gestao: false, admin: false, bases: false },
 };
+// Ações de importação da Central de Bases: valem para quem tem "bases", mesmo sem "gestao".
+const ACOES_BASES = ['nucleo.bases_resumo', 'engajamento.salvarBase', 'engajamento.publicarBase', 'engajamento.importarCSVSharePoint',
+  'nps.importar', 'estagio.importar'];
+const ACOES_BASES_RENOVACAO = ['importar_alunos', 'importar_drive', 'importar_drive_single'];
+function podeBases_(eu) { return !!(eu && (PERFIS[eu.perfil] || PERFIS.atendente).bases); }
 
 // Relatório diário único (todos os sistemas)
 const EMAIL_RELATORIO = 'marques.marcela@estacio.br';

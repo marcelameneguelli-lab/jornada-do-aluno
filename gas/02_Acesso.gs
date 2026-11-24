@@ -91,7 +91,7 @@ function podeSistema_(eu, sis) {
 function publico_(u) {
   const regra = PERFIS[u.perfil] || PERFIS.atendente;
   const sistemas = (u.perfil === 'admin' || u.sistemas.indexOf('todos') >= 0) ? SISTEMAS.slice() : u.sistemas.slice();
-  return { nome: u.nome, email: u.email, perfil: u.perfil, sistemas: sistemas, gestao: regra.gestao, admin: regra.admin };
+  return { nome: u.nome, email: u.email, perfil: u.perfil, sistemas: sistemas, gestao: regra.gestao, admin: regra.admin, bases: !!regra.bases };
 }
 
 /** Versão para a tela de usuários do administrador (sem sal e sem hash). */

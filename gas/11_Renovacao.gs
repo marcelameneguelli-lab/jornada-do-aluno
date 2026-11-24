@@ -1967,7 +1967,9 @@ function Modulo_renovacao() {
       if (ACOES_RENOVACAO_NO_NUCLEO.indexOf(nome) >= 0) {
         return { ok: false, erro: 'Login, senha e usuários agora ficam na Jornada do Aluno (menu Usuários e perfis).' };
       }
-      d.__sess = { email: eu.email, nome: eu.nome, perfil: eu.perfil, token: '', exp: 0 };
+      // importação pela Central de Bases: quem tem "bases" importa como coordenador
+      const perfil = (ACOES_BASES_RENOVACAO.indexOf(nome) >= 0 && podeBases_(eu) && eu.perfil !== 'admin') ? 'coordenador' : eu.perfil;
+      d.__sess = { email: eu.email, nome: eu.nome, perfil: perfil, token: '', exp: 0 };
       return Renovacao_().processarAcao(nome, d);
     };
   });

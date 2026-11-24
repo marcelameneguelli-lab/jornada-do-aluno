@@ -96,9 +96,9 @@
     sistemasLiberados().forEach(s => { h += `<a href="#/s/${s.id}" data-rota="s/${s.id}" title="${esc(s.nome)}"><span>${s.icone}</span>${esc(s.nome)}</a>`; });
     h += '<div class="menu-grupo">Ferramentas da equipe</div>';
     JORNADA.ferramentas.forEach(f => { h += `<a href="#/f/${f.id}" data-rota="f/${f.id}" title="${esc(f.nome)}"><span>${f.icone}</span>${esc(f.nome)}</a>`; });
-    if (me.gestao || me.admin) {
+    if (me.gestao || me.admin || me.bases) {
       h += '<div class="menu-grupo">Administração</div>';
-      if (me.gestao) h += '<a href="#/bases" data-rota="bases" title="Central de Bases"><span>🗂️</span>Central de Bases</a>';
+      if (me.gestao || me.bases) h += '<a href="#/bases" data-rota="bases" title="Central de Bases"><span>🗂️</span>Central de Bases</a>';
       if (me.admin) h += '<a href="#/config" data-rota="config" title="Configurações dos sistemas"><span>⚙️</span>Configurações</a>';
       if (me.admin) h += '<a href="#/relatorio" data-rota="relatorio" title="Relatório diário"><span>📨</span>Relatório diário</a>';
       if (me.admin) h += '<a href="#/usuarios" data-rota="usuarios" title="Usuários e perfis"><span>👥</span>Usuários e perfis</a>';
@@ -115,10 +115,10 @@
     const me = eu();
     if (r === 'inicio') return telaInicio(area);
     if (r === 'usuarios' && me.admin) return telaUsuarios(area);
-    if (r === 'bases' && me.gestao) return telaBases(area);
+    if (r === 'bases' && (me.gestao || me.bases)) return telaBases(area);
     if (r === 'config' && me.admin) return telaConfig(area);
     const mc = r.match(/^(bases|config)\/([a-z]+)(?:\?(.*))?/);
-    if (mc && (mc[1] === 'bases' ? me.gestao : me.admin)) return abrirCentral(area, mc[1], mc[2], mc[3] || '');
+    if (mc && (mc[1] === 'bases' ? (me.gestao || me.bases) : me.admin)) return abrirCentral(area, mc[1], mc[2], mc[3] || '');
     const mf = r.match(/^f\/([a-z]+)/);
     if (mf) {
       const ferr = JORNADA.ferramentas.filter(f => f.id === mf[1])[0];

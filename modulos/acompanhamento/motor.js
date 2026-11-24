@@ -390,7 +390,7 @@
   /* ── importação de arquivo (NPS: exportação do Medallia), só pela Central de Bases ── */
   function telaImportar() {
     if (!CFG.importar) { $('#area').innerHTML = '<div class="carregando-base">Este sistema não tem importação própria.</div>'; return; }
-    if (!eu().gestao) { $('#area').innerHTML = '<div class="carregando-base">Seu perfil não tem acesso à importação.</div>'; return; }
+    if (!eu().gestao && !eu().bases) { $('#area').innerHTML = '<div class="carregando-base">Seu perfil não tem acesso à importação.</div>'; return; }
     const datas = E.alunos.map((r) => CFG.dataDe ? CFG.dataDe(r) : '').filter(Boolean).sort();
     $('#area').innerHTML = `<div class="painel importar-central">
       <h3>${esc(CFG.importar.rotulo)}</h3>

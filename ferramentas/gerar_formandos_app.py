@@ -25,7 +25,7 @@ s=s[:a]+'''  async function bruto(corpo) {
         j = await Api.chamar('nucleo.trocar_senha', { atual: resto.atual, nova: resto.nova });
         if (j && j.ok) { const s = Api.Sessao.ler() || {}; Api.Sessao.gravar(Object.assign(s, { token: j.token, exp: j.exp })); j.token = 'jornada'; }
       } else {
-        j = await Api.chamar('formandos.' + acao, resto);
+        j = await Api.chamar('formandos.' + acao, window.JORNADA_IMPORTACAO ? Object.assign({ importacao: true }, resto) : resto);
       }
     } catch (e) {
       if (e.auth) return { ok: false, error: 'auth', ver: VERSAO_SERVIDOR };
@@ -83,6 +83,11 @@ _i=s.rfind('</body>'); s=s[:_i]+'''<style>
     return;
   }
   raiz.classList.add('jornada-modo', 'jornada-modo-' + modo);
+  if (modo === 'importar' && (function () { try { return ((window.Api && Api.Sessao.ler()) || {}).me || {}; } catch (e) { return {}; } })().bases) {
+    // Central de Bases: quem tem "bases" (inclusive atendente) importa alunos, formados e ENADE
+    window.JORNADA_IMPORTACAO = true;
+    ehAdmin = function () { return true; };
+  }
   var painel = document.createElement('div');
   painel.id = 'jornada-painel-modo';
   painel.innerHTML = modo === 'importar'

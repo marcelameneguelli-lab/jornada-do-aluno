@@ -222,6 +222,8 @@ function _jornadaModo() {
   }
   raiz.classList.add('jornada-modo', 'jornada-modo-' + modo);
   var tela = modo === 'importar' ? 'importar' : 'admin';
+  // Central de Bases: quem tem "bases" (inclusive atendente) importa
+  if (modo === 'importar' && (function () { try { return ((window.Api && Api.Sessao.ler()) || {}).me || {}; } catch (e) { return {}; } })().bases) _podeImportar = function () { return true; };
   var pode = modo === 'importar' ? _podeImportar() : _podeAdmin();
   showPage = function () { return _show(tela); };
   if (!pode) { document.querySelector('.main').innerHTML = '<div style="padding:40px;text-align:center">Seu perfil não tem acesso a esta área.</div>'; return; }

@@ -77,7 +77,7 @@ function processar_(acao, d) {
     if (eu) {
       const regra = PERFIS[eu.perfil] || PERFIS.atendente;
       if ((mod.admin || []).indexOf(nome) >= 0 && !regra.admin) return { ok: false, permissao: false, erro: 'Apenas o administrador pode fazer isso.' };
-      if ((mod.gestao || []).indexOf(nome) >= 0 && !regra.gestao) return { ok: false, permissao: false, erro: 'Seu perfil não pode fazer isso.' };
+      if ((mod.gestao || []).indexOf(nome) >= 0 && !regra.gestao && !(regra.bases && ACOES_BASES.indexOf(chave) >= 0)) return { ok: false, permissao: false, erro: 'Seu perfil não pode fazer isso.' };
     }
     const r = fn(d, eu) || {};
     if (eu && !r.me) r.me = publico_(eu); // o módulo pode devolver a identidade no formato dele

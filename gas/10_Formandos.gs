@@ -289,9 +289,10 @@ function Formandos_() {
 }
 
 /** Identidade no formato que o painel espera. */
-function formandosEu_(eu) {
+function formandosEu_(eu, importacao) {
   const regra = PERFIS[eu.perfil] || PERFIS.atendente;
-  return { nome: eu.nome, email: eu.email, perfil: regra.gestao ? 'admin' : 'atendente' };
+  // na Central de Bases, quem tem "bases" importa alunos, formados e ENADE como o administrador do painel
+  return { nome: eu.nome, email: eu.email, perfil: (regra.gestao || (importacao && regra.bases)) ? 'admin' : 'atendente' };
 }
 
 function Modulo_formandos() {
@@ -310,7 +311,7 @@ function Modulo_formandos() {
         const ops = Array.isArray(d.ops) ? d.ops : [];
         if (!ops.length) return comMe(eu, { ok: true, v: F.ultima_(), n: 0 });
         if (ops.length > 400) return { ok: false, error: 'lote grande demais (máx. 400 operações)' };
-        const v = F.validar_(ops, formandosEu_(eu));
+        const v = F.validar_(ops, formandosEu_(eu, d.importacao === true));
         if (v) return { ok: false, error: 'sem_permissao', detalhe: v };
         return comMe(eu, F.gravar_(ops));
       },

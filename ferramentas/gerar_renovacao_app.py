@@ -120,6 +120,11 @@ _i=s.rfind('</body>'); s=s[:_i]+'''<style>
     tentativas++;
     try {
       if (typeof S !== 'undefined' && S && S.perfil) {
+        if (modo === 'importar' && (function () { try { return ((window.Api && Api.Sessao.ler()) || {}).me || {}; } catch (e) { return {}; } })().bases) {
+          // Central de Bases: quem tem "bases" (inclusive atendente) importa nesta tela
+          var _telas = TELAS_PERFIL[S.perfil] || TELAS_PERFIL.atendente;
+          if (Array.isArray(_telas) && _telas.indexOf('importar') < 0) _telas.push('importar');
+        }
         if (podeVer(modo)) irOriginal(modo);
         else document.getElementById('app').innerHTML = '<div style="padding:40px;text-align:center">Seu perfil não tem acesso a esta área.</div>';
         return;
