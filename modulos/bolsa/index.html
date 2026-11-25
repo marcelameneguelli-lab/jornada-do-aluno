@@ -1,0 +1,470 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Bolsa Permanência · Jornada do Aluno</title>
+<link rel="icon" type="image/png" href="../../icones/icon-64.png">
+<link rel="stylesheet" href="../../nucleo/estilo.css?v=1.2.9">
+<style>
+  body { background: var(--fundo); }
+  [hidden] { display: none !important; }
+  .topo { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; padding: 14px 22px; background: #fff; border-bottom: 1px solid var(--borda); position: sticky; top: 0; z-index: 5; }
+  .topo h1 { font-size: 19px; margin: 0; } .topo small { display: block; color: var(--texto-2); font-size: 12px; }
+  .topo .direita { margin-left: auto; display: flex; gap: 8px; align-items: center; }
+  .topo select { width: auto; margin: 0; padding: 7px 10px; font-weight: 700; }
+  .abas { display: flex; gap: 4px; padding: 0 22px; background: #fff; border-bottom: 1px solid var(--borda); }
+  .abas button { border: 0; background: none; padding: 11px 14px; font: inherit; font-weight: 600; color: var(--texto-2); cursor: pointer; border-bottom: 3px solid transparent; }
+  .abas button.ativa { color: var(--azul); border-bottom-color: var(--verde); }
+  .abas .cont { background: var(--azul-claro); color: var(--azul); border-radius: 10px; padding: 1px 7px; font-size: 11px; margin-left: 4px; }
+  main { padding: 18px 22px; }
+  .lembrete { background: #eef5fc; border: 1px solid #b9d4ef; border-radius: 8px; padding: 9px 13px; font-size: 13px; margin-bottom: 14px; color: #1d4b7a; }
+  .lembrete.amarelo { background: #fff8e6; border-color: #f2d48a; color: #6b5200; }
+  .pools { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 12px; margin-bottom: 16px; }
+  .pool { background: #fff; border: 1px solid var(--borda); border-radius: 12px; padding: 14px 16px; }
+  .pool h3 { margin: 0 0 8px; font-size: 14px; color: var(--azul); }
+  .pool h3 small { display: block; color: var(--texto-2); font-weight: 600; font-size: 11px; margin-top: 2px; }
+  .pool .saldo { font-size: 24px; font-weight: 800; } .pool .saldo.neg { color: #d92d20; } .pool .saldo.pos { color: #1e7a38; }
+  .pool .linha { display: flex; justify-content: space-between; font-size: 12px; color: var(--texto-2); margin-top: 3px; }
+  .pista { display: flex; height: 10px; background: #eef1f5; border-radius: 6px; overflow: hidden; margin: 8px 0 4px; }
+  .pista i { display: block; height: 100%; }
+  .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; margin-bottom: 14px; }
+  .card { background: #fff; border: 1px solid var(--borda); border-radius: 10px; padding: 11px 13px; border-top: 4px solid var(--cor, #8aa); cursor: pointer; }
+  .card.sel { box-shadow: 0 0 0 2px var(--azul) inset; }
+  .card b { display: block; font-size: 22px; } .card span { font-size: 12px; color: var(--texto-2); }
+  .bloco { background: #fff; border: 1px solid var(--borda); border-radius: 10px; padding: 14px 16px; margin-bottom: 14px; }
+  .bloco h3 { margin: 0 0 10px; font-size: 15px; }
+  .duas { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .barra { display: grid; grid-template-columns: minmax(150px, 48%) 1fr 34px; gap: 8px; align-items: center; font-size: 12px; margin: 5px 0; }
+  .barra i { display: block; height: 10px; background: var(--azul); border-radius: 5px; } .barra em { font-style: normal; text-align: right; font-weight: 700; }
+  .filtros { display: flex; gap: 8px; margin-bottom: 12px; align-items: center; flex-wrap: wrap; }
+  .filtros input, .filtros select { width: auto; margin: 0; padding: 7px 10px; font-size: 13px; }
+  .filtros input[type=search] { min-width: 220px; }
+  .total { margin-left: auto; color: var(--texto-2); font-size: 13px; }
+  .tabela td.nome b { display: block; } .tabela td.nome small { color: var(--texto-2); font-family: Consolas, monospace; }
+  .tabela tr.clicavel { cursor: pointer; } .tabela tr.clicavel:hover td { background: #f7f9fc; }
+  .tabela td.num, .tabela th.num { text-align: right; white-space: nowrap; }
+  .selo { display: inline-block; border-radius: 10px; padding: 2px 9px; font-size: 11px; font-weight: 700; white-space: nowrap; }
+  .st-em_analise { background: #e7f0fb; color: #1d4b7a; } .st-deferido { background: #e6fcf5; color: #0b7285; } .st-em_processamento { background: #f3f0ff; color: #5f3dc4; }
+  .st-lancada { background: #e6f6ea; color: #1e7a38; } .st-indeferido { background: #eceff3; color: #475467; } .st-conflito { background: #fde8e8; color: #b42318; } .st-sem_saldo { background: #fff4e5; color: #b54708; }
+  .alerta { display: inline-block; background: #fff4e5; color: #93370d; border-radius: 10px; padding: 1px 7px; font-size: 11px; margin: 2px 3px 0 0; }
+  .seta-up { color: #1e7a38; font-weight: 700; } .seta-down { color: #b42318; font-weight: 700; }
+  .modal-caixa.larga { max-width: 820px; }
+  .grade2 { display: grid; grid-template-columns: 1fr 1fr; gap: 0 12px; } .grade3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0 12px; } .grade4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0 12px; }
+  textarea { display: block; width: 100%; margin-top: 5px; padding: 9px 11px; border: 1px solid var(--borda); border-radius: 8px; font: inherit; min-height: 70px; }
+  .historico { font-size: 12px; color: var(--texto-2); margin: 4px 0 0; padding-left: 18px; }
+  .secao-form { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--texto-2); margin: 14px 0 4px; border-top: 1px solid var(--borda); padding-top: 10px; }
+  .pool-tab td input { width: 140px; margin: 0; text-align: right; }
+  .carregando-base { padding: 40px; text-align: center; color: var(--texto-2); }
+  @media (max-width: 900px) { .grade2, .grade3, .grade4, .duas { grid-template-columns: 1fr; } main { padding: 14px 10px; } }
+</style>
+</head>
+<body>
+<div class="topo" id="topo">
+  <div><h1>🤝 Bolsa Permanência</h1><small id="sub">Solicitações, percentuais, justificativas e saldo do pool</small></div>
+  <div class="direita"><label style="margin:0;font-size:13px;color:var(--texto-2)">Período</label><select id="sel-periodo"></select><button class="btn primario" id="btn-nova">+ Nova solicitação</button></div>
+</div>
+<nav class="abas" id="abas">
+  <button data-aba="painel" class="ativa">Painel</button>
+  <button data-aba="solicitacoes">Solicitações <span class="cont" id="c-sol">0</span></button>
+  <button data-aba="pool">Pool e saldo</button>
+</nav>
+<main id="area"><div class="carregando-base">Carregando...</div></main>
+<div id="modal" hidden><div class="modal-caixa larga" id="modal-corpo"></div></div>
+
+<script src="../../nucleo/config.js?v=1.8.0"></script>
+<script src="../../nucleo/api.js?v=1.2.3"></script>
+<script>window.App = (window.parent && window.parent !== window) ? window.parent.App : null;</script>
+<script>
+(function () {
+  const $ = (s) => document.querySelector(s);
+  const esc = (t) => String(t == null ? '' : t).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const MODO = new URLSearchParams(location.search).get('modo') || '';
+  const ST = { em_analise: 'Em análise', deferido: 'Deferido', em_processamento: 'Em processamento', lancada: 'Lançada', indeferido: 'Indeferido', conflito: 'Conflito de bolsa', sem_saldo: 'Sem saldo' };
+  const ST_COR = { em_analise: '#1c7ed6', deferido: '#0b7285', em_processamento: '#7048e8', lancada: '#2f9e44', indeferido: '#868e96', conflito: '#d92d20', sem_saldo: '#f79009' };
+  const MOD_NOME = { PRESENCIAL: 'Presencial', SEMIPRESENCIAL: 'Semipresencial', EAD: 'EAD', FLEX: 'Flex' };
+  const COMPROMETE = ['deferido', 'em_processamento'];
+  const moeda = (v) => (Number(v) || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+  const num = (v) => { const t = String(v == null ? '' : v).trim(); if (!t) return ''; const n = parseFloat(/,/.test(t) ? t.replace(/\./g, '').replace(',', '.') : t); return isNaN(n) ? '' : n; };
+  const dataBR = (iso) => { const m = String(iso || '').match(/^(\d{4})-(\d{2})-(\d{2})/); return m ? `${m[3]}/${m[2]}/${m[1]}` : ''; };
+  const hojeISO = () => { const d = new Date(); return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 10); };
+  const aviso = (msg, tipo) => { if (window.App && window.App.aviso) return window.App.aviso(msg, tipo); alert(msg); };
+  const E = { aba: 'painel', d: null, periodo: '', busca: '', fSt: '', fMod: '', fMot: '', fAlerta: '' };
+  const L = () => (E.d && E.d.solicitacoes) || [];
+
+  async function carregar() {
+    try {
+      const r = await Api.chamar('bolsa.dados', { periodo: E.periodo }, { timeout: 120000 });
+      if (!r || !r.ok) throw new Error((r && r.erro) || 'Não foi possível carregar.');
+      E.d = r; E.periodo = r.periodo;
+    } catch (e) { if (!e.auth) aviso(e.message, 'erro'); E.d = E.d || { solicitacoes: [], periodos: [], pool: {}, motivos: [], modalidades: Object.keys(MOD_NOME) }; }
+  }
+
+  /* alertas de cada solicitação, para a equipe agir */
+  function alertas(s) {
+    const a = [];
+    if (s.pagouRenov === 'NÃO') a.push('Não pagou a renovação');
+    if ((s.status === 'lancada' || COMPROMETE.indexOf(s.status) >= 0) && (s.consumo == null || s.consumo === '')) a.push('Sem consumo informado');
+    if (s.base && s.status === 'lancada' && s.base.pctBase != null && Number(s.base.pctBase) !== Number(s.pct)) a.push(`Base mostra ${s.base.pctBase}%`);
+    if (s.base && /CANCELAD|TRANCAD/i.test(s.base.situacao)) a.push('Aluno ' + s.base.situacao.toLowerCase());
+    if (s.base && s.base.inadimplente) a.push('Inadimplente');
+    if (s.pendencias) a.push('Com pendência');
+    return a;
+  }
+  function resumoPool() {
+    const pool = E.d.pool || {}, res = {};
+    E.d.modalidades.forEach((m) => {
+      const S = L().filter((s) => s.modalidade === m);
+      const lanc = S.filter((s) => s.status === 'lancada').reduce((t, s) => t + (Number(s.consumo) || 0), 0);
+      const comp = S.filter((s) => COMPROMETE.indexOf(s.status) >= 0).reduce((t, s) => t + (Number(s.consumo) || 0), 0);
+      const p = pool[m] == null ? null : Number(pool[m]);
+      res[m] = { pool: p, lanc, comp, saldo: p == null ? null : p - lanc - comp, n: S.filter((s) => s.status === 'lancada').length, total: S.length };
+    });
+    return res;
+  }
+
+  function desenhar() {
+    $('#sel-periodo').innerHTML = (E.d.periodos.length ? E.d.periodos : [E.periodo || '']).filter(Boolean).map((p) => `<option ${p === E.periodo ? 'selected' : ''}>${esc(p)}</option>`).join('') + '<option value="__novo">+ Novo período</option>';
+    document.querySelectorAll('#abas button').forEach((b) => b.classList.toggle('ativa', b.dataset.aba === E.aba));
+    $('#c-sol').textContent = L().length;
+    $('#sub').textContent = E.periodo ? `Período ${E.periodo} · ${L().length} solicitação(ões)` : 'Nenhum período ainda: importe a planilha na Central de Bases ou crie um período';
+    if (E.aba === 'painel') painel(); else if (E.aba === 'solicitacoes') solicitacoes(); else poolTela();
+  }
+
+  function cardPool(m, r) {
+    const usado = r.pool ? Math.min(100, (r.lanc / r.pool) * 100) : 0, comp = r.pool ? Math.min(100 - usado, (r.comp / r.pool) * 100) : 0;
+    return `<div class="pool"><h3>${MOD_NOME[m] || m}<small>${r.n} lançada(s) · ${r.total} pedido(s)</small></h3>
+      ${r.pool == null ? '<div class="dica">Pool não informado. Defina na aba Pool e saldo.</div>' : `<div class="saldo ${r.saldo < 0 ? 'neg' : 'pos'}">${moeda(r.saldo)}</div><div class="dica">saldo disponível</div>
+      <div class="pista"><i style="width:${usado}%;background:#2f9e44"></i><i style="width:${comp}%;background:#f79009"></i></div>
+      <div class="linha"><span>Pool</span><b>${moeda(r.pool)}</b></div>`}
+      <div class="linha"><span>Lançado</span><b>${moeda(r.lanc)}</b></div>
+      <div class="linha"><span>Comprometido (deferido, ainda não lançado)</span><b>${moeda(r.comp)}</b></div></div>`;
+  }
+
+  function painel() {
+    const S = L(), rp = resumoPool();
+    const tot = Object.values(rp).reduce((o, r) => ({ pool: o.pool + (r.pool || 0), lanc: o.lanc + r.lanc, comp: o.comp + r.comp }), { pool: 0, lanc: 0, comp: 0 });
+    const cont = (f) => S.filter(f).length;
+    const porMot = {}; S.forEach((s) => { const k = s.tipo || 'Sem motivo'; porMot[k] = (porMot[k] || 0) + 1; });
+    const mots = Object.keys(porMot).sort((a, b) => porMot[b] - porMot[a]); const maxM = Math.max(1, ...Object.values(porMot));
+    const comPct = S.filter((s) => s.pct != null);
+    const media = comPct.length ? (comPct.reduce((t, s) => t + Number(s.pct), 0) / comPct.length) : 0;
+    const comAnt = S.filter((s) => s.pct != null && s.pctAnt != null);
+    const subiu = comAnt.filter((s) => s.pct > s.pctAnt).length, desceu = comAnt.filter((s) => s.pct < s.pctAnt).length, novos = comAnt.filter((s) => !s.pctAnt).length;
+    const comAlerta = S.filter((s) => alertas(s).length);
+    const porCurso = {}; S.filter((s) => s.status === 'lancada').forEach((s) => { const k = s.curso || (s.base && s.base.curso) || '—'; porCurso[k] = (porCurso[k] || 0) + (Number(s.consumo) || 0); });
+    const cursos = Object.keys(porCurso).sort((a, b) => porCurso[b] - porCurso[a]).slice(0, 10); const maxC = Math.max(1, ...Object.values(porCurso));
+    $('#area').innerHTML = !E.periodo ? '<div class="lembrete amarelo">Nenhuma solicitação ainda. Importe a planilha de acompanhamento na Central de Bases, ou crie um período e registre as solicitações aqui.</div>' : `
+      <div class="lembrete">Saldo = pool − lançado − comprometido. O consumo de cada bolsa é o valor que ela representa no semestre (coluna "Consumo" da solicitação).</div>
+      <div class="pools">${E.d.modalidades.map((m) => cardPool(m, rp[m])).join('')}
+        <div class="pool" style="border-color:var(--azul)"><h3>Total ${esc(E.periodo)}</h3>${tot.pool ? `<div class="saldo ${tot.pool - tot.lanc - tot.comp < 0 ? 'neg' : 'pos'}">${moeda(tot.pool - tot.lanc - tot.comp)}</div><div class="dica">saldo disponível</div>` : ''}
+          <div class="linha"><span>Pool</span><b>${moeda(tot.pool)}</b></div><div class="linha"><span>Lançado</span><b>${moeda(tot.lanc)}</b></div><div class="linha"><span>Comprometido</span><b>${moeda(tot.comp)}</b></div></div></div>
+      <div class="cards">${Object.keys(ST).map((k) => `<div class="card" style="--cor:${ST_COR[k]}" data-st="${k}"><b>${cont((s) => s.status === k)}</b><span>${ST[k]}</span></div>`).join('')}
+        <div class="card" style="--cor:#f79009" data-alerta="1"><b>${comAlerta.length}</b><span>Com alerta</span></div></div>
+      <div class="duas">
+        <div class="bloco"><h3>Motivos das solicitações</h3>${mots.map((k) => `<div class="barra"><span>${esc(k)}</span><i style="width:${porMot[k] / maxM * 100}%"></i><em>${porMot[k]}</em></div>`).join('') || '<p class="dica">Sem dados.</p>'}</div>
+        <div class="bloco"><h3>Percentuais</h3>
+          <p style="margin:0 0 6px"><b style="font-size:22px">${media.toFixed(1).replace('.', ',')}%</b> <span class="dica">bolsa média concedida</span></p>
+          <p style="margin:0;font-size:13px"><span class="seta-up">▲ ${subiu}</span> aumentaram · <span class="seta-down">▼ ${desceu}</span> reduziram · ${comAnt.length - subiu - desceu} mantiveram · ${novos} sem bolsa no semestre anterior</p>
+          <h3 style="margin-top:14px">Consumo lançado por curso</h3>${cursos.map((k) => `<div class="barra"><span>${esc(k)}</span><i style="width:${porCurso[k] / maxC * 100}%;background:#2f9e44"></i><em style="min-width:80px">${moeda(porCurso[k]).replace('R$', '')}</em></div>`).join('') || '<p class="dica">Nenhuma bolsa lançada com consumo informado.</p>'}</div>
+      </div>`;
+    document.querySelectorAll('[data-st]').forEach((c) => { c.onclick = () => { E.fSt = c.dataset.st; E.fAlerta = ''; E.aba = 'solicitacoes'; desenhar(); }; });
+    document.querySelectorAll('[data-alerta]').forEach((c) => { c.onclick = () => { E.fAlerta = '1'; E.fSt = ''; E.aba = 'solicitacoes'; desenhar(); }; });
+  }
+
+  function filtrar() {
+    const b = E.busca.trim().toLowerCase();
+    return L().filter((s) => (!E.fSt || s.status === E.fSt) && (!E.fMod || s.modalidade === E.fMod) && (!E.fMot || s.tipo === E.fMot) && (!E.fAlerta || alertas(s).length)
+      && (!b || String(s.nome).toLowerCase().indexOf(b) >= 0 || String(s.mat).indexOf(b) >= 0 || String(s.curso).toLowerCase().indexOf(b) >= 0 || String(s.requerimento).indexOf(b) >= 0))
+      .sort((a, b2) => String(b2.data).localeCompare(String(a.data)) || String(a.nome).localeCompare(String(b2.nome), 'pt-BR'));
+  }
+  function solicitacoes() {
+    const F = filtrar(), motivos = Array.from(new Set(L().map((s) => s.tipo).filter(Boolean))).sort();
+    $('#area').innerHTML = `
+      <div class="filtros">
+        <input type="search" id="busca" placeholder="Nome, matrícula, curso ou requerimento" value="${esc(E.busca)}">
+        <select id="f-st"><option value="">Todos os status</option>${Object.keys(ST).map((k) => `<option value="${k}" ${E.fSt === k ? 'selected' : ''}>${ST[k]}</option>`).join('')}</select>
+        <select id="f-mod"><option value="">Todas as modalidades</option>${E.d.modalidades.map((m) => `<option value="${m}" ${E.fMod === m ? 'selected' : ''}>${MOD_NOME[m]}</option>`).join('')}</select>
+        <select id="f-mot"><option value="">Todos os motivos</option>${motivos.map((m) => `<option ${E.fMot === m ? 'selected' : ''}>${esc(m)}</option>`).join('')}</select>
+        <label style="display:flex;gap:6px;align-items:center;margin:0;font-size:13px"><input type="checkbox" id="f-alerta" ${E.fAlerta ? 'checked' : ''} style="width:auto;margin:0"> Só com alerta</label>
+        <button class="btn" id="limpar">Limpar</button><button class="btn" id="exportar">📥 Exportar</button>
+        <span class="total">${F.length} solicitação(ões) · consumo ${moeda(F.reduce((t, s) => t + (Number(s.consumo) || 0), 0))}</span>
+      </div>
+      <div class="painel"><table class="tabela"><thead><tr><th>Aluno</th><th>Modalidade · curso</th><th class="num">% anterior → atual</th><th>Motivo</th><th>Status</th><th class="num">Consumo</th><th>Lançamento</th></tr></thead>
+      <tbody>${F.map((s) => { const al = alertas(s); return `<tr class="clicavel" data-id="${esc(s.id)}">
+        <td class="nome"><b>${esc(s.nome || (s.base && s.base.nome) || s.mat)}</b><small>${esc(s.mat)}</small>${al.map((x) => `<br><span class="alerta">${esc(x)}</span>`).join('')}</td>
+        <td>${esc(MOD_NOME[s.modalidade] || s.modalidade)}<br><small class="dica">${esc(s.curso)}</small></td>
+        <td class="num">${s.pctAnt == null ? '—' : s.pctAnt + '%'} → <b>${s.pct == null ? '—' : s.pct + '%'}</b>${s.pctAnt != null && s.pct != null ? (s.pct > s.pctAnt ? ' <span class="seta-up">▲</span>' : s.pct < s.pctAnt ? ' <span class="seta-down">▼</span>' : '') : ''}</td>
+        <td><small>${esc(s.tipo)}</small></td><td><span class="selo st-${s.status}">${ST[s.status] || esc(s.status)}</span></td>
+        <td class="num">${s.consumo == null || s.consumo === '' ? '<span class="dica">—</span>' : moeda(s.consumo)}</td>
+        <td><small>${dataBR(s.dataLanc)}${s.requerimento ? '<br>req. ' + esc(s.requerimento) : ''}</small></td></tr>`; }).join('') || '<tr><td colspan="7" class="vazio">Nenhuma solicitação aqui.</td></tr>'}</tbody></table></div>`;
+    const busca = $('#busca'); busca.oninput = () => { E.busca = busca.value; const pos = busca.selectionStart; desenhar(); const x = $('#busca'); x.focus(); x.setSelectionRange(pos, pos); };
+    $('#f-st').onchange = (e) => { E.fSt = e.target.value; desenhar(); };
+    $('#f-mod').onchange = (e) => { E.fMod = e.target.value; desenhar(); };
+    $('#f-mot').onchange = (e) => { E.fMot = e.target.value; desenhar(); };
+    $('#f-alerta').onchange = (e) => { E.fAlerta = e.target.checked ? '1' : ''; desenhar(); };
+    $('#limpar').onclick = () => { Object.assign(E, { busca: '', fSt: '', fMod: '', fMot: '', fAlerta: '' }); desenhar(); };
+    $('#exportar').onclick = () => exportar(F);
+    document.querySelectorAll('tr[data-id]').forEach((tr) => { tr.onclick = () => abrir(L().filter((s) => s.id === tr.dataset.id)[0]); });
+  }
+
+  function poolTela() {
+    const rp = resumoPool(), g = E.d.gestao;
+    $('#area').innerHTML = !E.periodo ? '<div class="lembrete amarelo">Escolha ou crie um período no alto da tela.</div>' : `
+      <div class="lembrete">Pool é o valor disponível para a bolsa no período ${esc(E.periodo)}, por modalidade.${g ? '' : ' Só a coordenação altera o pool.'}</div>
+      <div class="painel"><table class="tabela pool-tab"><thead><tr><th>Modalidade</th><th class="num">Pool (R$)</th><th class="num">Lançado</th><th class="num">Comprometido</th><th class="num">Saldo</th><th class="num">Bolsas lançadas</th></tr></thead>
+      <tbody>${E.d.modalidades.map((m) => { const r = rp[m]; return `<tr><td><b>${MOD_NOME[m]}</b></td>
+        <td class="num">${g ? `<input data-pool="${m}" inputmode="decimal" value="${r.pool == null ? '' : String(r.pool).replace('.', ',')}" placeholder="0,00">` : (r.pool == null ? '—' : moeda(r.pool))}</td>
+        <td class="num">${moeda(r.lanc)}</td><td class="num">${moeda(r.comp)}</td><td class="num"><b style="color:${r.saldo == null ? 'inherit' : r.saldo < 0 ? '#d92d20' : '#1e7a38'}">${r.saldo == null ? '—' : moeda(r.saldo)}</b></td><td class="num">${r.n}</td></tr>`; }).join('')}</tbody></table>
+      ${g ? '<div class="botoes" style="padding:10px 12px"><button class="btn primario" id="salvar-pool">Salvar pool</button></div>' : ''}</div>`;
+    const b = $('#salvar-pool');
+    if (b) b.onclick = async () => {
+      const pool = {}; document.querySelectorAll('[data-pool]').forEach((i) => { pool[i.dataset.pool] = num(i.value); });
+      b.disabled = true;
+      try { const r = await Api.chamar('bolsa.pool', { periodo: E.periodo, pool }); if (!r || !r.ok) throw new Error((r && r.erro) || 'Não foi possível salvar.'); aviso('Pool salvo.', 'ok'); await carregar(); desenhar(); }
+      catch (e) { if (!e.auth) aviso(e.message, 'erro'); b.disabled = false; }
+    };
+  }
+
+  /* ---------- formulário ---------- */
+  function abrir(s) {
+    const novo = !s; s = s || { status: 'em_analise', data: hojeISO(), pagouRenov: '', modalidade: '', tipo: '' };
+    const motivos = E.d.motivos || [];
+    const motSel = motivos.filter((m) => m.tipo === s.tipo)[0];
+    const outros = s.tipo && !motSel;
+    const b = s.base || {};
+    $('#modal-corpo').innerHTML = `<h2>${novo ? 'Nova solicitação · ' + esc(E.periodo) : esc(s.nome || b.nome || s.mat)}</h2>
+      ${!novo && alertas(s).length ? `<p>${alertas(s).map((x) => `<span class="alerta">${esc(x)}</span>`).join(' ')}</p>` : ''}
+      <form id="f">
+        <div class="grade3">
+          <label>Matrícula<input name="mat" value="${esc(s.mat || '')}" ${novo ? '' : 'readonly'} required inputmode="numeric"><small class="dica" id="busca-info">${novo ? 'Nome, curso e contato vêm da base líquida.' : ''}</small></label>
+          <label>Nome<input name="nome" value="${esc(s.nome || b.nome || '')}"></label>
+          <label>Curso<input name="curso" value="${esc(s.curso || b.curso || '')}"></label>
+          <label>Celular<input name="tel" value="${esc(s.tel || b.tel || '')}"></label>
+          <label>E-mail<input name="email" value="${esc(s.email || b.email || '')}"></label>
+          <label>Modalidade<select name="modalidade"><option value="">Selecione...</option>${E.d.modalidades.map((m) => `<option value="${m}" ${s.modalidade === m ? 'selected' : ''}>${MOD_NOME[m]}</option>`).join('')}</select></label>
+        </div>
+        <div class="secao-form">Bolsa</div>
+        <div class="grade4">
+          <label>Entrega da carta<input type="date" name="data" value="${esc(s.data || '')}"></label>
+          <label>% anterior<input name="pctAnt" inputmode="decimal" value="${s.pctAnt == null ? '' : s.pctAnt}"></label>
+          <label>% atual<input name="pct" inputmode="decimal" value="${s.pct == null ? '' : s.pct}" required></label>
+          <label>Pagou a renovação?<select name="pagouRenov"><option value="">—</option><option ${s.pagouRenov === 'SIM' ? 'selected' : ''}>SIM</option><option ${s.pagouRenov === 'NÃO' ? 'selected' : ''}>NÃO</option></select></label>
+          <label>Vigência: início<input type="date" name="vigIni" value="${esc(s.vigIni || '')}"></label>
+          <label>Vigência: fim<input type="date" name="vigFim" value="${esc(s.vigFim || '')}"></label>
+          <label>Consumo no semestre (R$)<input name="consumo" inputmode="decimal" value="${s.consumo == null ? '' : String(s.consumo).replace('.', ',')}"></label>
+          <label style="display:flex;gap:6px;align-items:center;margin-top:24px"><input type="checkbox" name="recalculo" ${s.recalculo ? 'checked' : ''} style="width:auto;margin:0"> Recálculo</label>
+        </div>
+        ${s.vigTxt ? `<p class="dica" style="margin:0">Vigência na planilha: ${esc(s.vigTxt)}</p>` : ''}
+        <div class="secao-form">Justificativa</div>
+        <div class="grade2">
+          <label>Motivo (tipo)<select name="tipo"><option value="">Selecione...</option>${motivos.map((m) => `<option ${s.tipo === m.tipo ? 'selected' : ''}>${esc(m.tipo)}</option>`).join('')}${outros ? `<option selected>${esc(s.tipo)}</option>` : ''}</select></label>
+          <label id="lbl-sub" ${motSel && motSel.sub ? '' : 'hidden'}>Submotivo <small class="dica" id="sub-dica">${esc((motSel && motSel.sub) || '')}</small><input name="sub" value="${esc(s.sub || '')}"></label>
+        </div>
+        <label>Justificativa (vai no requerimento) <button type="button" class="btn mini" id="usar-padrao">Usar texto padrão do motivo</button> <button type="button" class="btn mini" id="copiar-just">Copiar</button>
+          <textarea name="descricao" rows="4">${esc(s.descricao || '')}</textarea></label>
+        <div class="secao-form">Andamento</div>
+        <div class="grade3">
+          <label>Status<select name="status">${Object.keys(ST).map((k) => `<option value="${k}" ${s.status === k ? 'selected' : ''}>${ST[k]}</option>`).join('')}</select></label>
+          <label>Data do lançamento<input type="date" name="dataLanc" value="${esc(s.dataLanc || '')}"></label>
+          <label>Nº do requerimento<input name="requerimento" value="${esc(s.requerimento || '')}"></label>
+        </div>
+        <label>Pendências<input name="pendencias" value="${esc(s.pendencias || '')}"></label>
+        <label>Observações<textarea name="obs">${esc(s.obs || '')}</textarea></label>
+        ${b.pctBase != null ? `<p class="dica">Na base líquida: bolsa permanência de ${b.pctBase}%${b.situacao ? ' · ' + esc(b.situacao) : ''}.</p>` : ''}
+        ${(s.historico || []).length ? `<p class="dica" style="margin:6px 0 0">Histórico:</p><ul class="historico">${s.historico.slice().reverse().map((h) => `<li>${ST[h.status] || esc(h.status)} · ${esc(h.quem)} · ${new Date(h.ts).toLocaleDateString('pt-BR')}</li>`).join('')}</ul>` : ''}
+        <div class="botoes">${!novo && E.d.gestao ? '<button type="button" class="btn" id="btn-excluir" style="color:var(--erro);margin-right:auto">Excluir</button>' : ''}
+          <button type="button" class="btn" data-fechar>Cancelar</button><button class="btn primario" id="btn-salvar">Salvar</button></div>
+      </form>`;
+    $('#modal').hidden = false;
+    const f = $('#f');
+    document.querySelector('[data-fechar]').onclick = fechar;
+    const textoPadrao = () => { const m = motivos.filter((x) => x.tipo === f.tipo.value)[0]; if (!m || !m.texto) return ''; return m.texto + (m.sub && f.sub.value.trim() ? '\nSubmotivo: ' + f.sub.value.trim() : ''); };
+    f.tipo.onchange = () => {
+      const m = motivos.filter((x) => x.tipo === f.tipo.value)[0];
+      $('#lbl-sub').hidden = !(m && m.sub); $('#sub-dica').textContent = (m && m.sub) || '';
+      if (!f.descricao.value.trim() || motivos.some((x) => x.texto && f.descricao.value.indexOf(x.texto) === 0)) f.descricao.value = textoPadrao();
+    };
+    f.sub.oninput = () => { if (motivos.some((x) => x.texto && f.descricao.value.indexOf(x.texto) === 0)) f.descricao.value = textoPadrao(); };
+    $('#usar-padrao').onclick = () => { const t = textoPadrao(); if (t) f.descricao.value = t; else aviso('Este motivo não tem texto padrão. Escreva a justificativa.', 'erro'); };
+    $('#copiar-just').onclick = async () => { try { await navigator.clipboard.writeText(f.descricao.value); aviso('Justificativa copiada.', 'ok'); } catch (e) { aviso('Não foi possível copiar.', 'erro'); } };
+    if (novo) {
+      let ultima = '';
+      const buscar = async () => {
+        const m = f.mat.value.replace(/\D/g, ''); if (m.length < 9 || m === ultima) return; ultima = m;
+        const ja = L().filter((x) => x.mat === m)[0];
+        if (ja) { $('#busca-info').textContent = 'Este aluno já tem solicitação neste período. Abrindo...'; setTimeout(() => abrir(ja), 600); return; }
+        $('#busca-info').textContent = 'Procurando na base líquida...';
+        try {
+          const r = await Api.chamar('bolsa.buscar_aluno', { matricula: m });
+          if (r && r.ok && !r.naoEncontrado) {
+            ['nome', 'curso', 'tel', 'email'].forEach((k) => { if (!f[k].value) f[k].value = r[k] || ''; });
+            if (!f.modalidade.value && r.modalidade) f.modalidade.value = r.modalidade;
+            if (f.pctAnt.value === '' && r.pctBase != null) f.pctAnt.value = r.pctBase;
+            $('#busca-info').textContent = '✓ Encontrado na base líquida.' + (r.inadimplente ? ' Atenção: inadimplente.' : '');
+          } else $('#busca-info').textContent = 'Não encontrei na base líquida. Preencha os dados.';
+        } catch (e) { if (!e.auth) $('#busca-info').textContent = 'Não foi possível procurar agora.'; }
+      };
+      f.mat.addEventListener('blur', buscar); f.mat.addEventListener('input', () => { if (f.mat.value.replace(/\D/g, '').length >= 12) buscar(); });
+    }
+    const bx = $('#btn-excluir');
+    if (bx) bx.onclick = async () => {
+      if (!confirm('Excluir esta solicitação? Não dá para desfazer.')) return;
+      try { const r = await Api.chamar('bolsa.excluir', { id: s.id }); if (!r || !r.ok) throw new Error((r && r.erro) || 'Não foi possível excluir.'); aviso('Solicitação excluída.', 'ok'); fechar(); await carregar(); desenhar(); }
+      catch (e) { if (!e.auth) aviso(e.message, 'erro'); }
+    };
+    f.onsubmit = async (ev) => {
+      ev.preventDefault();
+      const registro = { id: novo ? '' : s.id, mat: f.mat.value, nome: f.nome.value.trim(), curso: f.curso.value.trim(), tel: f.tel.value.trim(), email: f.email.value.trim(), modalidade: f.modalidade.value,
+        data: f.data.value, pctAnt: f.pctAnt.value, pct: f.pct.value, pagouRenov: f.pagouRenov.value, vigIni: f.vigIni.value, vigFim: f.vigFim.value, vigTxt: s.vigTxt || '',
+        consumo: num(f.consumo.value), recalculo: f.recalculo.checked, tipo: f.tipo.value, sub: f.sub.value.trim(), descricao: f.descricao.value.trim(),
+        status: f.status.value, dataLanc: f.dataLanc.value, requerimento: f.requerimento.value.trim(), pendencias: f.pendencias.value.trim(), obs: f.obs.value.trim() };
+      const bt = $('#btn-salvar'); bt.disabled = true; bt.textContent = 'Salvando...';
+      try {
+        const r = await Api.chamar('bolsa.salvar', { periodo: E.periodo, registro });
+        if (!r || !r.ok) throw new Error((r && r.erro) || 'Não foi possível salvar.');
+        aviso('Solicitação salva.', 'ok'); fechar(); await carregar(); desenhar();
+      } catch (e) { if (!e.auth) aviso(e.message, 'erro'); bt.disabled = false; bt.textContent = 'Salvar'; }
+    };
+  }
+  function fechar() { $('#modal').hidden = true; $('#modal-corpo').innerHTML = ''; }
+
+  function exportar(F) {
+    const cel = (v) => { const t = String(v == null ? '' : v); return /[;"\n]/.test(t) ? '"' + t.replace(/"/g, '""') + '"' : t; };
+    const cab = ['Período', 'Data da carta', 'Modalidade', 'Matrícula', 'Nome', 'Curso', 'Celular', 'E-mail', '% anterior', 'Pagou renovação', '% atual', 'Vigência', 'Motivo', 'Justificativa', 'Status', 'Data do lançamento', 'Requerimento', 'Recálculo', 'Consumo', 'Pendências', 'Alertas'];
+    const linhas = F.map((s) => [s.periodo, dataBR(s.data), MOD_NOME[s.modalidade] || s.modalidade, s.mat, s.nome, s.curso, s.tel, s.email, s.pctAnt, s.pagouRenov, s.pct,
+      s.vigIni ? dataBR(s.vigIni) + ' - ' + dataBR(s.vigFim) : s.vigTxt, s.tipo, s.descricao, ST[s.status] || s.status, dataBR(s.dataLanc), s.requerimento, s.recalculo ? 'SIM' : '',
+      s.consumo == null ? '' : String(s.consumo).replace('.', ','), s.pendencias, alertas(s).join(' | ')]);
+    const csv = '﻿' + [cab].concat(linhas).map((l) => l.map(cel).join(';')).join('\r\n');
+    const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
+    a.download = 'bolsa_permanencia_' + E.periodo + '_' + hojeISO() + '.csv'; document.body.appendChild(a); a.click(); a.remove();
+  }
+
+  /* ---------- importação (Central de Bases) ---------- */
+  const norm = (t) => String(t == null ? '' : t).normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/ /g, ' ').trim().toUpperCase().replace(/\s+/g, ' ');
+  function isoDe(v) {
+    if (v == null || v === '') return '';
+    if (typeof v === 'number' && v > 20000 && v < 80000) { const d = new Date(Math.round((v - 25569) * 864e5)); return d.toISOString().slice(0, 10); }
+    const t = String(v).trim(); let m = t.match(/^(\d{4})-(\d{2})-(\d{2})/); if (m) return m[0];
+    m = t.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/); if (m) return `${m[3]}-${('0' + m[2]).slice(-2)}-${('0' + m[1]).slice(-2)}`;
+    return '';
+  }
+  function statusDe(o) {
+    const lanc = norm(o.lanc), sol = norm(o.sol), obs = norm(o.obs), bl = norm(o.bolsaLancada);
+    const t = [lanc, obs].join(' ');
+    if (/CONFLITO/.test(t)) return 'conflito';
+    if (/SEM SALDO/.test(t)) return 'sem_saldo';
+    if (/LANCADA/.test(t) || bl === 'SIM') return 'lancada';
+    if (/PROCESSAMENTO/.test(t)) return 'em_processamento';
+    if (sol === 'INDEFERIDO') return 'indeferido';
+    if (sol === 'DEFERIDO') return 'deferido';
+    return 'em_analise';
+  }
+  function converter(linhas) {
+    const iCab = linhas.findIndex((l) => l.some((c) => norm(c) === 'MATRICULA') && l.some((c) => /PERCENTUAL/.test(norm(c))));
+    if (iCab < 0) return null;
+    const cab = linhas[iCab].map(norm);
+    const col = (...nomes) => { for (const n of nomes) { const i = cab.indexOf(n); if (i >= 0) return i; } return -1; };
+    const C = { data: col('DATA ENT. CARTA', 'DATA DA CARTA'), mod: col('MODALIDADE'), mat: col('MATRICULA'), nome: col('NOME'), curso: col('CURSO'), tel: col('TEL', 'TELEFONE'), email: col('EMAIL', 'E-MAIL'),
+      semAnt: col('BOLSA SEM ANT'), pctAnt: col('PERCENTUAL ANTERIOR', 'PERCENTUAL'), pagou: col('PAGOU RENOVACAO'), pct: col('PERCENTUAL ATUAL'), vig: col('VINGENCIA', 'VIGENCIA'),
+      tipo: col('TIPO'), desc: col('DESCRICAO'), bolsaLancada: col('BOLSA LANCADA?', 'BOLSA LANCADA RENOVACAO'), lanc: col('STATUS LANCAMENTO'), sol: col('STATUS DA SOLICITACAO'), obs: col('STATUS/OBSERVACOES'),
+      dataLanc: col('DATA DO LANCAMENTO'), recalc: col('RECALCULO'), consumo: col('CONSUMO GAB', 'CONSUMO'), req: col('NUMERO REQUERIMENTO'), pend: col('PENDENCIAS') };
+    const v = (l, k) => (C[k] < 0 ? '' : l[C[k]]);
+    const out = [];
+    linhas.slice(iCab + 1).forEach((l) => {
+      const mat = String(v(l, 'mat') == null ? '' : v(l, 'mat')).replace(/\.0$/, '').replace(/\D/g, '');
+      if (mat.length < 9) return;
+      const vig = String(v(l, 'vig') || ''); const vm = vig.match(/(\d{1,2}\/\d{1,2}\/\d{4})\s*-\s*(\d{1,2}\/\d{1,2}\/\d{4})/);
+      const semAnt = norm(v(l, 'semAnt'));
+      let pctAnt = v(l, 'pctAnt'); if (semAnt === 'NAO' && (pctAnt === '' || pctAnt == null)) pctAnt = 0;
+      const desc = String(v(l, 'desc') || '');
+      out.push({ mat, data: isoDe(v(l, 'data')), modalidade: String(v(l, 'mod') || ''), nome: String(v(l, 'nome') || '').trim(), curso: String(v(l, 'curso') || '').trim(),
+        tel: String(v(l, 'tel') || '').replace(/\.0$/, ''), email: String(v(l, 'email') || '').trim(), pctAnt: pctAnt === '' ? '' : pctAnt, pagouRenov: String(v(l, 'pagou') || ''),
+        pct: v(l, 'pct'), vigIni: vm ? isoDe(vm[1]) : '', vigFim: vm ? isoDe(vm[2]) : '', vigTxt: vm ? '' : vig.trim(), tipo: String(v(l, 'tipo') || '').trim(),
+        descricao: /^=|^-$/.test(desc.trim()) ? '' : desc.trim(),
+        status: statusDe({ lanc: v(l, 'lanc'), sol: v(l, 'sol'), obs: v(l, 'obs'), bolsaLancada: v(l, 'bolsaLancada') }), dataLanc: isoDe(v(l, 'dataLanc')),
+        requerimento: String(v(l, 'req') || '').replace(/\.0$/, '').trim(), recalculo: norm(v(l, 'recalc')) === 'SIM', consumo: v(l, 'consumo') === '' || v(l, 'consumo') == null ? '' : num(v(l, 'consumo')),
+        pendencias: String(v(l, 'pend') || '').trim() });
+    });
+    // justificativa padrão quando a planilha só tinha a fórmula
+    const mot = {}; ((E.d && E.d.motivos) || []).forEach((m) => { mot[norm(m.tipo)] = m.texto; });
+    out.forEach((o) => { if (!o.descricao && mot[norm(o.tipo)]) o.descricao = mot[norm(o.tipo)]; });
+    return out;
+  }
+  async function carregarXlsx() {
+    if (window.XLSX) return;
+    await new Promise((ok, falha) => { const s = document.createElement('script'); s.src = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js'; s.onload = ok; s.onerror = () => falha(new Error('Não foi possível carregar o leitor de planilhas. Confira a internet.')); document.head.appendChild(s); });
+  }
+  function telaImportar() {
+    $('#abas').hidden = true; $('#btn-nova').hidden = true; $('#sel-periodo').hidden = true; document.querySelector('.direita label').hidden = true;
+    $('#sub').textContent = 'Importar a planilha de acompanhamento da bolsa';
+    $('#area').innerHTML = `<div class="bloco" style="max-width:760px">
+      <h3>Importar planilha de acompanhamento</h3>
+      <p class="dica">Use a planilha de acompanhamento da Bolsa Direção/Permanência (uma linha por aluno, com MATRICULA, PERCENTUAL ATUAL, TIPO, STATUS...). Escolha a aba do semestre e confira o período. Quem já está no sistema é atualizado; nada que a equipe preencheu é apagado.</p>
+      <label>Arquivo (.xlsx)<input type="file" id="arq" accept=".xlsx,.xls,.csv"></label>
+      <div class="grade2"><label>Aba<select id="aba" disabled></select></label><label>Período (ex.: 26.3)<input id="periodo" placeholder="26.3"></label></div>
+      <div id="previa"></div>
+      <div class="botoes"><button class="btn primario" id="importar" disabled>Importar</button></div></div>`;
+    let wb = null, conv = null;
+    const previa = () => {
+      const ws = wb.Sheets[$('#aba').value];
+      const linhas = XLSX.utils.sheet_to_json(ws, { header: 1, raw: true, defval: '' });
+      conv = converter(linhas);
+      const m = $('#aba').value.match(/(\d{2}\.\d)/); if (m && !$('#periodo').value) $('#periodo').value = m[1];
+      if (!conv) { $('#previa').innerHTML = '<div class="lembrete amarelo">Esta aba não tem as colunas MATRICULA e PERCENTUAL. Escolha a aba das solicitações.</div>'; $('#importar').disabled = true; return; }
+      const c = {}; conv.forEach((o) => { c[o.status] = (c[o.status] || 0) + 1; });
+      $('#previa').innerHTML = `<div class="lembrete"><b>${conv.length}</b> aluno(s) encontrados: ${Object.keys(c).map((k) => `${c[k]} ${ST[k].toLowerCase()}`).join(', ')}. Consumo informado em ${conv.filter((o) => o.consumo !== '').length}.</div>`;
+      $('#importar').disabled = !conv.length;
+    };
+    $('#arq').onchange = async (e) => {
+      const a = e.target.files[0]; if (!a) return;
+      try {
+        await carregarXlsx();
+        wb = XLSX.read(await a.arrayBuffer(), { type: 'array', cellDates: false });
+        const abas = wb.SheetNames;
+        const melhor = abas.filter((n) => { const l = XLSX.utils.sheet_to_json(wb.Sheets[n], { header: 1, raw: true, defval: '' }).slice(0, 5); return l.some((r) => r.some((x) => norm(x) === 'PERCENTUAL ATUAL')) && /\d{2}\.\d/.test(n); }).pop() || abas[0];
+        $('#aba').innerHTML = abas.map((n) => `<option ${n === melhor ? 'selected' : ''}>${esc(n)}</option>`).join(''); $('#aba').disabled = false;
+        $('#periodo').value = ''; previa();
+      } catch (er) { aviso(er.message, 'erro'); }
+    };
+    $('#aba').onchange = () => { $('#periodo').value = ''; previa(); };
+    $('#importar').onclick = async () => {
+      const p = $('#periodo').value.trim();
+      if (!/^\d{2}\.\d$/.test(p)) { aviso('Informe o período no formato 26.3.', 'erro'); return; }
+      const b = $('#importar'); b.disabled = true; b.textContent = 'Importando...';
+      try {
+        let novas = 0, at = 0;
+        for (let i = 0; i < conv.length; i += 300) {
+          const r = await Api.chamar('bolsa.importar', { periodo: p, respostas: conv.slice(i, i + 300) }, { timeout: 120000 });
+          if (!r || !r.ok) throw new Error((r && r.erro) || 'Falha ao importar.');
+          novas += r.novas; at += r.atualizadas;
+        }
+        aviso(`Importação concluída (${p}): ${novas} nova(s) e ${at} atualizada(s).`, 'ok');
+        b.textContent = 'Importado ✓';
+      } catch (er) { if (!er.auth) aviso(er.message, 'erro'); b.disabled = false; b.textContent = 'Importar'; }
+    };
+  }
+
+  document.addEventListener('DOMContentLoaded', async () => {
+    const s = Api.Sessao.ler();
+    if (!s) { if (window.App) window.App.mostrarLogin('Entre novamente.'); return; }
+    if (MODO === 'importar') { await carregar(); telaImportar(); return; }
+    document.querySelectorAll('#abas button').forEach((b) => { b.onclick = () => { E.aba = b.dataset.aba; desenhar(); }; });
+    $('#sel-periodo').onchange = async (e) => {
+      let p = e.target.value;
+      if (p === '__novo') {
+        p = (prompt('Novo período (ex.: 27.1):') || '').trim();
+        if (!/^\d{2}\.\d$/.test(p)) { if (p) aviso('Use o formato 27.1.', 'erro'); desenhar(); return; }
+        if (E.d.periodos.indexOf(p) < 0) E.d.periodos.unshift(p);
+      }
+      E.periodo = p; await carregar(); if (E.d.periodos.indexOf(p) < 0) { E.d.periodos.unshift(p); E.periodo = p; E.d.periodo = p; } desenhar();
+    };
+    $('#btn-nova').onclick = () => { if (!E.periodo) { aviso('Crie um período antes (no seletor de período).', 'erro'); return; } abrir(null); };
+    $('#modal').onclick = (ev) => { if (ev.target.id === 'modal') fechar(); };
+    await carregar(); desenhar();
+  });
+  window.TelaBolsa = { estado: E, converter, desenhar, abrir };
+})();
+</script>
+</body>
+</html>

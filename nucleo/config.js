@@ -2,7 +2,7 @@
 window.JORNADA = {
   nome: 'Jornada do Aluno',
   subtitulo: 'Secretaria Acadêmica VR',
-  versao: '1.7.1',
+  versao: '1.8.0',
   // URL da implantação do Apps Script (termina em /exec). Preencher depois de publicar o backend.
   gasUrl: 'https://script.google.com/macros/s/AKfycby-J1CZXGCFVRALueDrP_GS2cVaSN-KuZB5y5RI3llchFtcsPaiZcrE5yMxjEBCzdt1/exec',
   sistemas: [
@@ -14,6 +14,7 @@ window.JORNADA = {
     { id: 'financiamentos', nome: 'Financiamentos', icone: '🏦', descricao: 'ProUni, FIES, Pravaler e Ficou Fácil: aproveitamento e termos', etapa: 6, pronto: true, pagina: 'modulos/acompanhamento/index.html?sistema=financiamentos' },
     { id: 'nps',         nome: 'NPS',         icone: '⭐', descricao: 'Base do Medallia: promotores, neutros e detratores', etapa: 6, pronto: true, pagina: 'modulos/acompanhamento/index.html?sistema=nps' },
     { id: 'apoio',       nome: 'Apoio às Avaliações', icone: '🧩', descricao: 'Orientações do NAAP/NAE para avaliações e uso da plataforma', etapa: 8, pronto: true, pagina: 'modulos/apoio/index.html' },
+    { id: 'bolsa',       nome: 'Bolsa Permanência', icone: '🤝', descricao: 'Solicitações, percentuais, justificativas, lançamento e saldo do pool por modalidade', etapa: 10, pronto: true, pagina: 'modulos/bolsa/index.html' },
     { id: 'risco',       nome: 'Alunos em risco', icone: '🚨', descricao: 'Quem acumula sinais em vários sistemas: dívida, evasão, provas, estágio, financiamento e renovação', etapa: 9, pronto: true, pagina: 'modulos/risco/index.html' },
     { id: 'evasao',      nome: 'Evasão',      icone: '🚪', descricao: 'Matriculados (cancelados, trancados, intenção de saída) e evadidos da Renovação, por período', etapa: 8, pronto: true, pagina: 'modulos/evasao/index.html' },
     { id: 'formandos',   nome: 'Formandos',   icone: '🎓', descricao: 'Prováveis formandos e colação de grau', etapa: 2, pronto: true },

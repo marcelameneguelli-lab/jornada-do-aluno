@@ -46,13 +46,14 @@ const PLANILHAS = {
   estagio:        '',
   financeiro:     '',
   apoio:          '', // Apoio às Avaliações (NAAP/NAE); vazio = planilha Central
-  risco:          '', // Alunos em risco: só lê os outros sistemas
+  risco:          '',
+  bolsa:          '', // Bolsa Permanência: solicitações e pool, no armazenamento do Engajamento // Alunos em risco: só lê os outros sistemas
   evasao:         '', // Evasão: registros no armazenamento do Engajamento (EvasaoData_<base>) e status na Renovação
 };
 
 // Sistemas do CRM. Provas, Estágio e Financeiro leem a base do Engajamento e gravam na Central.
 // Financiamentos (ProUni, FIES, Pravaler, Ficou Fácil) e NPS (Medallia) são novos.
-const SISTEMAS = ['renovacao', 'engajamento', 'provas', 'estagio', 'financeiro', 'financiamentos', 'nps', 'formandos', 'apoio', 'evasao', 'risco'];
+const SISTEMAS = ['renovacao', 'engajamento', 'provas', 'estagio', 'financeiro', 'financiamentos', 'nps', 'formandos', 'apoio', 'evasao', 'risco', 'bolsa'];
 
 // Perfis. "gestao" libera exportar e ver a produtividade de todos. "bases" libera a Central de Bases (importar).
 const PERFIS = {
@@ -63,7 +64,7 @@ const PERFIS = {
 };
 // Ações de importação da Central de Bases: valem para quem tem "bases", mesmo sem "gestao".
 const ACOES_BASES = ['nucleo.bases_resumo', 'engajamento.salvarBase', 'engajamento.publicarBase', 'engajamento.importarCSVSharePoint',
-  'nps.importar', 'estagio.importar'];
+  'nps.importar', 'estagio.importar', 'bolsa.importar'];
 const ACOES_BASES_RENOVACAO = ['importar_alunos', 'importar_drive', 'importar_drive_single'];
 function podeBases_(eu) { return !!(eu && (PERFIS[eu.perfil] || PERFIS.atendente).bases); }
 
