@@ -46,12 +46,13 @@ const PLANILHAS = {
   estagio:        '',
   financeiro:     '',
   apoio:          '', // Apoio às Avaliações (NAAP/NAE); vazio = planilha Central
+  risco:          '', // Alunos em risco: só lê os outros sistemas
   evasao:         '', // Evasão: registros no armazenamento do Engajamento (EvasaoData_<base>) e status na Renovação
 };
 
 // Sistemas do CRM. Provas, Estágio e Financeiro leem a base do Engajamento e gravam na Central.
 // Financiamentos (ProUni, FIES, Pravaler, Ficou Fácil) e NPS (Medallia) são novos.
-const SISTEMAS = ['renovacao', 'engajamento', 'provas', 'estagio', 'financeiro', 'financiamentos', 'nps', 'formandos', 'apoio', 'evasao'];
+const SISTEMAS = ['renovacao', 'engajamento', 'provas', 'estagio', 'financeiro', 'financiamentos', 'nps', 'formandos', 'apoio', 'evasao', 'risco'];
 
 // Perfis. "gestao" libera exportar e ver a produtividade de todos. "bases" libera a Central de Bases (importar).
 const PERFIS = {
