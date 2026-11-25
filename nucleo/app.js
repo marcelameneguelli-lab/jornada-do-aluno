@@ -165,7 +165,8 @@
   /** Calendário, Tarefas e Tutoriais: as telas do EngajaVR em modo ferramenta, para toda a equipe. */
   function abrirFerramenta(area, f) {
     document.body.classList.add('com-sistema');
-    area.innerHTML = `<iframe class="moldura-sistema" title="${esc(f.nome)}" src="modulos/engajamento/index.html?ferramenta=${f.id}&v=${JORNADA.versao}"></iframe>`;
+    const src = f.pagina ? `${f.pagina}?v=${JORNADA.versao}` : `modulos/engajamento/index.html?ferramenta=${f.id}&v=${JORNADA.versao}`;
+    area.innerHTML = `<iframe class="moldura-sistema" title="${esc(f.nome)}" src="${src}"></iframe>`;
   }
 
   function emMigracao(area, sis) {

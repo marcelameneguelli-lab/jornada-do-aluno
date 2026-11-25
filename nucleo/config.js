@@ -2,7 +2,7 @@
 window.JORNADA = {
   nome: 'Jornada do Aluno',
   subtitulo: 'Secretaria Acadêmica VR',
-  versao: '1.7.0',
+  versao: '1.7.1',
   // URL da implantação do Apps Script (termina em /exec). Preencher depois de publicar o backend.
   gasUrl: 'https://script.google.com/macros/s/AKfycby-J1CZXGCFVRALueDrP_GS2cVaSN-KuZB5y5RI3llchFtcsPaiZcrE5yMxjEBCzdt1/exec',
   sistemas: [
@@ -23,5 +23,6 @@ window.JORNADA = {
     { id: 'calendario', nome: 'Calendário', icone: '🗓️', descricao: 'Eventos e datas importantes da equipe' },
     { id: 'tarefas',    nome: 'Tarefas',    icone: '✅', descricao: 'Tarefas atribuídas, prazos e andamento' },
     { id: 'tutoriais',  nome: 'Tutoriais',  icone: '📚', descricao: 'Materiais de apoio e modelos' },
+    { id: 'respostas',  nome: 'Central de Respostas', icone: '💬', descricao: 'Modelos de mensagem para o WhatsApp, com busca pelo que o aluno escreveu', pagina: 'modulos/respostas/index.html' },
   ],
 };

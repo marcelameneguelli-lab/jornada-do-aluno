@@ -1,0 +1,1271 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Central de Respostas · Jornada do Aluno</title>
+<link rel="icon" type="image/png" href="../../icones/icon-64.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@600;700;800&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --azul: #003B71;
+    --azul-claro: #0F5FA6;
+    --azul-suave: #E8F0F8;
+    --verde: #8DC63F;
+    --verde-escuro: #6FA62E;
+    --bg: #F5F6F8;
+    --surface: #FFFFFF;
+    --borda: #E2E6EC;
+    --texto: #1B2433;
+    --texto-mudo: #647088;
+    --aviso-bg: #FFF6E0;
+    --aviso-texto: #8A5A00;
+    --sombra: 0 1px 2px rgba(15,30,60,.05), 0 8px 24px rgba(15,30,60,.06);
+    --raio: 14px;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    font-family:'Inter',system-ui,sans-serif;
+    background:var(--bg);
+    color:var(--texto);
+    min-height:100vh;
+  }
+  .mono{font-family:'IBM Plex Mono',monospace;}
+  h1,h2,h3{font-family:'Sora',sans-serif;margin:0;}
+
+  /* ---------- HEADER ---------- */
+  header{
+    background:linear-gradient(135deg, var(--azul) 0%, #002952 100%);
+    color:#fff;
+    padding:16px 24px;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:16px;
+    flex-wrap:wrap;
+  }
+  .marca{display:flex;align-items:center;gap:14px;}
+  .marca-icone{
+    width:42px;height:42px;border-radius:11px;
+    background:var(--verde);
+    display:flex;align-items:center;justify-content:center;
+    flex-shrink:0;
+  }
+  .marca-icone svg{width:24px;height:24px;stroke:#00210f;}
+  .marca h1{font-size:19px;font-weight:700;letter-spacing:-.01em;}
+  .marca p{margin:2px 0 0;font-size:13px;color:#BFD6EC;font-weight:500;}
+  .indicador-sync{display:flex;align-items:center;gap:6px;font-size:11px !important;color:#8FB4D9 !important;margin-top:4px !important;}
+  .ponto-vivo{width:6px;height:6px;border-radius:50%;background:var(--verde);flex-shrink:0;animation:pulsar 2s ease-in-out infinite;}
+  @keyframes pulsar{0%,100%{opacity:1;}50%{opacity:.3;}}
+  .header-stats{display:flex;gap:22px;}
+  .header-stat{text-align:right;}
+  .header-stat .num{font-family:'Sora',sans-serif;font-size:20px;font-weight:700;color:var(--verde);line-height:1;}
+  .header-stat .lbl{font-size:11px;color:#9FBBD8;margin-top:3px;text-transform:uppercase;letter-spacing:.04em;}
+
+  /* ---------- LAYOUT ---------- */
+  .shell{display:flex;max-width:1320px;margin:0 auto;align-items:flex-start;}
+  nav.sidebar{
+    width:230px;flex-shrink:0;
+    padding:22px 14px;
+    position:sticky;top:0;
+    max-height:100vh;
+    overflow-y:auto;
+  }
+  .cat-item{
+    display:flex;align-items:center;gap:11px;
+    padding:10px 12px;border-radius:10px;
+    cursor:pointer;margin-bottom:3px;
+    color:var(--texto-mudo);font-weight:600;font-size:14px;
+    transition:background .15s, color .15s;
+    border:1px solid transparent;
+  }
+  .cat-item:hover{background:var(--surface);}
+  .cat-item.ativo{background:var(--azul-suave);color:var(--azul);border-color:#CFE0F2;}
+  .cat-item svg{width:18px;height:18px;flex-shrink:0;stroke:currentColor;fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round;}
+  .cat-item .qtd{margin-left:auto;font-size:11px;font-family:'IBM Plex Mono',monospace;color:var(--texto-mudo);}
+  .sidebar-botao{
+    width:100%;margin-top:14px;padding:11px;border-radius:10px;
+    background:var(--verde);color:#00210f;font-weight:700;font-size:13.5px;
+    border:none;cursor:pointer;font-family:inherit;
+  }
+  .sidebar-botao:hover{background:var(--verde-escuro);color:#fff;}
+
+  main{flex:1;min-width:0;padding:22px 24px 60px;}
+
+  /* ---------- BUSCA ---------- */
+  .busca-painel{
+    background:var(--surface);border:1px solid var(--borda);border-radius:var(--raio);
+    padding:18px 20px;box-shadow:var(--sombra);margin-bottom:18px;
+  }
+  .busca-painel label{font-size:13px;font-weight:700;color:var(--azul);display:block;margin-bottom:8px;}
+  .busca-painel textarea{
+    width:100%;min-height:64px;resize:vertical;
+    border:1.5px solid var(--borda);border-radius:10px;
+    padding:11px 13px;font-family:inherit;font-size:14.5px;color:var(--texto);
+    transition:border-color .15s;
+  }
+  .busca-painel textarea:focus{outline:none;border-color:var(--azul-claro);}
+  .busca-rodape{display:flex;justify-content:space-between;align-items:center;margin-top:8px;}
+  .busca-dica{font-size:12px;color:var(--texto-mudo);}
+  .limpar-busca{font-size:12.5px;color:var(--azul-claro);font-weight:600;cursor:pointer;background:none;border:none;font-family:inherit;}
+
+  .lista-cabecalho{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:12px;}
+  .lista-cabecalho h2{font-size:16px;color:var(--azul);}
+  .lista-cabecalho .contagem{font-size:12.5px;color:var(--texto-mudo);font-family:'IBM Plex Mono',monospace;}
+
+  /* ---------- CARDS ---------- */
+  .grade{display:grid;grid-template-columns:repeat(auto-fill, minmax(300px,1fr));gap:13px;}
+  .card{
+    background:var(--surface);border:1px solid var(--borda);border-radius:12px;
+    padding:16px 17px;box-shadow:var(--sombra);
+    display:flex;flex-direction:column;gap:9px;
+    transition:transform .12s, box-shadow .12s;
+  }
+  .card.destaque{border-color:var(--verde);}
+  .card-topo{display:flex;justify-content:space-between;align-items:flex-start;gap:8px;}
+  .card-titulo{font-size:14.5px;font-weight:700;color:var(--texto);line-height:1.3;}
+  .card-tag{
+    font-size:10.5px;font-weight:700;color:var(--azul);background:var(--azul-suave);
+    padding:3px 8px;border-radius:6px;white-space:nowrap;text-transform:uppercase;letter-spacing:.03em;
+    flex-shrink:0;
+  }
+  .card-prev{font-size:12.8px;color:var(--texto-mudo);line-height:1.5;
+    display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;}
+  .barra-match{height:4px;border-radius:3px;background:#EDF1F6;overflow:hidden;margin-top:2px;}
+  .barra-match-fill{height:100%;background:var(--verde);border-radius:3px;transition:width .25s;}
+  .card-rodape{display:flex;justify-content:space-between;align-items:center;margin-top:auto;padding-top:4px;}
+  .card-usos{font-size:11px;color:var(--texto-mudo);font-family:'IBM Plex Mono',monospace;}
+  .card-usar{
+    background:var(--azul);color:#fff;border:none;border-radius:8px;
+    padding:7px 13px;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit;
+  }
+  .card-usar:hover{background:var(--azul-claro);}
+  .card-acoes{display:flex;gap:6px;align-items:center;}
+  .icon-btn{
+    width:28px;height:28px;border-radius:7px;border:1px solid var(--borda);
+    background:var(--surface);display:flex;align-items:center;justify-content:center;
+    cursor:pointer;color:var(--texto-mudo);flex-shrink:0;
+  }
+  .icon-btn:hover{background:var(--azul-suave);color:var(--azul);border-color:#CFE0F2;}
+  .icon-btn.perigo:hover{background:#FFEAE7;color:#A33A2C;border-color:#F3C4BC;}
+  .icon-btn svg{width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
+  .vazio{padding:50px 20px;text-align:center;color:var(--texto-mudo);}
+  .vazio b{display:block;color:var(--texto);font-size:15px;margin-bottom:6px;}
+
+  /* ---------- EDITOR (drawer) ---------- */
+  .fundo-editor{
+    position:fixed;inset:0;background:rgba(10,20,40,.45);
+    display:none;align-items:flex-start;justify-content:center;
+    padding:40px 16px;overflow-y:auto;z-index:50;
+  }
+  .fundo-editor.aberto{display:flex;}
+  .editor{
+    background:var(--surface);border-radius:16px;max-width:560px;width:100%;
+    padding:24px 26px 26px;box-shadow:0 20px 60px rgba(0,0,0,.25);
+  }
+  .editor-topo{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;margin-bottom:4px;}
+  .editor-topo h3{font-size:17px;color:var(--azul);}
+  .editor-fechar{background:none;border:none;font-size:20px;color:var(--texto-mudo);cursor:pointer;line-height:1;padding:2px;}
+  .editor-categoria{font-size:12px;color:var(--texto-mudo);margin-bottom:16px;}
+  .campo{margin-bottom:12px;}
+  .campo label{display:block;font-size:12.5px;font-weight:700;color:var(--texto);margin-bottom:5px;}
+  .campo input{
+    width:100%;border:1.5px solid var(--borda);border-radius:8px;padding:9px 11px;
+    font-family:inherit;font-size:13.5px;
+  }
+  .campo input:focus{outline:none;border-color:var(--azul-claro);}
+  .preview-box{
+    background:var(--bg);border:1px solid var(--borda);border-radius:10px;
+    padding:13px 14px;font-size:13.5px;line-height:1.6;white-space:pre-wrap;
+    max-height:280px;overflow-y:auto;margin-top:14px;color:var(--texto);
+  }
+  .preview-lbl{font-size:11.5px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--texto-mudo);margin:16px 0 7px;}
+  .acoes-editor{display:flex;gap:9px;margin-top:18px;flex-wrap:wrap;}
+  .acoes-editor button{
+    flex:1;min-width:140px;padding:11px;border-radius:9px;font-weight:700;font-size:13.5px;
+    cursor:pointer;border:1.5px solid transparent;font-family:inherit;
+  }
+  .btn-copiar{background:var(--surface);border-color:var(--azul);color:var(--azul);}
+  .btn-copiar:hover{background:var(--azul-suave);}
+  .btn-whats{background:var(--verde);color:#00210f;}
+  .btn-whats:hover{background:var(--verde-escuro);color:#fff;}
+  .confirma{font-size:12px;color:var(--verde-escuro);font-weight:700;margin-top:8px;height:14px;}
+
+  /* ---------- NOVO MODELO ---------- */
+  .campo textarea.texto-modelo{
+    width:100%;min-height:140px;border:1.5px solid var(--borda);border-radius:8px;
+    padding:10px 12px;font-family:inherit;font-size:13.5px;resize:vertical;
+  }
+  .campo select{
+    width:100%;border:1.5px solid var(--borda);border-radius:8px;padding:9px 11px;
+    font-family:inherit;font-size:13.5px;background:#fff;
+  }
+  .aviso-compartilhado{
+    background:var(--aviso-bg);color:var(--aviso-texto);font-size:12px;border-radius:8px;
+    padding:9px 11px;margin-bottom:14px;line-height:1.5;
+  }
+
+  /* ---------- IA ---------- */
+  .botao-ia{
+    width:100%;margin-top:12px;padding:11px;border-radius:10px;
+    background:linear-gradient(135deg, var(--azul) 0%, var(--azul-claro) 100%);
+    color:#fff;font-weight:700;font-size:13.5px;border:none;cursor:pointer;font-family:inherit;
+  }
+  .botao-ia:hover{filter:brightness(1.08);}
+  .nota-ia{font-size:11px;color:var(--texto-mudo);text-align:center;margin-top:6px;}
+  .badge-ia{
+    display:inline-flex;align-items:center;gap:5px;
+    background:var(--azul-suave);color:var(--azul);font-size:11px;font-weight:700;
+    padding:4px 9px;border-radius:7px;text-transform:uppercase;letter-spacing:.03em;
+  }
+  .linha-selects{display:flex;gap:10px;}
+  .linha-selects .campo{flex:1;}
+  .texto-ia{
+    width:100%;min-height:160px;border:1.5px solid var(--borda);border-radius:10px;
+    padding:13px 14px;font-family:inherit;font-size:13.5px;line-height:1.6;resize:vertical;
+    color:var(--texto);background:var(--bg);
+  }
+  .texto-ia:focus{outline:none;border-color:var(--azul-claro);background:#fff;}
+  .ia-status{font-size:12.5px;color:var(--texto-mudo);margin:10px 0;min-height:16px;display:flex;align-items:center;gap:8px;}
+  .spinner{
+    width:13px;height:13px;border-radius:50%;border:2px solid var(--borda);border-top-color:var(--azul-claro);
+    animation:girar .7s linear infinite;flex-shrink:0;
+  }
+  @keyframes girar{to{transform:rotate(360deg);}}
+  .btn-regenerar{background:var(--surface);border:1.5px solid var(--azul);color:var(--azul);}
+  .btn-regenerar:hover{background:var(--azul-suave);}
+  .aviso-revisar{
+    background:#FFF1F0;color:#A33A2C;font-size:12px;border-radius:8px;
+    padding:9px 11px;margin-top:14px;line-height:1.5;
+  }
+
+  @media (max-width:760px){
+    .shell{flex-direction:column;}
+    nav.sidebar{
+      width:100%;height:auto;position:relative;
+      display:flex;overflow-x:auto;padding:14px 16px;gap:8px;
+    }
+    .cat-item{flex-shrink:0;margin-bottom:0;}
+    .cat-item .qtd{display:none;}
+    .sidebar-botao{display:none;}
+    main{padding:16px;}
+    .header-stats{display:none;}
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="marca">
+    <div class="marca-icone"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h16v11H8l-4 4V5z"/></svg></div>
+    <div>
+      <h1>Central de Respostas</h1>
+      <p>Secretaria Acadêmica · Estácio Volta Redonda</p>
+      <p class="indicador-sync"><span class="ponto-vivo"></span><span id="sync-txt">Modelos compartilhados com toda a equipe</span></p>
+    </div>
+  </div>
+  <div class="header-stats">
+    <div class="header-stat"><div class="num" id="stat-total">—</div><div class="lbl">modelos</div></div>
+    <div class="header-stat"><div class="num" id="stat-usos">—</div><div class="lbl">envios registrados</div></div>
+    <div class="header-stat"><div class="num" id="stat-meus">—</div><div class="lbl">meus envios</div></div>
+  </div>
+</header>
+
+<div class="shell">
+  <nav class="sidebar" id="sidebar"></nav>
+
+  <main>
+    <div class="busca-painel">
+      <label for="busca">Cole aqui o que o aluno escreveu</label>
+      <textarea id="busca" placeholder="Ex.: meu estágio está parado, falta assinar o contrato..."></textarea>
+      <div class="busca-rodape">
+        <span class="busca-dica">Os modelos mais parecidos sobem para o topo automaticamente.</span>
+        <button class="limpar-busca" id="limpar-busca">Limpar</button>
+      </div>
+    </div>
+
+    <div class="lista-cabecalho">
+      <h2 id="titulo-lista">Todos os modelos</h2>
+      <span class="contagem" id="contagem-lista"></span>
+    </div>
+
+    <div class="grade" id="grade"></div>
+  </main>
+</div>
+
+<div class="fundo-editor" id="fundo-editor">
+  <div class="editor" id="editor-conteudo"></div>
+</div>
+
+<script src="../../nucleo/config.js?v=1.7.1"></script>
+<script src="../../nucleo/api.js?v=1.2.3"></script>
+<script>
+/* ============ DADOS ============ */
+const CATEGORIAS = [
+  {id:'renovacao', nome:'Renovação', icone:`<path d="M20 11A8 8 0 1 0 18.5 16"/><path d="M20 5v6h-6"/>`},
+  {id:'trancamento', nome:'Trancamento', icone:`<rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/>`},
+  {id:'bolsa', nome:'Bolsa Direção', icone:`<circle cx="7" cy="7" r="2.1"/><circle cx="17" cy="17" r="2.1"/><path d="M18 6 6 18"/>`},
+  {id:'financeiro', nome:'Financeiro', icone:`<path d="M6 3h12v18l-3-2-3 2-3-2-3 2V3z"/><path d="M9 8h6M9 12h6"/>`},
+  {id:'estagio', nome:'Estágio', icone:`<rect x="3" y="8" width="18" height="12" rx="2"/><path d="M8 8V6a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>`},
+  {id:'engajamento', nome:'Engajamento', icone:`<path d="M12 20s-7-4.4-9.5-9A5.5 5.5 0 0 1 12 6a5.5 5.5 0 0 1 9.5 5c-2.5 4.6-9.5 9-9.5 9z"/>`},
+  {id:'atendimento', nome:'Atendimento', icone:`<path d="M4 5h16v11H8l-4 4V5z"/>`},
+  {id:'contatos', nome:'Contatos', icone:`<path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2z"/>`},
+  {id:'documentos', nome:'Documentos', icone:`<path d="M7 3h7l5 5v13a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z"/><path d="M14 3v5h5"/>`},
+  {id:'academico', nome:'Acadêmico', icone:`<path d="M12 4 2 9l10 5 10-5-10-5z"/><path d="M6 11v5c0 1.5 3 3 6 3s6-1.5 6-3v-5"/>`},
+  {id:'objecoes', nome:'Contorno de Objeção', icone:`<path d="M12 3 5 6v6c0 5 3 8.5 7 9 4-.5 7-4 7-9V6l-7-3z"/><path d="M9 12l2 2 4-4"/>`},
+];
+
+const VAR_LABELS = {
+  nome:'Nome do aluno', semestre:'Semestre (ex.: 26.1 EAD)', data:'Data do atendimento',
+  atendente:'Seu nome', valor_total:'Valor original', valor_promocional:'Valor promocional',
+  valor_entrada:'Valor de entrada', valor_parcela:'Valor de cada parcela', qtd_parcelas:'Quantidade de parcelas',
+  percentual_desconto:'Percentual de desconto', mes_inicio:'Mês inicial', mes_fim:'Mês final',
+  prazo:'Prazo estimado', setor:'Setor responsável', data_evento:'Data do evento',
+  nome_evento:'Nome do evento', disciplina:'Nome da disciplina'
+};
+
+const MODELOS_PADRAO = [
+{id:'ren_sinal_vida', categoria:'renovacao', titulo:'Aluno sem retorno (sinal de vida)', tags:['sinal de vida','sem resposta','sumiu','continuar estudos'],
+texto:`Olá, {{nome}}!
+
+Espero que esteja bem. Estamos entrando em contato para saber se você tem interesse em dar continuidade aos seus estudos conosco. Valorizamos sua participação em nossa instituição e gostaríamos de saber como podemos apoiá-lo(a) da melhor maneira possível.
+
+Ficamos à disposição para responder a quaisquer perguntas que você possa ter. Por favor, entre em contato conosco para podermos ajudá-lo(a) a planejar os próximos passos acadêmicos.
+
+Atenciosamente,
+{{atendente}}
+Secretaria Acadêmica, Estácio Volta Redonda`},
+
+{id:'ren_pendente_aceite', categoria:'renovacao', titulo:'Pendente de aceite do contrato', tags:['aceite','contrato','renovacao pendente','sia','renova'],
+texto:`Olá, {{nome}}, boa tarde!
+
+Espero que esteja tudo bem com você! Sou {{atendente}}, da Secretaria Acadêmica da Estácio Volta Redonda.
+
+O motivo do meu contato é informar que estamos quase concluindo a sua renovação de matrícula para o semestre {{semestre}}.
+
+Está pendente apenas o seu aceite de contrato. Você pode fazer esse aceite eletronicamente pelo SIA (https://sia.estacio.br/sianet/logon/) ou pelo Renova (https://renova.estacio.br/entrar).
+
+Após o aceite, já dá para escolher as disciplinas do semestre e começar a estudar!
+
+Se precisar de alguma ajuda, é só me chamar.`},
+
+{id:'ren_ajuda_renovacao', categoria:'renovacao', titulo:'Oferecer ajuda com a renovação', tags:['ajuda renovacao','duvida renovacao','inicio das aulas'],
+texto:`Olá, {{nome}}, boa tarde!
+
+Espero que esteja tudo bem com você!
+
+Estou entrando em contato para saber se podemos ajudar com a sua renovação de matrícula. Como as aulas estão prestes a começar, queremos garantir que tudo esteja em ordem.
+
+Se precisar de qualquer assistência ou esclarecimento, não hesite em me chamar.
+
+Atenciosamente,
+{{atendente}}`},
+
+{id:'ren_falta_aceite', categoria:'renovacao', titulo:'Falta aceite no SIA', tags:['aceite','sia','escolher disciplinas'],
+texto:`Falta pouco para você poder escolher as disciplinas do semestre.
+
+Caso esteja com dificuldade para acessar o SIA e dar o aceite no contrato, me avisa que eu te ajudo.`},
+
+{id:'ren_nao_renovacao', categoria:'renovacao', titulo:'Consequências da não renovação', tags:['nao renovou','trancamento','perda de desconto','estagio rescisao'],
+texto:`Preciso te informar que, com a não renovação da matrícula, os descontos concedidos no ato da matrícula serão cancelados.
+
+O aluno que tiver pendência financeira e/ou DIS terá um único boleto gerado no SIA para pagamento.
+
+Alunos com estágio vigente terão a empresa comunicada sobre o trancamento da matrícula, para a rescisão do contrato.
+
+Ao reabrir a matrícula, será preciso verificar a oferta vigente, já que pode haver perda acadêmica por atualização do currículo do curso.`},
+
+{id:'ren_desconto_divida', categoria:'renovacao', titulo:'Oferta especial de renovação (com desconto)', tags:['desconto','oferta','divida','promocao renovacao'],
+texto:`*OFERTA ESPECIAL PARA RENOVAÇÃO*
+
+Oferta válida por tempo limitado: de R$ {{valor_total}} por R$ {{valor_promocional}}.
+
+Pague R$ {{valor_entrada}} de entrada + até {{qtd_parcelas}}x de R$ {{valor_parcela}} no Pix ou cartão de crédito, e comece a estudar ainda hoje!
+
+*Valores referentes às mensalidades em aberto do semestre anterior + renovação.
+
+Responda *sim* e junte-se à sua turma! 😁`},
+
+{id:'ren_desconto_meses', categoria:'renovacao', titulo:'Desconto nas mensalidades do semestre novo', tags:['desconto mensalidade','novo semestre','promocao'],
+texto:`Você também ganhou um desconto nas suas mensalidades do semestre novo!
+
+{{percentual_desconto}}% de {{mes_inicio}} a {{mes_fim}}.
+
+É uma ótima oportunidade!`},
+
+{id:'tranc_automatico', categoria:'trancamento', titulo:'Trancamento automático, como funciona', tags:['trancamento','trancar matricula','call center','nao renovado'],
+texto:`Você tem 2 opções:
+
+1) Solicitar o trancamento da matrícula pelo Call Center.
+
+2) Aguardar o encerramento da renovação, quando o sistema classifica automaticamente os alunos não renovados como trancados.
+
+O aluno com pendência financeira e/ou DIS terá um único boleto gerado no SIA para pagamento.
+
+Com o trancamento da matrícula, os descontos concedidos no ato da matrícula são cancelados.
+
+Alunos com estágio vigente terão a empresa comunicada do trancamento, para a rescisão do contrato.
+
+Ao reabrir a matrícula, será preciso verificar a oferta vigente, já que pode haver perda acadêmica por atualização do currículo do curso.`},
+
+{id:'tranc_agendar', categoria:'trancamento', titulo:'Como agendar trancamento/cancelamento', tags:['agendar trancamento','cancelamento matricula','entrevista','protocolo'],
+texto:`Para solicitar o trancamento ou cancelamento de matrícula, é necessário primeiro entrar em contato pelo número 4003-6767, para agendar uma entrevista presencial.
+
+Após a entrevista, você recebe o número do protocolo da solicitação.`},
+
+{id:'bolsa_solicitacao', categoria:'bolsa', titulo:'Como solicitar a Bolsa Direção', tags:['bolsa direcao','carta','desconto','formulario'],
+texto:`Para solicitar a Bolsa Direção, o aluno precisa escrever uma carta de próprio punho, descrevendo os motivos pelos quais precisa de mais desconto.
+
+É necessário anexar comprovantes da situação relatada e preencher o nosso formulário de solicitação.`},
+
+{id:'bolsa_regras', categoria:'bolsa', titulo:'Regras da Bolsa Direção', tags:['bolsa direcao','nao renova automatico','exigencias','permanencia'],
+texto:`A Bolsa Direção não entra no boleto de renovação e não renova automaticamente.
+
+É uma ajuda pontual, que o aluno pode receber no semestre. Quem recebe a bolsa precisa cumprir as exigências do programa para mantê-la no semestre, e para uma possível renovação no semestre seguinte.
+
+Fazemos uma análise sobre o que o aluno apresenta, cruzando essas informações por meio de um aplicativo, para confirmar a veracidade dos dados.`},
+
+{id:'bolsa_retirada', categoria:'bolsa', titulo:'Aviso de retirada da bolsa (matrícula não renovada)', tags:['bolsa direcao','auditoria','retirada','matricula nao renovada'],
+texto:`Olá, {{nome}}, boa tarde!
+
+Estamos passando por uma auditoria interna sobre o lançamento da Bolsa Direção e, conforme as regras do programa, o benefício é concedido apenas para alunos com matrícula renovada no semestre da solicitação.
+
+Como sua matrícula ainda não foi renovada, o sistema fará a retirada automática da bolsa. Essa é uma determinação do regulamento descrito no formulário de solicitação, não uma decisão local da unidade.
+
+Se precisar de apoio para regularizar a matrícula ou tirar dúvidas sobre o benefício, estamos à disposição.`},
+
+{id:'fin_boleto', categoria:'financeiro', titulo:'Emissão de boleto e contatos do financeiro', tags:['boleto','segunda via','financeiro','pagamento'],
+texto:`📌 Para emitir seu boleto, acesse:
+🔗 https://apps.dialmyapp.com/web-app?callId=qr&callServiceName=Ly9xcj9vcGVuTGFiZWw9cXI%3D&profile=Estacio+-+Secretarias&&shortUrl=m.dialmyapp.com%2F%3F6nz3oy1mdyu&sign=b35a32#/
+
+Ou pelos telefones 4003-6767 / 0800 880 6767.
+
+Ou pelo WhatsApp: 📱 0800 880 6772`},
+
+{id:'fin_central', categoria:'financeiro', titulo:'Central financeira, contatos', tags:['financeiro','central','telefone','whatsapp'],
+texto:`Nosso financeiro é centralizado.
+
+Entre em contato pelos telefones 4003-6767 / 0800 880 6767.
+
+Ou pelo WhatsApp: 📱 0800 880 6772`},
+
+{id:'fin_creditos', categoria:'financeiro', titulo:'Como funcionam os créditos financeiros das disciplinas', tags:['creditos','mensalidade','grade','ajuste de grade'],
+texto:`📚 Créditos financeiros das disciplinas, entenda como funciona!
+
+O valor da sua semestralidade está diretamente relacionado ao número de créditos das disciplinas que você cursa.
+
+🔹 Cada disciplina tem um número de créditos, que representa a carga horária da matéria.
+🔹 Esses créditos são usados para calcular o valor da mensalidade.
+🔹 Ao ajustar sua grade, incluindo ou excluindo matérias, o valor financeiro também é ajustado proporcionalmente.
+
+💡 Fique atento: incluir disciplinas extras pode aumentar a semestralidade, e excluir pode reduzir, desde que feito dentro do prazo de ajuste. Depois do encerramento do período de ajustes, as cobranças permanecem inalteradas.
+
+📆 Consulte o calendário acadêmico para saber os prazos de ajuste de grade. Em caso de dúvidas, fale com a Central pelo 4003-6767.`},
+
+{id:'fin_divida_renovacao', categoria:'financeiro', titulo:'Renovação paga, mas com dívida anterior em aberto', tags:['divida','negociacao','renovacao paga','parcelas em aberto'],
+texto:`Olá, {{nome}}! Boa noite 😊
+
+Verificamos que o pagamento da sua renovação de matrícula foi realizado. Que bom contar com você para mais um semestre!
+
+No entanto, identificamos que ainda há valores em aberto referentes a parcelas de uma negociação anterior. Esses débitos precisam ser regularizados para que a renovação seja concluída corretamente no sistema.
+
+Se precisar de apoio para verificar valores ou formas de pagamento, nossa equipe financeira está à disposição.
+
+💬 WhatsApp: 0800 880 6772`},
+
+{id:'est_indeferimento', categoria:'estagio', titulo:'Como evitar indeferimento do estágio (assinatura)', tags:['estagio','assinatura','contrato de estagio','indeferimento'],
+texto:`*Evite o indeferimento do seu estágio!*
+
+Seu requerimento está parado por falta de assinatura no contrato de estágio. No momento, ele está na fase da empresa.
+
+Se a empresa não estiver recebendo o link, basta imprimir os dois arquivos (termo de compromisso e plano de atividades) e coletar as assinaturas fisicamente, com o carimbo da empresa na última folha de cada documento, no campo destinado à empresa.
+
+Depois das assinaturas, você pode trazer os documentos até a secretaria do campus, ou escanear todas as folhas e anexar no site Encontre Sua Vaga, sinalizando a inconsistência de assinatura híbrida.
+
+Após isso, sua documentação será analisada novamente e, se estiver tudo certo, será deferida.
+
+Lembre-se de que você não pode iniciar o estágio sem esse documento assinado por todas as partes.`},
+
+{id:'est_requerimento', categoria:'estagio', titulo:'Abrir requerimento antes da assinatura', tags:['estagio','requerimento','tce','sia'],
+texto:`Olá,
+
+Recebemos o processo de assinatura do seu estágio não obrigatório, mas é necessário abrir o requerimento primeiro.
+
+Acesse o SIA e vá em Atendimento > Requerimento > Novo > Estágio > Estágio não Obrigatório, e preencha o formulário.
+
+Não esqueça de anexar o TCE, caso a empresa já tenha enviado.`},
+
+{id:'est_pendencia_assinatura', categoria:'estagio', titulo:'Pendência de assinatura no contrato (passo a passo)', tags:['estagio','assinatura','gov.br','encontre sua vaga'],
+texto:`📌 Estágio, pendência de assinatura no contrato
+
+Olá!
+
+Verificamos que seu requerimento de estágio está parado por falta de assinatura no contrato. O processo está na etapa aluno/empresa.
+
+📍 O que você precisa fazer:
+
+🔹 Assinatura do aluno: assine digitalmente pelo site www.encontresuavaga.com.br
+
+🔹 Assinatura da empresa: se a empresa não estiver recebendo o link digital, há duas opções:
+
+Assinatura física: imprima o termo de compromisso, colete a assinatura do representante legal indicado e insira o carimbo com o CNPJ da empresa na última página, no campo reservado a ela.
+
+Assinatura via gov.br: o representante também pode assinar digitalmente pelo gov.br, no campo de assinatura da empresa.
+
+📎 Depois das assinaturas, leve o documento físico até a secretaria, ou digitalize todas as páginas e anexe no Encontre Sua Vaga, na aba Documentos, sinalizando que é uma assinatura híbrida.
+
+Assim que o envio for feito corretamente, a documentação será reavaliada e, estando tudo certo, será deferida.
+
+⚠️ Importante: você não pode iniciar as atividades de estágio sem o contrato assinado por todas as partes, antes da data de início.
+
+Qualquer dúvida, estamos à disposição. Boa sorte nessa nova etapa! 💼`},
+
+{id:'eng_certificadoras', categoria:'engajamento', titulo:'O que são as disciplinas certificadoras', tags:['certificadoras','certificacao','sava','linkedin'],
+texto:`As disciplinas certificadoras concedem uma certificação intermediária, que atesta o desenvolvimento de competências específicas ao longo do curso, fortalecendo o currículo e ajudando no acesso ao mercado de trabalho.
+
+Elas mostram que você está alinhado(a) com as competências exigidas pelo mercado atual, e ajudam a trilhar um caminho de sucesso com suas habilidades.
+
+Após concluir as disciplinas, a certificação fica disponível na SAVA, e você pode compartilhar no seu LinkedIn.`},
+
+{id:'eng_nps', categoria:'engajamento', titulo:'Convite para responder a pesquisa NPS', tags:['nps','pesquisa satisfacao','experiencia do aluno'],
+texto:`Olá, {{nome}}, boa tarde!
+
+Você sabe o que é NPS?
+
+NPS (Net Promoter Score) é a pesquisa que mede o nível de satisfação dos nossos alunos em relação ao nosso atendimento. Ela é enviada para o seu e-mail, com remetente "Estácio Experiência do Aluno", e às vezes cai no e-mail secundário ou no spam.
+
+Nosso desafio é aumentar a adesão dos alunos nessa pesquisa.
+
+Notas: 0 a 6, insatisfeito · 7 e 8, neutro · 9 e 10, satisfeito 🤩
+
+Sua opinião é muito importante para que possamos melhorar ainda mais para você!
+
+{{atendente}}
+Coordenação de Relacionamento`},
+
+{id:'eng_naap', categoria:'engajamento', titulo:'Apresentar o NAAP', tags:['naap','apoio psicopedagogico','ansiedade','bem estar'],
+texto:`💙 Você conhece o NAAP?
+
+O Núcleo de Apoio e Atendimento Psicopedagógico tem como missão promover o bem-estar e o desenvolvimento integral do aluno, fatores essenciais para o sucesso na vida acadêmica.
+
+O NAAP oferece acompanhamento durante toda a graduação, ajuda em dúvidas, dificuldades e ansiedades no contexto acadêmico, e contribui diretamente para o seu desempenho e para a qualidade da sua formação.
+
+O atendimento é sigiloso, com total privacidade.
+
+Se precisar de apoio, acesse https://naap.estacio.br/`},
+
+{id:'eng_avaliacao_google', categoria:'engajamento', titulo:'Pedido de avaliação no Google', tags:['avaliacao google','5 estrelas','review'],
+texto:`🌟 Sua opinião transforma tudo!
+
+Olá, {{nome}}! Tudo bem?
+
+Estamos passando por uma nova fase, com endereço novo e muitos avanços, e gostaríamos de contar com a sua ajuda.
+
+Deixe sua avaliação sobre a nossa unidade no Google. É rápido, fácil, e faz toda a diferença para mostrar o quanto estamos comprometidos em oferecer uma experiência cada vez melhor para você.
+
+📲 Link: https://g.co/kgs/fvLCX5b
+
+Se você curte nosso atendimento, a estrutura e o cuidado com cada detalhe, nos avalie com 5 estrelas e conte um pouco da sua experiência.
+
+Muito obrigado pelo apoio!
+
+{{atendente}}
+Estácio, Campus Volta Redonda`},
+
+{id:'eng_pesquisa_individual', categoria:'engajamento', titulo:'Aviso de pesquisa individual de atendimento', tags:['pesquisa atendimento','nota','avaliacao do atendimento'],
+texto:`Olá, tudo bem? Meu nome é {{atendente}}, e foi um prazer atender você hoje!
+
+Em breve você vai receber um e-mail (Estácio Experiência do Aluno) para avaliar meu atendimento no dia {{data}}. Se ficou satisfeito(a), eu agradeceria muito uma nota entre 9 e 10.
+
+Se tiver alguma sugestão ou observação, também pode compartilhar na pesquisa. Sua opinião é muito importante para que eu melhore cada vez mais o atendimento, para você e para outros alunos.
+
+Muito obrigado(a)!`},
+
+{id:'eng_close_the_loop', categoria:'engajamento', titulo:'Retorno após pesquisa de insatisfação', tags:['close the loop','insatisfacao','plano de acao'],
+texto:`Olá, {{nome}}! Boa noite. Tudo bem com você?
+
+Estou entrando em contato em nome da unidade, depois de analisarmos sua resposta na pesquisa de satisfação sobre a experiência do aluno.
+
+Percebi que você sinalizou alguns pontos de insatisfação relacionados a infraestrutura, aprendizado e comunicação, e gostaríamos de entender melhor essas percepções.
+
+Nosso objetivo é ouvir você com atenção, e verificar o que pode ser ajustado de forma imediata, ou se há possibilidade de construirmos um plano de ação que melhore sua experiência acadêmica daqui pra frente.
+
+Fico no aguardo do seu retorno, com total disposição para conversar. 💙
+
+{{atendente}}
+Coordenação de Relacionamento, Estácio Volta Redonda`},
+
+{id:'at_saudacao', categoria:'atendimento', titulo:'Mensagem de boas-vindas', tags:['saudacao','boas vindas','primeiro contato'],
+texto:`Olá! Seja bem-vindo(a)!
+
+Sou {{atendente}}, da Coordenação de Relacionamento da Estácio Volta Redonda. 💙
+
+Fico feliz com o seu contato! Sua mensagem é importante para nós, e será respondida o mais breve possível.
+
+Se for uma situação urgente, peço que compareça ao nosso atendimento presencial, ou fale direto com um atendente pelo WhatsApp da Secretaria: 📞 24 98108-9360
+
+Conte com a gente nessa jornada acadêmica!`},
+
+{id:'at_fila', categoria:'atendimento', titulo:'Explicar fila de atendimento por WhatsApp', tags:['fila','ordem de chegada','tempo de espera'],
+texto:`Olá! Obrigada por entrar em contato.
+
+Nosso atendimento funciona assim:
+
+Presencial: estamos atendendo normalmente, dentro do horário de funcionamento.
+WhatsApp: os atendimentos são feitos por ordem de chegada (fila), e respondemos assim que possível.
+
+Atendimento presencial da Secretaria: segunda a sexta, 10h às 20h · sábado, 9h às 13h.
+
+Se a sua demanda for urgente, compareça presencialmente para ser atendido(a) por um consultor.
+
+Agradeço a compreensão!`},
+
+{id:'at_encerramento', categoria:'atendimento', titulo:'Encerrar o atendimento', tags:['encerramento','finalizar','pesquisa de satisfacao'],
+texto:`Pedimos, por gentileza, que não responda esta mensagem, pois este atendimento foi concluído, e qualquer nova mensagem abrirá um novo atendimento.
+
+Queremos melhorar para você! Nos ajude respondendo à pesquisa de satisfação deste atendimento, ela vai chegar por e-mail.
+
+Qualquer dúvida, é só falar com a gente!
+
+Atendimento finalizado!`},
+
+{id:'at_retomada', categoria:'atendimento', titulo:'Retomar contato após perda de conversas', tags:['perda de conversas','numero novo','retomar contato'],
+texto:`Olá, bom dia!
+
+Passando para saber se está tudo bem com você. 😊
+
+Tive um problema com o meu número e perdi as conversas. Se precisar de alguma ajuda, orientação ou informação, estou à disposição para te apoiar!`},
+
+{id:'cont_canais_oficiais', categoria:'contatos', titulo:'Canais oficiais da Estácio', tags:['canais oficiais','portal do aluno','app','sms'],
+texto:`📣 Fique atento aos canais oficiais da Estácio!
+
+Para garantir informações seguras e atualizadas sobre sua vida acadêmica, utilize sempre:
+
+✅ Portal do Aluno, www.estacio.br
+✅ App Estácio, disponível na Play Store e App Store
+✅ E-mail institucional
+✅ SMS, 29733 e 29782
+✅ Comunicação ativa, 11 3042-1137
+✅ WhatsApp Atendimento, 0800 880 6772
+✅ WhatsApp Secretaria, 24 99234-7540
+✅ WhatsApp Polo Ensino Digital, 24 98816-7327
+
+📌 Evite seguir orientações de fontes não oficiais. Qualquer dúvida, estamos aqui para apoiar.`},
+
+{id:'cont_internos', categoria:'contatos', titulo:'Contatos internos (gestor, secretaria, matrícula)', tags:['contato gestor','sala de matricula','horario de atendimento'],
+texto:`Contato do gestor do campus: 24 99324-1419
+
+Atendimento Sala de Matrícula, WhatsApp:
+Rubia, 24 99243-5715
+Anna Beatriz, 24 99228-4601
+Breno, 24 97834-0663
+
+Peço, por gentileza, entrar em contato com o setor de matrículas para saber sobre cursos e valores.
+
+WhatsApp Atendimento Secretaria: 24 98108-9360
+
+Horário de atendimento presencial: segunda a sexta, 10h às 20h · sábado, 9h às 13h.`},
+
+{id:'doc_declaracao_matricula', categoria:'documentos', titulo:'Declaração de matrícula, como solicitar', tags:['declaracao','comprovante','matricula ativa'],
+texto:`Olá, {{nome}}!
+
+Você pode emitir a declaração de matrícula direto pelo SIA, em Atendimento > Documentos > Declarações.
+
+Se precisar de uma via física, pode retirar na secretaria do campus, normalmente em até {{prazo}} após a solicitação.
+
+Qualquer dúvida, estou à disposição.`},
+
+{id:'doc_historico_escolar', categoria:'documentos', titulo:'Histórico escolar, como solicitar', tags:['historico escolar','boletim','documentos'],
+texto:`Olá, {{nome}}!
+
+O histórico escolar também é emitido pelo SIA, em Atendimento > Documentos > Histórico Escolar.
+
+Caso precise de uma via autenticada ou em papel timbrado, é só passar na secretaria que a gente orienta sobre o processo e o prazo de entrega.
+
+Fico à disposição para ajudar!`},
+
+{id:'doc_segunda_via_carteirinha', categoria:'documentos', titulo:'Segunda via da carteirinha de estudante', tags:['carteirinha','segunda via','identidade estudantil'],
+texto:`Olá, {{nome}}!
+
+Para solicitar a segunda via da carteirinha de estudante, basta comparecer à secretaria do campus, no horário de atendimento (segunda a sexta, 10h às 20h, sábado, 9h às 13h).
+
+Em alguns casos pode haver uma taxa de emissão. Assim que eu confirmar com o setor responsável, te aviso.`},
+
+{id:'doc_diploma_colacao', categoria:'documentos', titulo:'Diploma e colação de grau, informações gerais', tags:['diploma','colacao de grau','formatura'],
+texto:`Olá, {{nome}}!
+
+Sobre o diploma e a colação de grau, o processo começa depois da conclusão de todas as disciplinas e do cumprimento das exigências do curso, como estágio e atividades complementares, quando aplicável.
+
+Assim que seu processo de formatura for aberto, a secretaria entra em contato com os próximos passos. Se quiser, posso verificar a situação da sua colação.`},
+
+{id:'aca_segunda_chamada', categoria:'academico', titulo:'Segunda chamada de prova, como solicitar', tags:['segunda chamada','prova','requerimento'],
+texto:`Olá, {{nome}}!
+
+Para solicitar a segunda chamada de prova, acesse o SIA e abra um requerimento em Atendimento > Requerimento > Novo > Segunda Chamada, informando o motivo da ausência e anexando o comprovante, quando exigido.
+
+O requerimento é analisado pela coordenação do curso, e o prazo de resposta costuma seguir o calendário acadêmico.`},
+
+{id:'aca_aproveitamento_disciplina', categoria:'academico', titulo:'Aproveitamento de disciplina / dispensa', tags:['aproveitamento','dispensa','equivalencia'],
+texto:`Olá, {{nome}}!
+
+Para solicitar aproveitamento ou dispensa de disciplina, abra um requerimento pelo SIA, em Atendimento > Requerimento > Novo > Aproveitamento de Estudos, anexando o histórico e a ementa da disciplina já cursada.
+
+A análise é feita pela coordenação do curso, que verifica a compatibilidade de conteúdo e carga horária.`},
+
+{id:'aca_mudanca_turno_polo', categoria:'academico', titulo:'Mudança de turno ou de polo', tags:['mudanca de turno','mudanca de polo','transferencia de turno'],
+texto:`Olá, {{nome}}!
+
+A mudança de turno ou de polo pode ser solicitada pelo SIA, em Atendimento > Requerimento > Novo > Mudança de Turno/Polo, dentro do período liberado no calendário acadêmico.
+
+Vale lembrar que a mudança depende da disponibilidade de vagas na turma de destino.`},
+
+{id:'aca_transferencia_interna', categoria:'academico', titulo:'Transferência interna de curso', tags:['transferencia interna','mudar de curso'],
+texto:`Olá, {{nome}}!
+
+Para solicitar transferência interna de curso, o pedido é feito pelo SIA, em Atendimento > Requerimento > Novo > Transferência Interna, também dentro do período liberado no calendário acadêmico.
+
+Depois da abertura do requerimento, a coordenação avalia a disponibilidade de vaga no curso de destino.`},
+
+{id:'aca_tcc_orientacao', categoria:'academico', titulo:'TCC, dúvidas sobre orientação', tags:['tcc','orientador','banca'],
+texto:`Olá, {{nome}}!
+
+Dúvidas sobre orientação de TCC, prazos de entrega e banca devem ser direcionadas ao professor orientador ou à coordenação do curso, que acompanham de perto cada etapa do trabalho.
+
+Se precisar, posso te ajudar a identificar o contato certo para o seu curso.`},
+
+{id:'aca_oferta_disciplina', categoria:'academico', titulo:'Disciplina não ofertada no semestre', tags:['disciplina nao ofertada','grade','turma fechada'],
+texto:`Olá, {{nome}}!
+
+Verificamos que a disciplina {{disciplina}} não está sendo ofertada neste semestre.
+
+Isso pode acontecer por baixa procura ou ajuste de grade curricular. Recomendamos falar com a coordenação do curso para entender as opções, que podem incluir cursar em outro turno/polo ou reorganizar a sequência de disciplinas.`},
+
+{id:'ren_renovacao_antecipada', categoria:'renovacao', titulo:'Convite para renovação antecipada', tags:['renovacao antecipada','garantir vaga','renovar cedo'],
+texto:`Olá, {{nome}}!
+
+A renovação de matrícula para o semestre {{semestre}} já está liberada! Quanto antes você renovar, mais cedo garante sua vaga nas disciplinas e turmas de preferência.
+
+O processo é simples: acesse o SIA ou o Renova, confirme seus dados e aceite o contrato.
+
+Qualquer dúvida durante o processo, é só me chamar.`},
+
+{id:'ren_duvida_disciplinas', categoria:'renovacao', titulo:'Dúvida sobre escolha de disciplinas na renovação', tags:['escolha de disciplinas','fluxo curricular','grade da renovacao'],
+texto:`Olá, {{nome}}!
+
+Na hora de escolher as disciplinas da renovação, fique atento ao seu fluxo curricular, ele mostra a sequência recomendada para não atrasar a formatura.
+
+Se tiver dúvida sobre qual disciplina escolher, posso te ajudar a conferir o fluxo, ou você pode buscar orientação com a coordenação do curso.`},
+
+{id:'fin_negociacao_divida', categoria:'financeiro', titulo:'Como negociar dívida em aberto', tags:['negociacao','divida','parcelamento'],
+texto:`Olá, {{nome}}!
+
+Para negociar uma dívida em aberto, entre em contato com o financeiro pelos telefones 4003-6767 / 0800 880 6767, ou pelo WhatsApp 0800 880 6772.
+
+Lá, a equipe apresenta as condições disponíveis de parcelamento para o seu caso.`},
+
+{id:'fin_isencao_taxa', categoria:'financeiro', titulo:'Dúvida sobre isenção ou revisão de taxa', tags:['isencao','taxa','multa','revisao de cobranca'],
+texto:`Olá, {{nome}}!
+
+Sobre a isenção ou revisão de uma taxa cobrada, o ideal é abrir uma solicitação junto ao financeiro, pelos telefones 4003-6767 / 0800 880 6767, ou pelo WhatsApp 0800 880 6772.
+
+A equipe financeira analisa o caso e retorna com a posição sobre a cobrança.`},
+
+{id:'est_prorrogacao', categoria:'estagio', titulo:'Prorrogação de estágio', tags:['prorrogacao','aditivo','estagio'],
+texto:`Olá, {{nome}}!
+
+Para solicitar a prorrogação do seu estágio, abra um requerimento pelo SIA, em Atendimento > Requerimento > Novo > Estágio > Prorrogação, informando o novo período e anexando o termo aditivo assinado pela empresa, se já estiver disponível.
+
+Qualquer dúvida no processo, estou à disposição.`},
+
+{id:'est_relatorio_estagio', categoria:'estagio', titulo:'Entrega do relatório de estágio', tags:['relatorio de estagio','entrega','prazo'],
+texto:`Olá, {{nome}}!
+
+O relatório de estágio deve ser entregue conforme o prazo definido pela disciplina de estágio do seu curso, normalmente acompanhado pelo professor orientador.
+
+Se estiver com dúvida sobre o modelo ou o prazo de entrega, recomendo confirmar diretamente com o professor orientador ou a coordenação.`},
+
+{id:'eng_boas_vindas_calouro', categoria:'engajamento', titulo:'Boas-vindas para aluno calouro', tags:['calouro','ingressante','primeiro semestre'],
+texto:`Olá, {{nome}}! Seja muito bem-vindo(a) à Estácio Volta Redonda! 🎓💙
+
+Fico feliz em te acompanhar nessa nova etapa. Qualquer dúvida sobre o início das aulas, acesso ao SIA, escolha de disciplinas ou qualquer outro assunto, pode me chamar que eu te ajudo.
+
+Desejo um ótimo semestre de estudos!`},
+
+{id:'eng_divulgacao_evento', categoria:'engajamento', titulo:'Convite para evento ou palestra do campus', tags:['evento','palestra','divulgacao'],
+texto:`Olá, {{nome}}! 📣
+
+Vai rolar {{nome_evento}}, no dia {{data_evento}}, aqui no campus.
+
+É uma ótima oportunidade para aprender, fazer networking e aproveitar mais a sua experiência na faculdade. Participe!`},
+
+{id:'at_aguardando_retorno_interno', categoria:'atendimento', titulo:'Aguardando retorno de outro setor', tags:['aguardando retorno','encaminhado','setor responsavel'],
+texto:`Olá, {{nome}}!
+
+Sua solicitação já foi encaminhada para o setor responsável ({{setor}}), e estamos aguardando o retorno deles.
+
+Assim que tivermos uma posição, te aviso por aqui. Obrigado(a) pela paciência!`},
+
+{id:'at_agradecimento_geral', categoria:'atendimento', titulo:'Agradecimento após resolução', tags:['agradecimento','resolvido','encerramento positivo'],
+texto:`Que bom que conseguimos resolver, {{nome}}! 💙
+
+Qualquer outra dúvida, pode me chamar por aqui que eu ajudo com o maior prazer.
+
+Tenha um ótimo dia!`},
+
+{id:'obj_ameaca_trancar', categoria:'objecoes', titulo:'Aluno ameaçando trancar por insatisfação', tags:['trancar','desistir','insatisfeito','quer sair'],
+texto:`Entendo que você está incomodado(a), {{nome}}, e isso realmente importa pra gente. Antes de pensar em trancar, queria entender melhor o que aconteceu, porque às vezes dá pra resolver sem precisar chegar a esse ponto.
+
+Pode me contar com calma o que te deixou nessa situação? Quero ver com você quais caminhos temos.`},
+
+{id:'obj_mensalidade_alta', categoria:'objecoes', titulo:'Reclamação sobre valor da mensalidade', tags:['caro','mensalidade alta','nao consigo pagar','valor'],
+texto:`Eu entendo, {{nome}}, mensalidade pesa no bolso, ainda mais em um momento difícil. Não dá pra eu prometer um desconto sem analisar o seu caso, mas dá pra verificar com o financeiro se existe alguma condição de parcelamento ou negociação que ajude.
+
+Quer que eu já te encaminhe pra falar com eles, ou prefere me contar mais sobre a sua situação primeiro?`},
+
+{id:'obj_atendimento_anterior_ruim', categoria:'objecoes', titulo:'Reclamação sobre atendimento anterior', tags:['atendimento ruim','mal atendido','ninguem resolve','ja liguei varias vezes'],
+texto:`Sinto muito que você tenha passado por isso, {{nome}}, e faz sentido você estar frustrado(a) depois de tentar resolver sem sucesso.
+
+Vou acompanhar pessoalmente o seu caso a partir de agora, pra não te deixar rodando entre setores de novo. Pode me contar o que ainda está pendente?`},
+
+{id:'obj_desconfianca_informacao', categoria:'objecoes', titulo:'Aluno desconfia da informação recebida', tags:['nao acredito','ja me falaram outra coisa','isso ta certo mesmo','desconfiado'],
+texto:`Faz sentido você querer ter certeza, {{nome}}, principalmente depois de ouvir informações diferentes em momentos diferentes. Vou confirmar esse dado direto na fonte antes de te responder, pra te passar algo seguro.
+
+Me dá um instante que eu já volto com a confirmação.`},
+
+{id:'obj_demora_retorno', categoria:'objecoes', titulo:'Reclamação por demora no retorno', tags:['demora','ninguem responde','ja faz dias','sem retorno'],
+texto:`Você tem razão em cobrar isso, {{nome}}, a demora não foi legal e eu entendo a sua frustração.
+
+Vou priorizar o seu caso agora e te dar uma posição concreta ainda hoje, sem enrolação.`},
+
+{id:'obj_insatisfeito_curso', categoria:'objecoes', titulo:'Insatisfação com curso ou disciplina', tags:['curso ruim','nao gostei da disciplina','professor','quero trocar de curso'],
+texto:`Entendo, {{nome}}, e é importante você se sentir bem com o que está estudando. Antes de pensar em qualquer mudança grande, me conta o que especificamente não está funcionando pra você: é o conteúdo, a forma de aula, ou outra coisa?
+
+Com isso eu consigo te orientar melhor sobre as opções, incluindo conversar com a coordenação se for o caso.`},
+
+{id:'obj_ameaca_concorrencia', categoria:'objecoes', titulo:'Aluno ameaça ir para outra instituição', tags:['vou pra outra faculdade','concorrente','vou desistir e ir pra outro lugar'],
+texto:`Entendo que você esteja considerando outras opções, {{nome}}, e respeito a sua decisão. Antes disso, eu queria entender o que está pesando pra você tomar essa decisão, porque talvez a gente consiga resolver o que está incomodando sem você precisar sair.
+
+Topa me contar mais?`},
+
+{id:'obj_cobranca_indevida', categoria:'objecoes', titulo:'Reclamação de cobrança indevida ou erro no sistema', tags:['cobranca errada','cobraram a mais','erro no sistema','boleto errado'],
+texto:`Você está certo(a) em estranhar isso, {{nome}}, cobrança errada incomoda mesmo. Vou verificar agora o que aconteceu no seu caso junto ao financeiro, e te retorno assim que tiver uma explicação ou correção.
+
+Me confirma só o valor e a data do boleto que você recebeu, pra eu agilizar a checagem?`},
+];
+
+/* ============ ESTADO ============ */
+let modelosCustom = [];
+let modelosEditados = {};
+let modelosRemovidos = [];
+let usoContagem = {};
+let meusUsos = 0;
+let categoriaAtiva = 'todos';
+let termoBusca = '';
+let euNome = '';
+
+function ehCustom(id){ return modelosCustom.some(m=>m.id===id); }
+
+function todosModelos(){
+  const padrao = MODELOS_PADRAO
+    .filter(m=>!modelosRemovidos.includes(m.id))
+    .map(m=> modelosEditados[m.id] ? {...m, ...modelosEditados[m.id]} : m);
+  const custom = modelosCustom.filter(m=>!modelosRemovidos.includes(m.id));
+  return [...padrao, ...custom];
+}
+
+/* ============ ARMAZENAMENTO: planilha Central da Jornada, compartilhada pela equipe ============ */
+function aplicarDados(r){
+  modelosCustom = r.custom || [];
+  modelosEditados = r.editados || {};
+  modelosRemovidos = r.removidos || [];
+  usoContagem = r.usos || {};
+  meusUsos = r.meusUsos || 0;
+}
+async function chamar(acao, dados){
+  const r = await Api.chamar('ferramentas.' + acao, dados || {});
+  if(!r || r.ok === false) throw new Error((r && r.erro) || 'Não foi possível salvar.');
+  if(r.dados) aplicarDados(r.dados);
+  return r;
+}
+async function carregarDados(){
+  try{ await chamar('respostas_dados'); }
+  catch(e){ if(!e.auth) avisar('Não foi possível carregar os modelos: ' + e.message); }
+}
+function avisar(msg, tipo){
+  try{ if(window.parent && window.parent.App && window.parent.App.aviso) return window.parent.App.aviso(msg, tipo || 'erro'); }catch(e){}
+  console.warn(msg);
+}
+async function salvarModelo(m){ await chamar('respostas_salvar', {modelo: m}); }
+async function excluirModelo(id){
+  try{ await chamar('respostas_excluir', {id}); }
+  catch(e){ if(!e.auth) avisar(e.message); }
+}
+async function restaurarModelo(id){ await chamar('respostas_restaurar', {id}); }
+async function registrarUso(id){
+  usoContagem[id] = (usoContagem[id]||0)+1; meusUsos++;
+  atualizarStats();
+  try{ await chamar('respostas_uso', {id}); }catch(e){ /* a contagem é só informativa */ }
+}
+
+/* ============ NORMALIZAÇÃO / BUSCA ============ */
+function normalizar(s){
+  return (s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+}
+function escHtml(s){
+  return (s||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+function pontuar(modelo, palavras){
+  if(!palavras.length) return 0;
+  const corpoTags = normalizar(modelo.tags.join(' '));
+  const corpoTexto = normalizar(modelo.titulo + ' ' + modelo.texto);
+  let pontos = 0;
+  palavras.forEach(p=>{
+    if(p.length < 3) return;
+    if(corpoTags.includes(p)) pontos += 3;
+    else if(corpoTexto.includes(p)) pontos += 1;
+  });
+  return pontos;
+}
+
+/* ============ RENDER SIDEBAR ============ */
+function renderSidebar(){
+  const nav = document.getElementById('sidebar');
+  const lista = todosModelos();
+  let html = '';
+  const todosAtivo = categoriaAtiva==='todos' ? 'ativo' : '';
+  html += `<div class="cat-item ${todosAtivo}" data-cat="todos">
+    <svg viewBox="0 0 24 24" fill="none" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>
+    Todos <span class="qtd">${lista.length}</span></div>`;
+  CATEGORIAS.forEach(c=>{
+    const qtd = lista.filter(m=>m.categoria===c.id).length;
+    const ativo = categoriaAtiva===c.id ? 'ativo' : '';
+    html += `<div class="cat-item ${ativo}" data-cat="${c.id}">
+      <svg viewBox="0 0 24 24" fill="none" stroke-linecap="round" stroke-linejoin="round">${c.icone}</svg>
+      ${c.nome} <span class="qtd">${qtd}</span></div>`;
+  });
+  html += `<button class="sidebar-botao" id="btn-novo-modelo">+ Adicionar modelo</button>`;
+  nav.innerHTML = html;
+  nav.querySelectorAll('.cat-item').forEach(el=>{
+    el.addEventListener('click', ()=>{ categoriaAtiva = el.dataset.cat; renderTudo(); });
+  });
+  document.getElementById('btn-novo-modelo').addEventListener('click', abrirFormNovoModelo);
+}
+
+/* ============ RENDER GRADE ============ */
+function renderGrade(){
+  const grade = document.getElementById('grade');
+  const titulo = document.getElementById('titulo-lista');
+  const contagem = document.getElementById('contagem-lista');
+  let lista = todosModelos();
+
+  if(categoriaAtiva!=='todos') lista = lista.filter(m=>m.categoria===categoriaAtiva);
+
+  const palavras = normalizar(termoBusca).split(/\s+/).filter(Boolean);
+  let comPontuacao = lista.map(m=>({...m, pontos: pontuar(m, palavras)}));
+
+  if(palavras.length){
+    comPontuacao = comPontuacao.filter(m=>m.pontos>0).sort((a,b)=>b.pontos-a.pontos);
+    titulo.textContent = 'Modelos sugeridos';
+  } else {
+    comPontuacao.sort((a,b)=> (usoContagem[b.id]||0) - (usoContagem[a.id]||0));
+    const nomeCat = categoriaAtiva==='todos' ? 'Todos os modelos' : CATEGORIAS.find(c=>c.id===categoriaAtiva).nome;
+    titulo.textContent = nomeCat;
+  }
+  contagem.textContent = comPontuacao.length + (comPontuacao.length===1 ? ' modelo' : ' modelos');
+
+  if(!comPontuacao.length){
+    grade.innerHTML = `<div class="vazio"><b>Nenhum modelo encontrado</b>Tente outras palavras, ou veja todos os modelos da categoria.</div>`;
+    return;
+  }
+
+  const maiorPontos = Math.max(...comPontuacao.map(m=>m.pontos), 1);
+  grade.innerHTML = comPontuacao.map(m=>{
+    const catNome = CATEGORIAS.find(c=>c.id===m.categoria)?.nome || m.categoria;
+    const usos = usoContagem[m.id] || 0;
+    const destaque = m.pontos>0 ? 'destaque' : '';
+    const barraPct = palavras.length ? Math.round((m.pontos/maiorPontos)*100) : 0;
+    return `<div class="card ${destaque}" data-id="${m.id}">
+      <div class="card-topo">
+        <div class="card-titulo">${escHtml(m.titulo)}</div>
+        <div class="card-tag">${escHtml(catNome)}</div>
+      </div>
+      <div class="card-prev">${escHtml(m.texto).replace(/\{\{(\w+)\}\}/g,(_, v)=>`[${VAR_LABELS[v]||v}]`)}</div>
+      ${palavras.length ? `<div class="barra-match"><div class="barra-match-fill" style="width:${barraPct}%"></div></div>` : ''}
+      <div class="card-rodape">
+        <span class="card-usos">${usos} ${usos===1?'envio':'envios'}</span>
+        <div class="card-acoes">
+          <button class="icon-btn" data-acao="editar" title="Editar modelo">
+            <svg viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+          </button>
+          <button class="icon-btn perigo" data-acao="excluir" title="Excluir modelo">
+            <svg viewBox="0 0 24 24"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/></svg>
+          </button>
+          <button class="card-usar">Usar modelo</button>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+
+  grade.querySelectorAll('.card').forEach(card=>{
+    card.querySelector('.card-usar').addEventListener('click', ()=> abrirEditor(card.dataset.id));
+    card.querySelector('[data-acao="editar"]').addEventListener('click', ()=> abrirFormEditarModelo(card.dataset.id));
+    card.querySelector('[data-acao="excluir"]').addEventListener('click', ()=> abrirConfirmacaoExclusao(card.dataset.id));
+  });
+}
+
+function atualizarStats(){
+  document.getElementById('stat-total').textContent = todosModelos().length;
+  document.getElementById('stat-usos').textContent = Object.values(usoContagem).reduce((a,b)=>a+b,0);
+  document.getElementById('stat-meus').textContent = meusUsos;
+}
+
+function renderTudo(){ renderSidebar(); renderGrade(); atualizarStats(); }
+
+/* ============ EDITOR DE MODELO ============ */
+function abrirEditor(id){
+  const modelo = todosModelos().find(m=>m.id===id);
+  if(!modelo) return;
+  const vars = [...new Set((modelo.texto.match(/\{\{(\w+)\}\}/g)||[]).map(v=>v.replace(/[{}]/g,'')))];
+  const catNome = CATEGORIAS.find(c=>c.id===modelo.categoria)?.nome || modelo.categoria;
+
+  const camposHtml = vars.map(v=>`
+    <div class="campo">
+      <label>${VAR_LABELS[v] || v}</label>
+      <input type="text" data-var="${v}" placeholder="${VAR_LABELS[v] || v}" value="${v==='atendente' ? escHtml(euNome) : ''}">
+    </div>`).join('');
+
+  document.getElementById('editor-conteudo').innerHTML = `
+    <div class="editor-topo">
+      <div>
+        <h3>${escHtml(modelo.titulo)}</h3>
+        <div class="editor-categoria">${catNome}</div>
+      </div>
+      <button class="editor-fechar" id="fechar-editor">✕</button>
+    </div>
+    ${camposHtml}
+    <div class="campo">
+      <label>Telefone do aluno (opcional, com DDD)</label>
+      <input type="text" id="campo-telefone" placeholder="Ex.: 24999998888">
+    </div>
+    <div class="preview-lbl">Pré-visualização</div>
+    <div class="preview-box" id="preview-texto"></div>
+    <div class="acoes-editor">
+      <button class="btn-copiar" id="btn-copiar">Copiar texto</button>
+      <button class="btn-whats" id="btn-whats">Abrir no WhatsApp</button>
+    </div>
+    <div class="confirma" id="confirma-msg"></div>
+  `;
+
+  function montarTexto(){
+    let t = modelo.texto;
+    document.querySelectorAll('[data-var]').forEach(input=>{
+      const v = input.dataset.var;
+      const val = input.value.trim();
+      t = t.split('{{'+v+'}}').join(val || '['+(VAR_LABELS[v]||v)+']');
+    });
+    document.getElementById('preview-texto').textContent = t;
+    return t;
+  }
+  montarTexto();
+  document.querySelectorAll('[data-var]').forEach(input=>{
+    input.addEventListener('input', montarTexto);
+  });
+
+  document.getElementById('fechar-editor').addEventListener('click', fecharEditor);
+  document.getElementById('btn-copiar').addEventListener('click', async ()=>{
+    const texto = montarTexto();
+    try{
+      await navigator.clipboard.writeText(texto);
+      document.getElementById('confirma-msg').textContent = '✓ Copiado!';
+      registrarUso(modelo.id);
+      setTimeout(()=> document.getElementById('confirma-msg').textContent='', 2200);
+    }catch(e){
+      document.getElementById('confirma-msg').textContent = 'Não foi possível copiar. Selecione o texto manualmente.';
+    }
+  });
+  document.getElementById('btn-whats').addEventListener('click', ()=>{
+    const texto = montarTexto();
+    const telefone = document.getElementById('campo-telefone').value.replace(/\D/g,'');
+    const url = telefone
+      ? `https://wa.me/55${telefone}?text=${encodeURIComponent(texto)}`
+      : `https://api.whatsapp.com/send?text=${encodeURIComponent(texto)}`;
+    window.open(url, '_blank');
+    registrarUso(modelo.id);
+  });
+
+  document.getElementById('fundo-editor').classList.add('aberto');
+}
+function fecharEditor(){
+  document.getElementById('fundo-editor').classList.remove('aberto');
+  renderGrade();
+}
+
+/* ============ NOVO MODELO ============ */
+function abrirFormNovoModelo(){
+  const opcoesCategoria = CATEGORIAS.map(c=>`<option value="${c.id}">${c.nome}</option>`).join('');
+  document.getElementById('editor-conteudo').innerHTML = `
+    <div class="editor-topo">
+      <h3>Adicionar modelo</h3>
+      <button class="editor-fechar" id="fechar-editor">✕</button>
+    </div>
+    <div class="aviso-compartilhado">Modelos adicionados aqui ficam visíveis para toda a equipe na Jornada do Aluno.</div>
+    <div class="campo"><label>Categoria</label>
+      <select id="novo-categoria">${opcoesCategoria}</select>
+    </div>
+    <div class="campo"><label>Título do modelo</label>
+      <input type="text" id="novo-titulo" placeholder="Ex.: Aviso de prazo de matrícula">
+    </div>
+    <div class="campo"><label>Palavras-chave (separadas por vírgula)</label>
+      <input type="text" id="novo-tags" placeholder="Ex.: prazo, matricula, atraso">
+    </div>
+    <div class="campo"><label>Texto do modelo (use {{nome}}, {{data}} etc. para campos variáveis)</label>
+      <textarea class="texto-modelo" id="novo-texto" placeholder="Olá, {{nome}}!..."></textarea>
+    </div>
+    <div class="acoes-editor">
+      <button class="btn-whats" id="btn-salvar-modelo">Salvar modelo</button>
+    </div>
+    <div class="confirma" id="confirma-msg"></div>
+  `;
+  document.getElementById('fechar-editor').addEventListener('click', fecharEditor);
+  document.getElementById('btn-salvar-modelo').addEventListener('click', async ()=>{
+    const titulo = document.getElementById('novo-titulo').value.trim();
+    const texto = document.getElementById('novo-texto').value.trim();
+    const categoria = document.getElementById('novo-categoria').value;
+    const tags = document.getElementById('novo-tags').value.split(',').map(t=>t.trim()).filter(Boolean);
+    if(!titulo || !texto){
+      document.getElementById('confirma-msg').textContent = 'Preencha pelo menos o título e o texto.';
+      return;
+    }
+    try{ await salvarModelo({categoria, titulo, tags, texto}); }
+    catch(e){ document.getElementById('confirma-msg').textContent = e.message; return; }
+    fecharEditor();
+    renderTudo();
+  });
+  document.getElementById('fundo-editor').classList.add('aberto');
+}
+
+/* ============ EDITAR / EXCLUIR MODELO ============ */
+function abrirFormEditarModelo(id){
+  const modelo = todosModelos().find(m=>m.id===id);
+  if(!modelo) return;
+  const custom = ehCustom(id);
+  const foiEditado = !custom && modelosEditados[id];
+  const opcoesCategoria = CATEGORIAS.map(c=>`<option value="${c.id}" ${c.id===modelo.categoria?'selected':''}>${c.nome}</option>`).join('');
+
+  document.getElementById('editor-conteudo').innerHTML = `
+    <div class="editor-topo">
+      <h3>Editar modelo</h3>
+      <button class="editor-fechar" id="fechar-editor">✕</button>
+    </div>
+    ${custom ? '' : `<div class="aviso-compartilhado">Este é um modelo padrão. Suas alterações ficam salvas como versão personalizada, visível para toda a equipe.</div>`}
+    <div class="campo"><label>Categoria</label>
+      <select id="edit-categoria">${opcoesCategoria}</select>
+    </div>
+    <div class="campo"><label>Título do modelo</label>
+      <input type="text" id="edit-titulo" value="${escHtml(modelo.titulo)}">
+    </div>
+    <div class="campo"><label>Palavras-chave (separadas por vírgula)</label>
+      <input type="text" id="edit-tags" value="${escHtml((modelo.tags||[]).join(', '))}">
+    </div>
+    <div class="campo"><label>Texto do modelo (use {{nome}}, {{data}} etc. para campos variáveis)</label>
+      <textarea class="texto-modelo" id="edit-texto">${escHtml(modelo.texto)}</textarea>
+    </div>
+    <div class="acoes-editor">
+      <button class="btn-whats" id="btn-salvar-edicao">Salvar alterações</button>
+      ${foiEditado ? `<button class="btn-regenerar" id="btn-restaurar-original">Restaurar original</button>` : ''}
+    </div>
+    <div class="confirma" id="confirma-msg"></div>
+  `;
+
+  document.getElementById('fechar-editor').addEventListener('click', fecharEditor);
+  document.getElementById('btn-salvar-edicao').addEventListener('click', async ()=>{
+    const titulo = document.getElementById('edit-titulo').value.trim();
+    const texto = document.getElementById('edit-texto').value.trim();
+    const categoria = document.getElementById('edit-categoria').value;
+    const tags = document.getElementById('edit-tags').value.split(',').map(t=>t.trim()).filter(Boolean);
+    if(!titulo || !texto){
+      document.getElementById('confirma-msg').textContent = 'Preencha pelo menos o título e o texto.';
+      return;
+    }
+    try{ await salvarModelo({id, categoria, titulo, tags, texto}); }
+    catch(e){ document.getElementById('confirma-msg').textContent = e.message; return; }
+    fecharEditor();
+    renderTudo();
+  });
+
+  const btnRestaurar = document.getElementById('btn-restaurar-original');
+  if(btnRestaurar){
+    btnRestaurar.addEventListener('click', async ()=>{
+      try{ await restaurarModelo(id); }catch(e){ document.getElementById('confirma-msg').textContent = e.message; return; }
+      fecharEditor();
+      renderTudo();
+    });
+  }
+
+  document.getElementById('fundo-editor').classList.add('aberto');
+}
+
+function abrirConfirmacaoExclusao(id){
+  const modelo = todosModelos().find(m=>m.id===id);
+  if(!modelo) return;
+  document.getElementById('editor-conteudo').innerHTML = `
+    <div class="editor-topo">
+      <h3>Excluir modelo</h3>
+      <button class="editor-fechar" id="fechar-editor">✕</button>
+    </div>
+    <p style="font-size:13.5px;color:var(--texto);line-height:1.6;margin:4px 0 0;">
+      Quer excluir <b>${escHtml(modelo.titulo)}</b>? Ele deixa de aparecer na lista para toda a equipe.
+    </p>
+    <div class="acoes-editor">
+      <button class="btn-copiar" id="btn-cancelar-exclusao">Cancelar</button>
+      <button class="btn-whats" style="background:#E2503F;" id="btn-confirmar-exclusao">Excluir</button>
+    </div>
+  `;
+  document.getElementById('fechar-editor').addEventListener('click', fecharEditor);
+  document.getElementById('btn-cancelar-exclusao').addEventListener('click', fecharEditor);
+  document.getElementById('btn-confirmar-exclusao').addEventListener('click', async ()=>{
+    await excluirModelo(id);
+    fecharEditor();
+    renderTudo();
+  });
+  document.getElementById('fundo-editor').classList.add('aberto');
+}
+
+/* ============ BUSCA / INICIALIZAÇÃO ============ */
+document.getElementById('busca').addEventListener('input', (e)=>{
+  termoBusca = e.target.value;
+  renderGrade();
+});
+document.getElementById('limpar-busca').addEventListener('click', ()=>{
+  termoBusca = '';
+  document.getElementById('busca').value = '';
+  renderGrade();
+});
+document.getElementById('fundo-editor').addEventListener('click', (e)=>{
+  if(e.target.id === 'fundo-editor') fecharEditor();
+});
+
+function chaveEstado(){
+  return JSON.stringify({modelosCustom, modelosEditados, modelosRemovidos, usoContagem});
+}
+
+async function sincronizar(){
+  if(document.getElementById('fundo-editor').classList.contains('aberto')) return; // não interrompe quem está editando
+  const antes = chaveEstado();
+  await carregarDados();
+  if(chaveEstado() !== antes) renderTudo();
+}
+
+(async function iniciar(){
+  const sess = Api.Sessao.ler();
+  if(!sess){ try{ window.parent.App.mostrarLogin('Entre novamente.'); }catch(e){} return; }
+  euNome = (sess.me && sess.me.nome) || '';
+  await carregarDados();
+  renderTudo();
+  setInterval(sincronizar, 30000);
+})();
+</script>
+</body>
+</html>
