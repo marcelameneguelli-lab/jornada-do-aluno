@@ -3575,13 +3575,17 @@ function enviarBaseServidor(cicloImp, novos, tentativa) {
       fim(false, '⚠️ Servidor tem ' + n + ' alunos no ciclo ' + cicloImp + ', esperado ' + novos.length + '.');
     }).catch(function(){ if(rest > 0) setTimeout(function(){ conferir(rest - 1); }, 10000); else fim(false, '⚠️ Não consegui confirmar no servidor.'); });
   };
-  gasPost('importar_alunos', { alunos: novos, ciclo: cicloImp })
+  gasGet('importar_alunos', { alunos: novos, ciclo: cicloImp }, 330000)
     .then(function(d) {
       if(d && d.ok && d.semConfirmacao) { setMsg('⏳ Enviado. Conferindo no servidor...'); setTimeout(function(){ conferir(6); }, 10000); }
       else if(d && d.ok) conferir(3);
       else fim(false, '⚠️ Erro ao salvar no servidor: ' + escEv((d && d.erro) || 'desconhecido'));
     })
-    .catch(function(err){ fim(false, '✗ Falha ao enviar para o servidor: ' + escEv(err.message)); });
+    .catch(function(err){
+      // a resposta não chegou, mas o servidor pode ter gravado: confere por até 3 minutos
+      setMsg('⏳ O servidor está demorando para responder. Conferindo se a base foi gravada...');
+      conferir(18);
+    });
 }
 
 function salvarDriveUrl() {

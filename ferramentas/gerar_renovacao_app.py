@@ -136,6 +136,16 @@ _i=s.rfind('</body>'); s=s[:_i]+'''<style>
 })();
 </script>
 '''+s[_i:]
+# 6b. importação da base: o servidor pode levar mais de 40 s (grava a aba do ciclo e a consolidada).
+#     Espera até 5,5 min e, se a resposta não chegar, confere no servidor antes de dizer que falhou.
+s=troca(s,"""  gasPost('importar_alunos', { alunos: novos, ciclo: cicloImp })""","""  gasGet('importar_alunos', { alunos: novos, ciclo: cicloImp }, 330000)""")
+s=troca(s,"""    .catch(function(err){ fim(false, '✗ Falha ao enviar para o servidor: ' + escEv(err.message)); });
+}""","""    .catch(function(err){
+      // a resposta não chegou, mas o servidor pode ter gravado: confere por até 3 minutos
+      setMsg('⏳ O servidor está demorando para responder. Conferindo se a base foi gravada...');
+      conferir(18);
+    });
+}""")
 # 7. service worker é o da Jornada
 s=troca(s,"// ═══ PWA — registrar o Service Worker (permite instalar como app) ═══\nif('serviceWorker' in navigator) {","// ═══ PWA: o service worker é o da Jornada (tela base) ═══\nif(false) {")
 os.makedirs(os.path.join(RAIZ,'app/modulos/renovacao'),exist_ok=True)
