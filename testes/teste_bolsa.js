@@ -22,13 +22,9 @@ t('uma solicitação por aluno no período', ()=>{ assert.equal(post({acao:'bols
 t('mudar status guarda histórico e data de lançamento', ()=>{ const s=post({acao:'bolsa.dados',token:tF,periodo:'26.3'}).solicitacoes[0]; const r=post({acao:'bolsa.salvar',token:tF,periodo:'26.3',registro:Object.assign({},s,{status:'lancada',consumo:1500})}); assert(r.ok,JSON.stringify(r)); const n=post({acao:'bolsa.dados',token:tF,periodo:'26.3'}).solicitacoes[0]; assert.equal(n.status,'lancada'); assert(n.dataLanc); assert(n.historico.length>=1); });
 t('atendente não mexe no pool nem exclui', ()=>{ assert.equal(post({acao:'bolsa.pool',token:tF,periodo:'26.3',pool:{PRESENCIAL:10000}}).ok,false); const s=post({acao:'bolsa.dados',token:tF,periodo:'26.3'}).solicitacoes[0]; assert.equal(post({acao:'bolsa.excluir',token:tF,id:s.id}).ok,false); });
 t('coordenação define o pool', ()=>{ const r=post({acao:'bolsa.pool',token:tM,periodo:'26.3',pool:{PRESENCIAL:10000,EAD:''}}); assert(r.ok,JSON.stringify(r)); const d=post({acao:'bolsa.dados',token:tM,periodo:'26.3'}); assert.equal(d.pool.PRESENCIAL,10000); assert.equal(d.gestao,true); });
-t('importar (atendente pela Central): cria, atualiza sem apagar o que a equipe preencheu', ()=>{ const r=post({acao:'bolsa.importar',token:tF,periodo:'26.3',respostas:[
-  {mat:'202501000001',modalidade:'PRESENCIAL',pct:30,tipo:'RETENÇÃO',status:'lancada',consumo:'',pendencias:''},
-  {mat:'202501000002',nome:'Beto Teste',modalidade:'EAD',pct:'50',tipo:'PERDA DE EMPREGO',status:'em_analise'}]});
-  assert(r.ok,JSON.stringify(r)); assert.equal(r.novas,1); assert.equal(r.atualizadas,1);
-  const d=post({acao:'bolsa.dados',token:tF,periodo:'26.3'}); assert.equal(d.solicitacoes.length,2); assert.equal(d.solicitacoes.find(s=>s.mat==='202501000001').consumo,1500); });
+t('não existe mais importação de planilha', ()=>{ const r=post({acao:'bolsa.importar',token:tM,periodo:'26.3',respostas:[]}); assert.equal(r.ok,false); });
+t('segunda solicitação lançada pela planilha do sistema', ()=>{ const r=post({acao:'bolsa.salvar',token:tF,periodo:'26.3',registro:{id:'',mat:'202501000002',nome:'Beto Teste',modalidade:'EAD',pct:'50',tipo:'PERDA DE EMPREGO',status:'em_analise'}}); assert(r.ok,JSON.stringify(r)); assert.equal(post({acao:'bolsa.dados',token:tF,periodo:'26.3'}).solicitacoes.length,2); });
 t('períodos ficam separados', ()=>{ assert.equal(post({acao:'bolsa.dados',token:tF,periodo:'27.1'}).solicitacoes.length,0); });
 t('coordenação exclui', ()=>{ const s=post({acao:'bolsa.dados',token:tM,periodo:'26.3'}).solicitacoes.find(x=>x.mat==='202501000002'); assert(post({acao:'bolsa.excluir',token:tM,id:s.id}).ok); assert.equal(post({acao:'bolsa.dados',token:tM,periodo:'26.3'}).solicitacoes.length,1); });
-t('Central de Bases mostra a bolsa', ()=>{ const r=post({acao:'nucleo.bases_resumo',token:tF}); assert(r.ok,JSON.stringify(r)); assert.equal(r.bolsa.total,1); assert.equal(r.bolsa.ultimo,'26.3'); });
 t('buscar aluno', ()=>{ const r=post({acao:'bolsa.buscar_aluno',token:tF,matricula:'202501000001'}); assert(r.ok); assert.equal(r.nome,'Ana Bolsista'); });
 console.log(ok+' testes da Bolsa Permanência passaram');

@@ -56,30 +56,45 @@
   .secao-form { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--texto-2); margin: 14px 0 4px; border-top: 1px solid var(--borda); padding-top: 10px; }
   .pool-tab td input { width: 140px; margin: 0; text-align: right; }
   .carregando-base { padding: 40px; text-align: center; color: var(--texto-2); }
+  .grade-pl { overflow: auto; max-height: calc(100vh - 230px); background: #fff; border: 1px solid var(--borda); border-radius: 10px; }
+  .planilha { border-collapse: separate; border-spacing: 0; font-size: 12.5px; min-width: 100%; }
+  .planilha th { position: sticky; top: 0; z-index: 2; background: #eef3f9; color: var(--azul); font-size: 11.5px; text-align: left; padding: 8px 6px; white-space: nowrap; border-bottom: 1px solid var(--borda); }
+  .planilha td { border-bottom: 1px solid #edf0f4; border-right: 1px solid #f2f4f7; padding: 2px 3px; vertical-align: top; background: #fff; }
+  .planilha .fixa { position: sticky; left: 0; z-index: 1; } .planilha th.fixa { z-index: 3; }
+  .planilha .fixa:nth-child(1) { width: 38px; min-width: 38px; }
+  .planilha td.fixa.estado, .planilha th.fixa:nth-child(2) { left: 38px; width: 110px; min-width: 110px; max-width: 110px; font-size: 11px; }
+  .planilha .fx3 { left: 148px; width: 126px; min-width: 126px; } .planilha .fx4 { left: 274px; min-width: 208px; box-shadow: 2px 0 0 #d6dde8; }
+  .planilha input, .planilha select, .planilha textarea { margin: 0; border: 1px solid transparent; border-radius: 4px; padding: 5px 6px; font: inherit; background: transparent; width: auto; min-width: 60px; }
+  .planilha input[type=date] { width: 128px; } .planilha input[type=checkbox] { min-width: 0; margin: 8px; }
+  .planilha textarea { min-height: 28px; resize: vertical; display: block; }
+  .planilha input:hover, .planilha select:hover, .planilha textarea:hover { border-color: #d0d7e2; }
+  .planilha input:focus, .planilha select:focus, .planilha textarea:focus { border-color: var(--azul); background: #fff; outline: none; }
+  .planilha input[readonly] { color: var(--texto-2); }
+  .planilha tr.rascunho td { background: #fffbea; } .planilha tr.erro-lin td { background: #fdecec; }
+  .planilha .salvo { font-weight: 700; color: var(--texto-2); } .planilha .al { color: #93370d; margin-top: 2px; line-height: 1.3; }
   @media (max-width: 900px) { .grade2, .grade3, .grade4, .duas { grid-template-columns: 1fr; } main { padding: 14px 10px; } }
 </style>
 </head>
 <body>
 <div class="topo" id="topo">
   <div><h1>🤝 Bolsa Permanência</h1><small id="sub">Solicitações, percentuais, justificativas e saldo do pool</small></div>
-  <div class="direita"><label style="margin:0;font-size:13px;color:var(--texto-2)">Período</label><select id="sel-periodo"></select><button class="btn primario" id="btn-nova">+ Nova solicitação</button></div>
+  <div class="direita"><label style="margin:0;font-size:13px;color:var(--texto-2)">Período</label><select id="sel-periodo"></select><button class="btn" id="btn-nova">+ Nova solicitação (ficha)</button></div>
 </div>
 <nav class="abas" id="abas">
-  <button data-aba="painel" class="ativa">Painel</button>
-  <button data-aba="solicitacoes">Solicitações <span class="cont" id="c-sol">0</span></button>
+  <button data-aba="solicitacoes" class="ativa">Planilha <span class="cont" id="c-sol">0</span></button>
+  <button data-aba="painel">Painel</button>
   <button data-aba="pool">Pool e saldo</button>
 </nav>
 <main id="area"><div class="carregando-base">Carregando...</div></main>
 <div id="modal" hidden><div class="modal-caixa larga" id="modal-corpo"></div></div>
 
-<script src="../../nucleo/config.js?v=1.8.0"></script>
+<script src="../../nucleo/config.js?v=1.8.1"></script>
 <script src="../../nucleo/api.js?v=1.2.3"></script>
 <script>window.App = (window.parent && window.parent !== window) ? window.parent.App : null;</script>
 <script>
 (function () {
   const $ = (s) => document.querySelector(s);
   const esc = (t) => String(t == null ? '' : t).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-  const MODO = new URLSearchParams(location.search).get('modo') || '';
   const ST = { em_analise: 'Em análise', deferido: 'Deferido', em_processamento: 'Em processamento', lancada: 'Lançada', indeferido: 'Indeferido', conflito: 'Conflito de bolsa', sem_saldo: 'Sem saldo' };
   const ST_COR = { em_analise: '#1c7ed6', deferido: '#0b7285', em_processamento: '#7048e8', lancada: '#2f9e44', indeferido: '#868e96', conflito: '#d92d20', sem_saldo: '#f79009' };
   const MOD_NOME = { PRESENCIAL: 'Presencial', SEMIPRESENCIAL: 'Semipresencial', EAD: 'EAD', FLEX: 'Flex' };
@@ -89,7 +104,7 @@
   const dataBR = (iso) => { const m = String(iso || '').match(/^(\d{4})-(\d{2})-(\d{2})/); return m ? `${m[3]}/${m[2]}/${m[1]}` : ''; };
   const hojeISO = () => { const d = new Date(); return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 10); };
   const aviso = (msg, tipo) => { if (window.App && window.App.aviso) return window.App.aviso(msg, tipo); alert(msg); };
-  const E = { aba: 'painel', d: null, periodo: '', busca: '', fSt: '', fMod: '', fMot: '', fAlerta: '' };
+  const E = { aba: 'solicitacoes', rascunhos: [], d: null, periodo: '', busca: '', fSt: '', fMod: '', fMot: '', fAlerta: '' };
   const L = () => (E.d && E.d.solicitacoes) || [];
 
   async function carregar() {
@@ -127,7 +142,7 @@
     $('#sel-periodo').innerHTML = (E.d.periodos.length ? E.d.periodos : [E.periodo || '']).filter(Boolean).map((p) => `<option ${p === E.periodo ? 'selected' : ''}>${esc(p)}</option>`).join('') + '<option value="__novo">+ Novo período</option>';
     document.querySelectorAll('#abas button').forEach((b) => b.classList.toggle('ativa', b.dataset.aba === E.aba));
     $('#c-sol').textContent = L().length;
-    $('#sub').textContent = E.periodo ? `Período ${E.periodo} · ${L().length} solicitação(ões)` : 'Nenhum período ainda: importe a planilha na Central de Bases ou crie um período';
+    $('#sub').textContent = E.periodo ? `Período ${E.periodo} · ${L().length} solicitação(ões)` : 'Nenhum período ainda: crie um período no seletor ao lado';
     if (E.aba === 'painel') painel(); else if (E.aba === 'solicitacoes') solicitacoes(); else poolTela();
   }
 
@@ -154,7 +169,7 @@
     const comAlerta = S.filter((s) => alertas(s).length);
     const porCurso = {}; S.filter((s) => s.status === 'lancada').forEach((s) => { const k = s.curso || (s.base && s.base.curso) || '—'; porCurso[k] = (porCurso[k] || 0) + (Number(s.consumo) || 0); });
     const cursos = Object.keys(porCurso).sort((a, b) => porCurso[b] - porCurso[a]).slice(0, 10); const maxC = Math.max(1, ...Object.values(porCurso));
-    $('#area').innerHTML = !E.periodo ? '<div class="lembrete amarelo">Nenhuma solicitação ainda. Importe a planilha de acompanhamento na Central de Bases, ou crie um período e registre as solicitações aqui.</div>' : `
+    $('#area').innerHTML = !E.periodo ? '<div class="lembrete amarelo">Nenhuma solicitação ainda. Crie um período no seletor do alto e preencha a planilha.</div>' : `
       <div class="lembrete">Saldo = pool − lançado − comprometido. O consumo de cada bolsa é o valor que ela representa no semestre (coluna "Consumo" da solicitação).</div>
       <div class="pools">${E.d.modalidades.map((m) => cardPool(m, rp[m])).join('')}
         <div class="pool" style="border-color:var(--azul)"><h3>Total ${esc(E.periodo)}</h3>${tot.pool ? `<div class="saldo ${tot.pool - tot.lanc - tot.comp < 0 ? 'neg' : 'pos'}">${moeda(tot.pool - tot.lanc - tot.comp)}</div><div class="dica">saldo disponível</div>` : ''}
@@ -176,28 +191,118 @@
     const b = E.busca.trim().toLowerCase();
     return L().filter((s) => (!E.fSt || s.status === E.fSt) && (!E.fMod || s.modalidade === E.fMod) && (!E.fMot || s.tipo === E.fMot) && (!E.fAlerta || alertas(s).length)
       && (!b || String(s.nome).toLowerCase().indexOf(b) >= 0 || String(s.mat).indexOf(b) >= 0 || String(s.curso).toLowerCase().indexOf(b) >= 0 || String(s.requerimento).indexOf(b) >= 0))
-      .sort((a, b2) => String(b2.data).localeCompare(String(a.data)) || String(a.nome).localeCompare(String(b2.nome), 'pt-BR'));
+      .sort((a, b2) => String(a.data || '9').localeCompare(String(b2.data || '9')) || String(a.nome).localeCompare(String(b2.nome), 'pt-BR'));
+  }
+
+  /* ---------- planilha editável (as colunas da planilha de acompanhamento) ---------- */
+  const COLS = () => [
+    { k: 'mat', t: 'Matrícula', tp: 'txt', w: 118, fx: 'fx3' },
+    { k: 'nome', t: 'Nome', tp: 'txt', w: 200, fx: 'fx4' },
+    { k: 'data', t: 'Data ent. carta', tp: 'date' },
+    { k: 'modalidade', t: 'Modalidade', tp: 'sel', ops: [['', '—']].concat(E.d.modalidades.map((m) => [m, MOD_NOME[m] || m])) },
+    { k: 'curso', t: 'Curso', tp: 'txt', w: 170 },
+    { k: 'tel', t: 'Celular', tp: 'txt', w: 115 },
+    { k: 'email', t: 'E-mail', tp: 'txt', w: 190 },
+    { k: 'pctAnt', t: '% anterior', tp: 'num', w: 70 },
+    { k: 'pagouRenov', t: 'Pagou renovação', tp: 'sel', ops: [['', '—'], ['SIM', 'SIM'], ['NÃO', 'NÃO']] },
+    { k: 'pct', t: '% atual', tp: 'num', w: 70 },
+    { k: 'vigIni', t: 'Vigência início', tp: 'date' },
+    { k: 'vigFim', t: 'Vigência fim', tp: 'date' },
+    { k: 'tipo', t: 'Tipo (motivo)', tp: 'sel', ops: [['', '—']].concat((E.d.motivos || []).map((m) => [m.tipo, m.tipo])) },
+    { k: 'descricao', t: 'Descrição (justificativa)', tp: 'area', w: 280 },
+    { k: 'status', t: 'Status', tp: 'sel', ops: Object.keys(ST).map((k) => [k, ST[k]]) },
+    { k: 'dataLanc', t: 'Data do lançamento', tp: 'date' },
+    { k: 'recalculo', t: 'Recálculo', tp: 'chk' },
+    { k: 'consumo', t: 'Consumo (R$)', tp: 'num', w: 95 },
+    { k: 'requerimento', t: 'Nº requerimento', tp: 'txt', w: 110 },
+    { k: 'pendencias', t: 'Pendências', tp: 'txt', w: 170 },
+    { k: 'obs', t: 'Observações', tp: 'txt', w: 200 },
+  ];
+  const faltando = (s) => [!String(s.mat || '').replace(/\D/g, '') && 'matrícula', !s.modalidade && 'modalidade', (s.pct === '' || s.pct == null) && '% atual', !s.tipo && 'tipo'].filter(Boolean);
+  function celula(c, s, nova) {
+    let v = s[c.k]; if (v == null) v = '';
+    const st = c.w ? ` style="width:${c.w}px"` : '';
+    if (c.tp === 'sel') {
+      const ops = c.ops.slice(); if (v && !ops.some((o) => o[0] === v)) ops.push([v, v]);
+      return `<select data-k="${c.k}"${st}>${ops.map((o) => `<option value="${esc(o[0])}" ${o[0] === v ? 'selected' : ''}>${esc(o[1])}</option>`).join('')}</select>`;
+    }
+    if (c.tp === 'chk') return `<input type="checkbox" data-k="${c.k}" ${v ? 'checked' : ''}>`;
+    if (c.tp === 'area') return `<textarea data-k="${c.k}" rows="1"${st}>${esc(v)}</textarea>`;
+    if (c.tp === 'date') return `<input type="date" data-k="${c.k}" value="${esc(v)}">`;
+    if (c.tp === 'num') return `<input data-k="${c.k}" inputmode="decimal" value="${esc(String(v).replace('.', ','))}"${st}>`;
+    return `<input data-k="${c.k}" value="${esc(v)}"${st} ${c.k === 'mat' && !nova ? 'readonly' : ''}>`;
+  }
+  function linhaHtml(s, nova) {
+    const al = nova ? [] : alertas(s), fal = faltando(s);
+    return `<tr data-id="${esc(s.id || '')}" data-tmp="${esc(s._tmp || '')}" class="${nova ? 'rascunho' : ''}">
+      <td class="fixa acoes-lin"><button class="btn mini" data-det title="Abrir a ficha completa">⋯</button></td>
+      <td class="fixa estado"><span class="salvo">${nova ? (fal.length ? 'Falta: ' + fal.join(', ') : 'Salvando...') : (al.length ? '⚠️' : '✓')}</span>${al.length ? `<div class="al">${al.map(esc).join('<br>')}</div>` : ''}</td>
+      ${COLS().map((c) => `<td class="${c.fx ? 'fixa ' + c.fx : ''}">${celula(c, s, nova)}</td>`).join('')}</tr>`;
+  }
+  function lerLinha(tr, base) {
+    const r = Object.assign({}, base);
+    tr.querySelectorAll('[data-k]').forEach((el) => { r[el.dataset.k] = el.type === 'checkbox' ? el.checked : el.value; });
+    r.mat = String(r.mat || '').replace(/\D/g, ''); r.consumo = num(r.consumo);
+    return r;
+  }
+  const filas = {};
+  async function salvarLinha(tr) {
+    const id = tr.dataset.id, tmp = tr.dataset.tmp;
+    const antes = id ? L().filter((x) => x.id === id)[0] : E.rascunhos.filter((x) => x._tmp === tmp)[0];
+    if (!antes) return;
+    const reg = lerLinha(tr, antes), ind = tr.querySelector('.salvo');
+    if (!id) { Object.assign(antes, reg); const f = faltando(reg); if (f.length) { ind.textContent = 'Falta: ' + f.join(', '); return; } if (L().some((x) => x.mat === reg.mat)) { ind.textContent = 'Já existe neste período'; return; } }
+    ind.textContent = 'Salvando...'; tr.classList.remove('erro-lin');
+    const chave = id || tmp;
+    filas[chave] = (filas[chave] || Promise.resolve()).then(async () => {
+      try {
+        const registro = Object.assign({}, reg, { id: tr.dataset.id || '' }); delete registro.base; delete registro.historico; delete registro._tmp;
+        const r = await Api.chamar('bolsa.salvar', { periodo: E.periodo, registro });
+        if (!r || !r.ok) throw new Error((r && r.erro) || 'Não foi possível salvar.');
+        const novo = Object.assign({}, r.registro, { base: antes.base });
+        if (!tr.dataset.id) { E.rascunhos = E.rascunhos.filter((x) => x._tmp !== tmp); E.d.solicitacoes.push(novo); tr.dataset.id = novo.id; tr.dataset.tmp = ''; tr.classList.remove('rascunho'); const m = tr.querySelector('[data-k=mat]'); if (m) m.readOnly = true; }
+        else { const i = E.d.solicitacoes.findIndex((x) => x.id === novo.id); if (i >= 0) E.d.solicitacoes[i] = novo; }
+        const dl = tr.querySelector('[data-k=dataLanc]'); if (dl && novo.dataLanc && !dl.value) dl.value = novo.dataLanc;
+        const al = alertas(novo); ind.textContent = al.length ? '⚠️' : '✓'; const box = tr.querySelector('.al'); if (box) box.remove();
+        if (al.length) tr.querySelector('.estado').insertAdjacentHTML('beforeend', `<div class="al">${al.map(esc).join('<br>')}</div>`);
+        $('#c-sol').textContent = L().length; $('#sub').textContent = `Período ${E.periodo} · ${L().length} solicitação(ões)`; totalPlanilha();
+      } catch (e) { tr.classList.add('erro-lin'); ind.textContent = 'Erro: ' + e.message; if (!e.auth) aviso(e.message, 'erro'); }
+    });
+  }
+  async function completarPelaBase(tr) {
+    const m = tr.querySelector('[data-k=mat]').value.replace(/\D/g, ''); if (m.length < 9 || tr.dataset.busca === m) return; tr.dataset.busca = m;
+    try {
+      const r = await Api.chamar('bolsa.buscar_aluno', { matricula: m });
+      if (r && r.ok && !r.naoEncontrado) {
+        const set = (k, v) => { const el = tr.querySelector(`[data-k=${k}]`); if (el && !el.value && v != null && v !== '') el.value = String(v); };
+        set('nome', r.nome); set('curso', r.curso); set('tel', r.tel); set('email', r.email); set('modalidade', r.modalidade); set('pctAnt', r.pctBase);
+      }
+    } catch (e) { /* segue sem completar */ }
+    salvarLinha(tr);
+  }
+  function totalPlanilha() {
+    const el = $('#total-pl'); if (!el) return; const F = filtrar();
+    el.textContent = `${F.length} solicitação(ões) · consumo ${moeda(F.reduce((t, s) => t + (Number(s.consumo) || 0), 0))}`;
   }
   function solicitacoes() {
-    const F = filtrar(), motivos = Array.from(new Set(L().map((s) => s.tipo).filter(Boolean))).sort();
-    $('#area').innerHTML = `
+    E.rascunhos = E.rascunhos || [];
+    const F = filtrar(), motivos = Array.from(new Set(L().map((s) => s.tipo).filter(Boolean))).sort(), cols = COLS();
+    $('#area').innerHTML = !E.periodo ? '<div class="lembrete amarelo">Crie um período no seletor do alto (ex.: 26.3) para começar a planilha.</div>' : `
       <div class="filtros">
+        <button class="btn primario" id="nova-linha">+ Nova linha</button>
         <input type="search" id="busca" placeholder="Nome, matrícula, curso ou requerimento" value="${esc(E.busca)}">
         <select id="f-st"><option value="">Todos os status</option>${Object.keys(ST).map((k) => `<option value="${k}" ${E.fSt === k ? 'selected' : ''}>${ST[k]}</option>`).join('')}</select>
         <select id="f-mod"><option value="">Todas as modalidades</option>${E.d.modalidades.map((m) => `<option value="${m}" ${E.fMod === m ? 'selected' : ''}>${MOD_NOME[m]}</option>`).join('')}</select>
         <select id="f-mot"><option value="">Todos os motivos</option>${motivos.map((m) => `<option ${E.fMot === m ? 'selected' : ''}>${esc(m)}</option>`).join('')}</select>
         <label style="display:flex;gap:6px;align-items:center;margin:0;font-size:13px"><input type="checkbox" id="f-alerta" ${E.fAlerta ? 'checked' : ''} style="width:auto;margin:0"> Só com alerta</label>
-        <button class="btn" id="limpar">Limpar</button><button class="btn" id="exportar">📥 Exportar</button>
-        <span class="total">${F.length} solicitação(ões) · consumo ${moeda(F.reduce((t, s) => t + (Number(s.consumo) || 0), 0))}</span>
+        <button class="btn" id="limpar">Limpar</button><button class="btn" id="exportar">📥 Extrair planilha (Excel)</button>
+        <span class="total" id="total-pl"></span>
       </div>
-      <div class="painel"><table class="tabela"><thead><tr><th>Aluno</th><th>Modalidade · curso</th><th class="num">% anterior → atual</th><th>Motivo</th><th>Status</th><th class="num">Consumo</th><th>Lançamento</th></tr></thead>
-      <tbody>${F.map((s) => { const al = alertas(s); return `<tr class="clicavel" data-id="${esc(s.id)}">
-        <td class="nome"><b>${esc(s.nome || (s.base && s.base.nome) || s.mat)}</b><small>${esc(s.mat)}</small>${al.map((x) => `<br><span class="alerta">${esc(x)}</span>`).join('')}</td>
-        <td>${esc(MOD_NOME[s.modalidade] || s.modalidade)}<br><small class="dica">${esc(s.curso)}</small></td>
-        <td class="num">${s.pctAnt == null ? '—' : s.pctAnt + '%'} → <b>${s.pct == null ? '—' : s.pct + '%'}</b>${s.pctAnt != null && s.pct != null ? (s.pct > s.pctAnt ? ' <span class="seta-up">▲</span>' : s.pct < s.pctAnt ? ' <span class="seta-down">▼</span>' : '') : ''}</td>
-        <td><small>${esc(s.tipo)}</small></td><td><span class="selo st-${s.status}">${ST[s.status] || esc(s.status)}</span></td>
-        <td class="num">${s.consumo == null || s.consumo === '' ? '<span class="dica">—</span>' : moeda(s.consumo)}</td>
-        <td><small>${dataBR(s.dataLanc)}${s.requerimento ? '<br>req. ' + esc(s.requerimento) : ''}</small></td></tr>`; }).join('') || '<tr><td colspan="7" class="vazio">Nenhuma solicitação aqui.</td></tr>'}</tbody></table></div>`;
+      <div class="dica" style="margin:-4px 0 8px">Digite direto nas células: cada linha salva sozinha quando você sai do campo. Matrícula, modalidade, % atual e tipo são obrigatórios. Nome, curso e contato vêm da base líquida ao digitar a matrícula.</div>
+      <div class="grade-pl"><table class="planilha"><thead><tr><th class="fixa"></th><th class="fixa">Situação</th>${cols.map((c) => `<th class="${c.fx ? 'fixa ' + c.fx : ''}">${esc(c.t)}</th>`).join('')}</tr></thead>
+      <tbody>${E.rascunhos.map((s) => linhaHtml(s, true)).join('')}${F.map((s) => linhaHtml(s, false)).join('')}${!F.length && !E.rascunhos.length ? `<tr><td colspan="${cols.length + 2}" class="vazio">Nenhuma linha ainda. Clique em "+ Nova linha".</td></tr>` : ''}</tbody></table></div>`;
+    if (!E.periodo) return;
+    totalPlanilha();
     const busca = $('#busca'); busca.oninput = () => { E.busca = busca.value; const pos = busca.selectionStart; desenhar(); const x = $('#busca'); x.focus(); x.setSelectionRange(pos, pos); };
     $('#f-st').onchange = (e) => { E.fSt = e.target.value; desenhar(); };
     $('#f-mod').onchange = (e) => { E.fMod = e.target.value; desenhar(); };
@@ -205,7 +310,24 @@
     $('#f-alerta').onchange = (e) => { E.fAlerta = e.target.checked ? '1' : ''; desenhar(); };
     $('#limpar').onclick = () => { Object.assign(E, { busca: '', fSt: '', fMod: '', fMot: '', fAlerta: '' }); desenhar(); };
     $('#exportar').onclick = () => exportar(F);
-    document.querySelectorAll('tr[data-id]').forEach((tr) => { tr.onclick = () => abrir(L().filter((s) => s.id === tr.dataset.id)[0]); });
+    $('#nova-linha').onclick = () => {
+      E.rascunhos.unshift({ _tmp: 't' + Date.now(), data: hojeISO(), status: 'em_analise' }); desenhar();
+      const m = document.querySelector('tr.rascunho [data-k=mat]'); if (m) m.focus();
+    };
+    const tb = document.querySelector('.planilha tbody');
+    tb.addEventListener('change', (ev) => {
+      const tr = ev.target.closest('tr'); if (!tr || !ev.target.dataset.k) return;
+      const k = ev.target.dataset.k;
+      if (k === 'tipo') { const d = tr.querySelector('[data-k=descricao]'), m = (E.d.motivos || []).filter((x) => x.tipo === ev.target.value)[0];
+        if (d && m && m.texto && (!d.value.trim() || (E.d.motivos || []).some((x) => x.texto && d.value === x.texto))) d.value = m.texto; }
+      if (k === 'mat' && !tr.dataset.id) { completarPelaBase(tr); return; }
+      salvarLinha(tr);
+    });
+    tb.addEventListener('click', (ev) => {
+      const b = ev.target.closest('[data-det]'); if (!b) return; const tr = b.closest('tr');
+      if (!tr.dataset.id) { aviso('Preencha os campos obrigatórios da linha antes de abrir a ficha.', 'erro'); return; }
+      abrir(L().filter((s) => s.id === tr.dataset.id)[0]);
+    });
   }
 
   function poolTela() {
@@ -329,126 +451,44 @@
   }
   function fechar() { $('#modal').hidden = true; $('#modal-corpo').innerHTML = ''; }
 
-  function exportar(F) {
-    const cel = (v) => { const t = String(v == null ? '' : v); return /[;"\n]/.test(t) ? '"' + t.replace(/"/g, '""') + '"' : t; };
-    const cab = ['Período', 'Data da carta', 'Modalidade', 'Matrícula', 'Nome', 'Curso', 'Celular', 'E-mail', '% anterior', 'Pagou renovação', '% atual', 'Vigência', 'Motivo', 'Justificativa', 'Status', 'Data do lançamento', 'Requerimento', 'Recálculo', 'Consumo', 'Pendências', 'Alertas'];
-    const linhas = F.map((s) => [s.periodo, dataBR(s.data), MOD_NOME[s.modalidade] || s.modalidade, s.mat, s.nome, s.curso, s.tel, s.email, s.pctAnt, s.pagouRenov, s.pct,
-      s.vigIni ? dataBR(s.vigIni) + ' - ' + dataBR(s.vigFim) : s.vigTxt, s.tipo, s.descricao, ST[s.status] || s.status, dataBR(s.dataLanc), s.requerimento, s.recalculo ? 'SIM' : '',
-      s.consumo == null ? '' : String(s.consumo).replace('.', ','), s.pendencias, alertas(s).join(' | ')]);
-    const csv = '﻿' + [cab].concat(linhas).map((l) => l.map(cel).join(';')).join('\r\n');
-    const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
-    a.download = 'bolsa_permanencia_' + E.periodo + '_' + hojeISO() + '.csv'; document.body.appendChild(a); a.click(); a.remove();
-  }
-
-  /* ---------- importação (Central de Bases) ---------- */
-  const norm = (t) => String(t == null ? '' : t).normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/ /g, ' ').trim().toUpperCase().replace(/\s+/g, ' ');
-  function isoDe(v) {
-    if (v == null || v === '') return '';
-    if (typeof v === 'number' && v > 20000 && v < 80000) { const d = new Date(Math.round((v - 25569) * 864e5)); return d.toISOString().slice(0, 10); }
-    const t = String(v).trim(); let m = t.match(/^(\d{4})-(\d{2})-(\d{2})/); if (m) return m[0];
-    m = t.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/); if (m) return `${m[3]}-${('0' + m[2]).slice(-2)}-${('0' + m[1]).slice(-2)}`;
-    return '';
-  }
-  function statusDe(o) {
-    const lanc = norm(o.lanc), sol = norm(o.sol), obs = norm(o.obs), bl = norm(o.bolsaLancada);
-    const t = [lanc, obs].join(' ');
-    if (/CONFLITO/.test(t)) return 'conflito';
-    if (/SEM SALDO/.test(t)) return 'sem_saldo';
-    if (/LANCADA/.test(t) || bl === 'SIM') return 'lancada';
-    if (/PROCESSAMENTO/.test(t)) return 'em_processamento';
-    if (sol === 'INDEFERIDO') return 'indeferido';
-    if (sol === 'DEFERIDO') return 'deferido';
-    return 'em_analise';
-  }
-  function converter(linhas) {
-    const iCab = linhas.findIndex((l) => l.some((c) => norm(c) === 'MATRICULA') && l.some((c) => /PERCENTUAL/.test(norm(c))));
-    if (iCab < 0) return null;
-    const cab = linhas[iCab].map(norm);
-    const col = (...nomes) => { for (const n of nomes) { const i = cab.indexOf(n); if (i >= 0) return i; } return -1; };
-    const C = { data: col('DATA ENT. CARTA', 'DATA DA CARTA'), mod: col('MODALIDADE'), mat: col('MATRICULA'), nome: col('NOME'), curso: col('CURSO'), tel: col('TEL', 'TELEFONE'), email: col('EMAIL', 'E-MAIL'),
-      semAnt: col('BOLSA SEM ANT'), pctAnt: col('PERCENTUAL ANTERIOR', 'PERCENTUAL'), pagou: col('PAGOU RENOVACAO'), pct: col('PERCENTUAL ATUAL'), vig: col('VINGENCIA', 'VIGENCIA'),
-      tipo: col('TIPO'), desc: col('DESCRICAO'), bolsaLancada: col('BOLSA LANCADA?', 'BOLSA LANCADA RENOVACAO'), lanc: col('STATUS LANCAMENTO'), sol: col('STATUS DA SOLICITACAO'), obs: col('STATUS/OBSERVACOES'),
-      dataLanc: col('DATA DO LANCAMENTO'), recalc: col('RECALCULO'), consumo: col('CONSUMO GAB', 'CONSUMO'), req: col('NUMERO REQUERIMENTO'), pend: col('PENDENCIAS') };
-    const v = (l, k) => (C[k] < 0 ? '' : l[C[k]]);
-    const out = [];
-    linhas.slice(iCab + 1).forEach((l) => {
-      const mat = String(v(l, 'mat') == null ? '' : v(l, 'mat')).replace(/\.0$/, '').replace(/\D/g, '');
-      if (mat.length < 9) return;
-      const vig = String(v(l, 'vig') || ''); const vm = vig.match(/(\d{1,2}\/\d{1,2}\/\d{4})\s*-\s*(\d{1,2}\/\d{1,2}\/\d{4})/);
-      const semAnt = norm(v(l, 'semAnt'));
-      let pctAnt = v(l, 'pctAnt'); if (semAnt === 'NAO' && (pctAnt === '' || pctAnt == null)) pctAnt = 0;
-      const desc = String(v(l, 'desc') || '');
-      out.push({ mat, data: isoDe(v(l, 'data')), modalidade: String(v(l, 'mod') || ''), nome: String(v(l, 'nome') || '').trim(), curso: String(v(l, 'curso') || '').trim(),
-        tel: String(v(l, 'tel') || '').replace(/\.0$/, ''), email: String(v(l, 'email') || '').trim(), pctAnt: pctAnt === '' ? '' : pctAnt, pagouRenov: String(v(l, 'pagou') || ''),
-        pct: v(l, 'pct'), vigIni: vm ? isoDe(vm[1]) : '', vigFim: vm ? isoDe(vm[2]) : '', vigTxt: vm ? '' : vig.trim(), tipo: String(v(l, 'tipo') || '').trim(),
-        descricao: /^=|^-$/.test(desc.trim()) ? '' : desc.trim(),
-        status: statusDe({ lanc: v(l, 'lanc'), sol: v(l, 'sol'), obs: v(l, 'obs'), bolsaLancada: v(l, 'bolsaLancada') }), dataLanc: isoDe(v(l, 'dataLanc')),
-        requerimento: String(v(l, 'req') || '').replace(/\.0$/, '').trim(), recalculo: norm(v(l, 'recalc')) === 'SIM', consumo: v(l, 'consumo') === '' || v(l, 'consumo') == null ? '' : num(v(l, 'consumo')),
-        pendencias: String(v(l, 'pend') || '').trim() });
-    });
-    // justificativa padrão quando a planilha só tinha a fórmula
-    const mot = {}; ((E.d && E.d.motivos) || []).forEach((m) => { mot[norm(m.tipo)] = m.texto; });
-    out.forEach((o) => { if (!o.descricao && mot[norm(o.tipo)]) o.descricao = mot[norm(o.tipo)]; });
-    return out;
-  }
   async function carregarXlsx() {
     if (window.XLSX) return;
-    await new Promise((ok, falha) => { const s = document.createElement('script'); s.src = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js'; s.onload = ok; s.onerror = () => falha(new Error('Não foi possível carregar o leitor de planilhas. Confira a internet.')); document.head.appendChild(s); });
+    await new Promise((ok, falha) => { const s = document.createElement('script'); s.src = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js'; s.onload = ok; s.onerror = () => falha(new Error('Não foi possível carregar o gerador de Excel. Confira a internet.')); document.head.appendChild(s); });
   }
-  function telaImportar() {
-    $('#abas').hidden = true; $('#btn-nova').hidden = true; $('#sel-periodo').hidden = true; document.querySelector('.direita label').hidden = true;
-    $('#sub').textContent = 'Importar a planilha de acompanhamento da bolsa';
-    $('#area').innerHTML = `<div class="bloco" style="max-width:760px">
-      <h3>Importar planilha de acompanhamento</h3>
-      <p class="dica">Use a planilha de acompanhamento da Bolsa Direção/Permanência (uma linha por aluno, com MATRICULA, PERCENTUAL ATUAL, TIPO, STATUS...). Escolha a aba do semestre e confira o período. Quem já está no sistema é atualizado; nada que a equipe preencheu é apagado.</p>
-      <label>Arquivo (.xlsx)<input type="file" id="arq" accept=".xlsx,.xls,.csv"></label>
-      <div class="grade2"><label>Aba<select id="aba" disabled></select></label><label>Período (ex.: 26.3)<input id="periodo" placeholder="26.3"></label></div>
-      <div id="previa"></div>
-      <div class="botoes"><button class="btn primario" id="importar" disabled>Importar</button></div></div>`;
-    let wb = null, conv = null;
-    const previa = () => {
-      const ws = wb.Sheets[$('#aba').value];
-      const linhas = XLSX.utils.sheet_to_json(ws, { header: 1, raw: true, defval: '' });
-      conv = converter(linhas);
-      const m = $('#aba').value.match(/(\d{2}\.\d)/); if (m && !$('#periodo').value) $('#periodo').value = m[1];
-      if (!conv) { $('#previa').innerHTML = '<div class="lembrete amarelo">Esta aba não tem as colunas MATRICULA e PERCENTUAL. Escolha a aba das solicitações.</div>'; $('#importar').disabled = true; return; }
-      const c = {}; conv.forEach((o) => { c[o.status] = (c[o.status] || 0) + 1; });
-      $('#previa').innerHTML = `<div class="lembrete"><b>${conv.length}</b> aluno(s) encontrados: ${Object.keys(c).map((k) => `${c[k]} ${ST[k].toLowerCase()}`).join(', ')}. Consumo informado em ${conv.filter((o) => o.consumo !== '').length}.</div>`;
-      $('#importar').disabled = !conv.length;
-    };
-    $('#arq').onchange = async (e) => {
-      const a = e.target.files[0]; if (!a) return;
-      try {
-        await carregarXlsx();
-        wb = XLSX.read(await a.arrayBuffer(), { type: 'array', cellDates: false });
-        const abas = wb.SheetNames;
-        const melhor = abas.filter((n) => { const l = XLSX.utils.sheet_to_json(wb.Sheets[n], { header: 1, raw: true, defval: '' }).slice(0, 5); return l.some((r) => r.some((x) => norm(x) === 'PERCENTUAL ATUAL')) && /\d{2}\.\d/.test(n); }).pop() || abas[0];
-        $('#aba').innerHTML = abas.map((n) => `<option ${n === melhor ? 'selected' : ''}>${esc(n)}</option>`).join(''); $('#aba').disabled = false;
-        $('#periodo').value = ''; previa();
-      } catch (er) { aviso(er.message, 'erro'); }
-    };
-    $('#aba').onchange = () => { $('#periodo').value = ''; previa(); };
-    $('#importar').onclick = async () => {
-      const p = $('#periodo').value.trim();
-      if (!/^\d{2}\.\d$/.test(p)) { aviso('Informe o período no formato 26.3.', 'erro'); return; }
-      const b = $('#importar'); b.disabled = true; b.textContent = 'Importando...';
-      try {
-        let novas = 0, at = 0;
-        for (let i = 0; i < conv.length; i += 300) {
-          const r = await Api.chamar('bolsa.importar', { periodo: p, respostas: conv.slice(i, i + 300) }, { timeout: 120000 });
-          if (!r || !r.ok) throw new Error((r && r.erro) || 'Falha ao importar.');
-          novas += r.novas; at += r.atualizadas;
-        }
-        aviso(`Importação concluída (${p}): ${novas} nova(s) e ${at} atualizada(s).`, 'ok');
-        b.textContent = 'Importado ✓';
-      } catch (er) { if (!er.auth) aviso(er.message, 'erro'); b.disabled = false; b.textContent = 'Importar'; }
-    };
+  async function exportar(F) {
+    const cab = ['DATA ENT. CARTA', 'MODALIDADE', 'MATRICULA', 'NOME', 'CURSO', 'TEL', 'EMAIL', 'PERCENTUAL ANTERIOR', 'PAGOU RENOVAÇÃO', 'PERCENTUAL ATUAL', 'VIGÊNCIA', 'TIPO', 'DESCRIÇÃO',
+      'STATUS', 'DATA DO LANÇAMENTO', 'RECÁLCULO', 'CONSUMO', 'NÚMERO REQUERIMENTO', 'PENDÊNCIAS', 'OBSERVAÇÕES', 'ALERTAS', 'REGISTRADO POR', 'ÚLTIMA ALTERAÇÃO'];
+    const nOuVazio = (v) => (v === '' || v == null ? '' : Number(v));
+    const linhas = F.map((s) => [dataBR(s.data), s.modalidade, s.mat, s.nome, s.curso, s.tel, s.email, nOuVazio(s.pctAnt), s.pagouRenov, nOuVazio(s.pct),
+      s.vigIni ? dataBR(s.vigIni) + ' - ' + dataBR(s.vigFim) : (s.vigTxt || ''), s.tipo, s.descricao, ST[s.status] || s.status, dataBR(s.dataLanc), s.recalculo ? 'SIM' : '',
+      nOuVazio(s.consumo), s.requerimento, s.pendencias, s.obs, alertas(s).join(' | '), s.quem || '', s.alteradoPor || '']);
+    const rp = resumoPool();
+    const pool = [['MODALIDADE', 'POOL', 'LANÇADO', 'COMPROMETIDO', 'SALDO', 'BOLSAS LANÇADAS', 'SOLICITAÇÕES']].concat(E.d.modalidades.map((m) => {
+      const r = rp[m]; return [MOD_NOME[m] || m, r.pool == null ? '' : r.pool, r.lanc, r.comp, r.saldo == null ? '' : r.saldo, r.n, r.total]; }));
+    const nome = 'bolsa_permanencia_' + E.periodo + '_' + hojeISO();
+    try {
+      await carregarXlsx();
+      const wb = XLSX.utils.book_new();
+      const ws = XLSX.utils.aoa_to_sheet([cab].concat(linhas));
+      ws['!cols'] = [12, 14, 15, 32, 26, 15, 28, 11, 10, 10, 24, 30, 60, 18, 14, 10, 12, 16, 28, 30, 30, 18, 18].map((w) => ({ wch: w }));
+      ws['!autofilter'] = { ref: XLSX.utils.encode_range({ s: { r: 0, c: 0 }, e: { r: linhas.length, c: cab.length - 1 } }) };
+      XLSX.utils.book_append_sheet(wb, ws, ('Solicitações ' + E.periodo).slice(0, 31));
+      const wp = XLSX.utils.aoa_to_sheet(pool); wp['!cols'] = [18, 14, 14, 14, 14, 16, 14].map((w) => ({ wch: w }));
+      XLSX.utils.book_append_sheet(wb, wp, 'Controle pool');
+      XLSX.writeFile(wb, nome + '.xlsx');
+    } catch (e) {
+      // sem Excel disponível: CSV com as mesmas colunas
+      const cel = (v) => { const t = String(v == null ? '' : v); return /[;"\n]/.test(t) ? '"' + t.replace(/"/g, '""') + '"' : t; };
+      const csv = '﻿' + [cab].concat(linhas).map((l) => l.map((v) => cel(typeof v === 'number' ? String(v).replace('.', ',') : v)).join(';')).join('\r\n');
+      const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
+      a.download = nome + '.csv'; document.body.appendChild(a); a.click(); a.remove();
+      aviso('Excel indisponível agora, extraí em CSV.', 'erro');
+    }
   }
 
   document.addEventListener('DOMContentLoaded', async () => {
     const s = Api.Sessao.ler();
     if (!s) { if (window.App) window.App.mostrarLogin('Entre novamente.'); return; }
-    if (MODO === 'importar') { await carregar(); telaImportar(); return; }
     document.querySelectorAll('#abas button').forEach((b) => { b.onclick = () => { E.aba = b.dataset.aba; desenhar(); }; });
     $('#sel-periodo').onchange = async (e) => {
       let p = e.target.value;
@@ -463,7 +503,7 @@
     $('#modal').onclick = (ev) => { if (ev.target.id === 'modal') fechar(); };
     await carregar(); desenhar();
   });
-  window.TelaBolsa = { estado: E, converter, desenhar, abrir };
+  window.TelaBolsa = { estado: E, desenhar, abrir };
 })();
 </script>
 </body>

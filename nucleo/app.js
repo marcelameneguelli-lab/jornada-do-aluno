@@ -188,7 +188,6 @@
     formandos: { sis: 'formandos', nome: 'Formandos', icone: '🎓', importar: 'modulos/formandos/index.html?modo=importar', config: 'modulos/formandos/index.html?modo=config',
       descConfig: 'Semestre de trabalho e limpeza dos dados do painel.' },
     nps: { sis: 'nps', nome: 'NPS (Medallia)', icone: '⭐', importar: 'modulos/acompanhamento/index.html?sistema=nps&modo=importar' },
-    bolsa: { sis: 'bolsa', nome: 'Bolsa Permanência', icone: '🤝', importar: 'modulos/bolsa/index.html?modo=importar' },
     estagio: { sis: 'estagio', nome: 'Estágio (BI)', icone: '💼', importar: 'modulos/acompanhamento/index.html?sistema=estagio&modo=importar' },
   };
   const liberado = (sis) => sistemasLiberados().some(s => s.id === sis);
@@ -227,7 +226,6 @@
       h += card('🤝', 'Base líquida ' + nomesEng[b], `<b>${n(e.total)}</b> alunos<br>Última importação: ${fmtData(e.ts)}`, 'Engajamento, Provas, Cobrança e Financiamentos (e nome e contatos do Estágio)', btn('engajamento', 'base=' + b, 'Importar base ' + nomesEng[b]));
     });
     h += card('🎓', 'Formandos', r.formandos ? `<b>${n(r.formandos.total)}</b> alunos no painel` : 'Sem informação', 'Formandos (alunos, formados e ENADE)', btn('formandos', '', 'Importar no Formandos'));
-    h += card('🤝', 'Bolsa Permanência (planilha de acompanhamento)', r.bolsa && r.bolsa.total ? `<b>${n(r.bolsa.total)}</b> solicitações em ${n(r.bolsa.periodos)} período(s)<br>Último período: ${r.bolsa.ultimo}` : 'Nenhuma solicitação importada', 'Bolsa Permanência', btn('bolsa', '', 'Importar planilha da bolsa'));
     h += card('💼', 'Estágio (relatório do BI)', r.estagio && r.estagio.total ? `<b>${n(r.estagio.total)}</b> alunos em ${n(r.estagio.disciplinas)} disciplinas de estágio<br>Última importação: ${fmtData(r.estagio.ultima)}` : 'Nenhum relatório importado', 'Estágio', btn('estagio', '', 'Importar relatório do BI'));
     h += card('⭐', 'NPS (Medallia)', r.nps && r.nps.total ? `<b>${n(r.nps.total)}</b> respostas<br>Respostas até ${esc((r.nps.ate || '').split('-').reverse().join('/'))}<br>Última importação: ${fmtData(r.nps.ultima)}` : 'Nenhuma resposta importada', 'NPS', btn('nps', '', 'Importar respostas do Medallia'));
     if (eu().admin) h += card('🗃️', 'Trazer tudo do EngajaVR atual', 'Acionamentos, follow-ups, calendário, tarefas, tutoriais, atendentes, estágio e evasão do EngajaVR em uso. Só lê o EngajaVR, nada é alterado lá. Pode repetir: não duplica.', 'Engajamento, Provas, Estágio, Financeiro, Financiamentos e ferramentas da equipe',

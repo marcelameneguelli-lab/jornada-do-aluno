@@ -35,10 +35,6 @@ function basesResumo_() {
     r.formandos = { total: del.filter(l => !l[0]).length };
   } catch (e) { r.erros.push('Formandos: ' + e.message); }
   try {
-    const b = bolsaLer_(); const ps = Array.from(new Set(b.solicitacoes.map(s => s.periodo))).sort();
-    r.bolsa = { total: b.solicitacoes.length, periodos: ps.length, ultimo: ps[ps.length - 1] || '' };
-  } catch (e) { r.erros.push('Bolsa: ' + e.message); }
-  try {
     const o = cobLerJson_('EstagioBI', null);
     r.estagio = o ? { total: (o.alunos || []).length, disciplinas: (o.alunos || []).reduce((t, a) => t + (a.disciplinas || []).length, 0), ultima: o.ts || 0, quem: o.quem || '' } : { total: 0 };
   } catch (e) { r.erros.push('Estágio: ' + e.message); }

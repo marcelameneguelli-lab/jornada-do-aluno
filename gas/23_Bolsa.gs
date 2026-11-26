@@ -132,40 +132,6 @@ function bolsaPool_(d, eu) {
   } finally { lock.releaseLock(); }
 }
 
-/** Importação da planilha de acompanhamento (Central de Bases): por matrícula e período, sem apagar o que já existe. */
-function bolsaImportar_(d, eu) {
-  const periodo = String(d.periodo || '');
-  if (!bolsaPeriodoOk_(periodo)) return { ok: false, erro: 'Informe o período no formato 26.3.' };
-  const lote = Array.isArray(d.respostas) ? d.respostas : [];
-  if (lote.length > 2000) return { ok: false, erro: 'Lote grande demais.' };
-  const lock = bloqueio_(30000);
-  try {
-    const o = bolsaLer_();
-    let novas = 0, atualizadas = 0, ignoradas = 0;
-    lote.forEach(x => {
-      const reg = bolsaLimpo_(x, periodo);
-      if (!reg) { ignoradas++; return; }
-      const i = o.solicitacoes.findIndex(s => s.periodo === periodo && s.mat === reg.mat);
-      if (i >= 0) {
-        const antes = o.solicitacoes[i];
-        // a importação não apaga o que a equipe já preencheu no sistema
-        Object.keys(reg).forEach(k => { if (reg[k] === '' || reg[k] === null) reg[k] = antes[k]; });
-        reg.id = antes.id; reg.criado = antes.criado; reg.quem = antes.quem; reg.historico = antes.historico || [];
-        if (antes.status !== reg.status) reg.historico = reg.historico.concat([{ status: reg.status, quem: eu.nome + ' (importação)', ts: Date.now() }]);
-        o.solicitacoes[i] = Object.assign(reg, { _ts: Date.now(), alteradoPor: eu.nome });
-        atualizadas++;
-      } else {
-        reg.criado = Date.now(); reg.quem = eu.nome + ' (importação)'; reg.historico = [{ status: reg.status, quem: eu.nome + ' (importação)', ts: Date.now() }]; reg._ts = Date.now();
-        o.solicitacoes.push(reg); novas++;
-      }
-    });
-    if (!o.periodos[periodo]) o.periodos[periodo] = { pool: {} };
-    bolsaGravar_(o);
-    log_('BOLSA', eu.nome, 'importou ' + lote.length + ' solicitação(ões) de ' + periodo + ': ' + novas + ' novas, ' + atualizadas + ' atualizadas');
-    return { ok: true, novas: novas, atualizadas: atualizadas, ignoradas: ignoradas };
-  } finally { lock.releaseLock(); }
-}
-
 function bolsaBuscar_(d) {
   const mat = normMatEv_(d.matricula);
   if (mat.length < 6) return { ok: false, erro: 'Matrícula incompleta.' };
@@ -180,10 +146,9 @@ function Modulo_bolsa() {
       salvar: (d, eu) => bolsaSalvar_(d, eu),
       excluir: (d, eu) => bolsaExcluir_(d, eu),
       pool: (d, eu) => bolsaPool_(d, eu),
-      importar: (d, eu) => bolsaImportar_(d, eu),
       buscar_aluno: (d) => bolsaBuscar_(d),
     },
-    gestao: ['excluir', 'pool', 'importar'],
+    gestao: ['excluir', 'pool'],
     admin: [],
   };
 }
