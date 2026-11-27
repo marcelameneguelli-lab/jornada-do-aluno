@@ -87,6 +87,7 @@
 
 <script src="../../nucleo/config.js?v=1.4.1"></script>
 <script src="../../nucleo/api.js?v=1.2.3"></script>
+<script src="../../nucleo/situacao.js?v=1.9.0"></script>
 <script>window.App = (window.parent && window.parent !== window) ? window.parent.App : null;</script>
 <script>
 (function () {
@@ -123,7 +124,7 @@
     cancelada: ['Cancelada', 's-cinza'], 'sem informação': ['Saiu da base', 's-cinza'] };
   const CANAIS = ['WhatsApp', 'Ligação', 'E-mail', 'Presencial', 'SMS'];
 
-  const E = { periodo: 'impar', aba: 'fila', d: {}, regs: [], eu: '', gestao: false, fFila: '', fEtapa: '', busca: '', fFaixa: '', fSit: '', fProm: 'ativas', fAcor: 'ativo', janela: 30, sel: new Set() };
+  const E = { periodo: 'impar', aba: 'fila', d: {}, regs: [], eu: '', gestao: false, fFila: '', fEtapa: '', busca: '', fFaixa: '', fSit: '', fSitAluno: 'ativos', fProm: 'ativas', fAcor: 'ativo', janela: 30, sel: new Set() };
   const D = () => E.d[E.periodo] || { alunos: [], eventos: [], promessas: [], acordos: [], resultados: [] };
 
   /* ---------- dados ---------- */
@@ -168,7 +169,8 @@
     if (contatoDesde(a.mat, somaDias(a.entrada || hojeISO(), et.de))) return null;
     return { tipo: 'regua', rot: 'Régua: ' + et.nome, cor: '#7048e8', ord: 5 + et.id, et };
   }
-  const fila = () => D().alunos.map((a) => ({ a, t: tarefa(a) })).filter((x) => x.t);
+  const ativosSit = () => D().alunos.filter((a) => Situacao.passa(a.situacao, E.fSitAluno));
+  const fila = () => ativosSit().map((a) => ({ a, t: tarefa(a) })).filter((x) => x.t);
 
   function situacaoAluno(a) {
     const ac = acordoAtivo(a.mat); if (ac) return ac.parcelas.some((x) => !x.paga && x.venc < hojeISO()) ? ['Acordo atrasado', 's-vermelho'] : ['Em acordo', 's-verde'];
@@ -193,7 +195,7 @@
     const [st, cls] = situacaoAluno(a), u = ultimoContato(a.mat), { dias, et } = etapaDe(a);
     return `<tr class="clicavel" data-mat="${esc(a.mat)}">
       ${extra && extra.sel ? `<td class="col-sel"><input type="checkbox" class="sel" value="${esc(a.mat)}" ${E.sel.has(a.mat) ? 'checked' : ''}></td>` : ''}
-      <td class="nome"><b>${esc(a.nome)}${tagFormando(a)}</b><small>${esc(a.mat)}</small></td><td>${esc(a.curso)}</td>
+      <td class="nome"><b>${esc(a.nome)}${tagFormando(a)}${Situacao.selo(a.situacao)}</b><small>${esc(a.mat)}</small></td><td>${esc(a.curso)}</td>
       <td class="num"><b>${moeda(a.valor)}</b>${a.pago ? `<br><small class="dica">pagou ${moeda(a.pago)}</small>` : ''}</td>
       <td>${esc(et.nome)}<br><small class="dica">${dias} dia(s) na carteira</small></td>
       ${extra && extra.tarefa ? `<td><span class="selo" style="background:${extra.tarefa.cor}1a;color:${extra.tarefa.cor}">${esc(extra.tarefa.rot)}</span>${extra.tarefa.prom ? `<br><small class="dica">${moeda(extra.tarefa.prom.valor)} até ${dataBR(extra.tarefa.prom.data)}</small>` : ''}${extra.tarefa.p ? `<br><small class="dica">${esc(extra.tarefa.p.rotulo)} ${moeda(extra.tarefa.p.valor)} · ${dataBR(extra.tarefa.p.venc)}</small>` : ''}</td>` : ''}
@@ -212,19 +214,21 @@
       <div class="regua">${REGUA.map((r) => `<div data-fila="r${r.id}" class="${E.fFila === 'r' + r.id ? 'sel' : ''}"><b>${esc(r.nome)}</b><em>${r.ate > 999 ? 'a partir de ' + r.de + ' dias' : r.de + ' a ' + r.ate + ' dias'} · ${esc(r.canal)}</em><em>${esc(r.acao)}</em><strong>${(grupos['r' + r.id] || {}).n || 0}</strong></div>`).join('')}</div>
       <div class="cards">${[['parcela_atrasada', 'Parcela do acordo atrasada', '#d92d20'], ['quebrada', 'Promessa quebrada', '#d92d20'], ['parcela_vence', 'Parcela do acordo vence', '#f79009'], ['lembrar', 'Lembrar a promessa', '#1c7ed6']].map(([k, t, c]) => `<div class="card ${E.fFila === k ? 'sel' : ''}" data-fila="${k}" style="--cor:${c}"><b>${(grupos[k] || {}).n || 0}</b><span>${t}</span></div>`).join('')}</div>
       <div class="filtros">${E.fFila ? `<button class="btn" id="ver-tudo">Ver a fila inteira</button>` : ''}
+        ${Situacao.select('f-sit-aluno', D().alunos.map((a) => a.situacao), E.fSitAluno)} ${Situacao.ocultos(D().alunos, (a) => a.situacao, E.fSitAluno)}
         <button class="btn" id="btn-lote">✉️ Mensagem em lote (${vis.length})</button>
         <span class="total">${vis.length} aluno(s) · ${moeda(vis.reduce((s, x) => s + x.a.valor, 0))}</span></div>
       <div class="painel"><table class="tabela"><thead><tr><th>Aluno</th><th>Curso</th><th class="num">Dívida</th><th>Régua</th><th>Fazer hoje</th><th>Situação</th><th>Último contato</th></tr></thead>
       <tbody>${vis.map((x) => linhaAluno(x.a, { tarefa: x.t })).join('') || '<tr><td colspan="7" class="vazio">Fila zerada. 🎉</td></tr>'}</tbody></table></div>`;
     document.querySelectorAll('[data-fila]').forEach((c) => { c.onclick = () => { E.fFila = E.fFila === c.dataset.fila ? '' : c.dataset.fila; desenhar(); }; });
     const vt = $('#ver-tudo'); if (vt) vt.onclick = () => { E.fFila = ''; desenhar(); };
+    $('#f-sit-aluno').onchange = (e) => { E.fSitAluno = e.target.value; desenhar(); };
     $('#btn-lote').onclick = () => abrirLote(vis.map((x) => x.a), (a) => { const t = tarefa(a); return t; });
     ligarLinhas();
   }
 
   function telaCarteira() {
     const b = E.busca.trim().toLowerCase();
-    const L = D().alunos.filter((a) => {
+    const L = ativosSit().filter((a) => {
       if (b && a.nome.toLowerCase().indexOf(b) < 0 && a.mat.indexOf(b) < 0 && a.curso.toLowerCase().indexOf(b) < 0) return false;
       if (E.fEtapa && String(etapaDe(a).et.id) !== E.fEtapa) return false;
       if (E.fFaixa) { const v = a.valor; if (E.fFaixa === '500' && v > 500) return false; if (E.fFaixa === '1000' && (v <= 500 || v > 1000)) return false; if (E.fFaixa === '3000' && (v <= 1000 || v > 3000)) return false; if (E.fFaixa === 'mais' && v <= 3000) return false; }
@@ -238,8 +242,9 @@
         <select id="f-etapa"><option value="">Todas as etapas</option>${REGUA.map((r) => `<option value="${r.id}" ${E.fEtapa === String(r.id) ? 'selected' : ''}>${esc(r.nome)}</option>`).join('')}</select>
         <select id="f-faixa"><option value="">Qualquer valor</option><option value="500" ${E.fFaixa === '500' ? 'selected' : ''}>Até R$ 500</option><option value="1000" ${E.fFaixa === '1000' ? 'selected' : ''}>R$ 500 a R$ 1.000</option><option value="3000" ${E.fFaixa === '3000' ? 'selected' : ''}>R$ 1.000 a R$ 3.000</option><option value="mais" ${E.fFaixa === 'mais' ? 'selected' : ''}>Acima de R$ 3.000</option></select>
         <select id="f-sit"><option value="">Qualquer situação</option><option value="formando" ${E.fSit === 'formando' ? 'selected' : ''}>🎓 Só formandos</option>${['sem contato', 'contatado', 'promessa', 'em acordo', 'acordo atrasado'].map((s) => `<option value="${s}" ${E.fSit === s ? 'selected' : ''}>${s.charAt(0).toUpperCase() + s.slice(1)}</option>`).join('')}</select>
+        ${Situacao.select('f-sit-aluno', D().alunos.map((a) => a.situacao), E.fSitAluno)}
         <button class="btn" id="exportar">📥 Exportar</button>
-        <span class="total">${L.length} aluno(s) · ${moeda(L.reduce((s, a) => s + a.valor, 0))}</span>
+        <span class="total">${L.length} aluno(s) · ${moeda(L.reduce((s, a) => s + a.valor, 0))}</span> ${Situacao.ocultos(D().alunos, (a) => a.situacao, E.fSitAluno)}
       </div>
       <div class="barra-lote" ${E.sel.size ? '' : 'hidden'}><b>${E.sel.size} selecionado(s)</b><button class="btn mini primario" id="lote-sel">✉️ Mensagem em lote</button><button class="btn mini" id="lote-limpar">Limpar seleção</button></div>
       <div class="painel"><table class="tabela"><thead><tr><th class="col-sel"><input type="checkbox" id="sel-todos" title="Marcar todos desta lista"></th><th>Aluno</th><th>Curso</th><th class="num">Dívida</th><th>Régua</th><th>Situação</th><th>Último contato</th></tr></thead>
@@ -247,10 +252,11 @@
       ${L.length > 400 ? `<p class="dica" style="padding:8px 12px">Mostrando os 400 maiores valores. Use os filtros para achar os demais.</p>` : ''}</div>`;
     const busca = $('#busca'); busca.oninput = () => { E.busca = busca.value; const pos = busca.selectionStart; desenhar(); const n = $('#busca'); n.focus(); n.setSelectionRange(pos, pos); };
     $('#f-etapa').onchange = (e) => { E.fEtapa = e.target.value; desenhar(); };
+    $('#f-sit-aluno').onchange = (e) => { E.fSitAluno = e.target.value; desenhar(); };
     $('#f-faixa').onchange = (e) => { E.fFaixa = e.target.value; desenhar(); };
     $('#f-sit').onchange = (e) => { E.fSit = e.target.value; desenhar(); };
-    $('#exportar').onclick = () => exportar('cobranca_carteira_' + E.periodo, ['Matrícula', 'Aluno', 'Formando', 'Curso', 'Celular', 'E-mail', 'Dívida', 'Já pagou', 'Na carteira desde', 'Etapa', 'Situação', 'Último contato'],
-      L.map((a) => { const u = ultimoContato(a.mat); return [a.mat, a.nome, a.formando ? 'Sim' : '', a.curso, a.cel || a.tel, a.email, a.valor.toFixed(2).replace('.', ','), (a.pago || 0).toFixed(2).replace('.', ','), dataBR(a.entrada), etapaDe(a).et.nome, situacaoAluno(a)[0], u ? u.atendente + ' ' + dataBR(isoDeTs(u.criado)) : '']; }));
+    $('#exportar').onclick = () => exportar('cobranca_carteira_' + E.periodo, ['Matrícula', 'Aluno', 'Formando', 'Curso', 'Celular', 'E-mail', 'Dívida', 'Já pagou', 'Na carteira desde', 'Etapa', 'Situação', 'Último contato', 'Situação na base'],
+      L.map((a) => { const u = ultimoContato(a.mat); return [a.mat, a.nome, a.formando ? 'Sim' : '', a.curso, a.cel || a.tel, a.email, a.valor.toFixed(2).replace('.', ','), (a.pago || 0).toFixed(2).replace('.', ','), dataBR(a.entrada), etapaDe(a).et.nome, situacaoAluno(a)[0], u ? u.atendente + ' ' + dataBR(isoDeTs(u.criado)) : '', a.situacao || '']; }));
     document.querySelectorAll('.sel').forEach((c) => { c.onchange = () => { c.checked ? E.sel.add(c.value) : E.sel.delete(c.value); desenhar(); }; });
     $('#sel-todos').onchange = (e) => { L.slice(0, 400).forEach((a) => e.target.checked ? E.sel.add(a.mat) : E.sel.delete(a.mat)); desenhar(); };
     const ls = $('#lote-sel'); if (ls) ls.onclick = () => abrirLote(D().alunos.filter((a) => E.sel.has(a.mat)), tarefa);

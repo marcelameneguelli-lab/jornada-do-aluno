@@ -90,6 +90,7 @@
 
 <script src="../../nucleo/config.js?v=1.8.2"></script>
 <script src="../../nucleo/api.js?v=1.2.3"></script>
+<script src="../../nucleo/situacao.js?v=1.9.0"></script>
 <script>window.App = (window.parent && window.parent !== window) ? window.parent.App : null;</script>
 <script>
 (function () {
@@ -121,7 +122,7 @@
     if (s.pagouRenov === 'NÃO') a.push('Não pagou a renovação');
     if ((s.status === 'lancada' || COMPROMETE.indexOf(s.status) >= 0) && (s.consumo == null || s.consumo === '')) a.push('Sem consumo informado');
     if (s.base && s.status === 'lancada' && s.base.pctBase != null && Number(s.base.pctBase) !== Number(s.pct)) a.push(`Base mostra ${s.base.pctBase}%`);
-    if (s.base && /CANCELAD|TRANCAD/i.test(s.base.situacao)) a.push('Aluno ' + s.base.situacao.toLowerCase());
+    if (s.base && Situacao.saiu(s.base.situacao)) a.push('Aluno ' + String(s.base.situacao).toLowerCase());
     if (s.base && s.base.inadimplente) a.push('Inadimplente');
     if (s.pendencias) a.push('Com pendência');
     return a;

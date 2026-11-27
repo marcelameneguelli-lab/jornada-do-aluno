@@ -237,6 +237,11 @@ function _jornadaModo() {
 '''+s[_i:]
 # 4b. Evasão saiu do Engajamento: agora é o sistema Evasão da Jornada (mesmos dados, EvasaoData_<base>)
 s=troca(s,'<button class="tab" onclick="showPage(\'evasao\')" id="tab-evasao">🚪 Evasão</button>','')
+# 4b. situação do aluno: por padrão só os ativos (trancados, cancelados, transferidos e formados ficam fora das ações)
+s=troca(s,'<script src="../../nucleo/api.js"></script>','<script src="../../nucleo/api.js"></script>\n  <script src="../../nucleo/situacao.js?v=1.9.0"></script>')
+s=troca(s,"""    selSit.innerHTML = '<option value="">Todas</option>' +
+      sitVals.map(s => '<option value="' + s + '"' + (s === curSit ? ' selected' : '') + '>' + s + '</option>').join('');""","""    selSit.outerHTML = Situacao.select('f-sit', sitVals, curSit || 'ativos').replace('<select ', '<select onchange="applyFilters()" ');""")
+s=troca(s,"    if (sit && rSit !== sit) return false;","    if (!Situacao.passa(rSit, sit || 'ativos')) return false;")
 # 5. service worker é o da Jornada
 s=troca(s,"if ('serviceWorker' in navigator && location.protocol === 'https:') {","if (false) { // Jornada: service worker único na tela base")
 os.makedirs(os.path.join(RAIZ,'app/modulos/engajamento'),exist_ok=True)

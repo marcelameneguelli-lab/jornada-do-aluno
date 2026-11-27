@@ -115,7 +115,7 @@ function riscoLista_(d, eu) {
     const mat = normMatEv_(r && (r.COD_MATRICULA || r.MATRICULA));
     if (!mat) return;
     const sit = riscoTxt_(r.NOM_SITUACAO_ALUNO || r.SITUACAO_ALUNO).toUpperCase();
-    if (/CANCELAD|TRANCAD|FORMAD|CONCLU/.test(sit)) return; // já saiu: fica na Evasão
+    // quem já saiu (trancou, cancelou, transferiu...) vem marcado: a tela mostra só os ativos por padrão
     const s = [];
     const add = (id, det) => s.push({ id: id, det: det || '' });
     const valor = cobValor_(r);
@@ -136,7 +136,7 @@ function riscoLista_(d, eu) {
     const pontos = s.reduce((t, x) => t + RISCO_SINAIS[x.id].peso, 0);
     alunos.push({
       mat: mat, nome: riscoTxt_(r.NOM_ALUNO), curso: riscoTxt_(r.NOM_CURSO), cel: riscoTxt_(r.NUM_TELEF_CELULAR || r.NUM_TELEFONE),
-      email: riscoTxt_(r.END_EMAIL), formando: !!formandos[mat], sinais: s, pontos: pontos,
+      email: riscoTxt_(r.END_EMAIL), formando: !!formandos[mat], situacao: sit, sinais: s, pontos: pontos,
       areas: Array.from(new Set(s.map(x => RISCO_SINAIS[x.id].sistema))).length, contato: contatos[mat] || null,
     });
   });

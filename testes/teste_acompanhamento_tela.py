@@ -30,7 +30,7 @@ with sync_playwright() as p:
     assert campos==['bolsa','termo_atualizacao','termo_reconsideracao','termo_encerramento'], campos; ok('ProUni: tipo de bolsa e os 3 termos na ficha')
     f.select_option('[data-campo=bolsa]','Parcial'); f.select_option('[data-campo=termo_atualizacao]','Pendente'); f.click('#btn-ficha'); pg.wait_for_timeout(1500)
     f.select_option('#form-ac [name=canal]','Ligação'); f.select_option('#form-ac [name=resultado]','Pendência de documento')
-    f.fill('#form-ac [name=obs]','Falta assinar o termo de atualização'); f.fill('#form-ac [name=fu]','2026-11-23')
+    f.fill('#form-ac [name=obs]','Falta assinar o termo de atualização'); f.fill('#form-ac [name=fu]','2027-01-15')
     pg.screenshot(path='/home/claude/testes/tela_financiamentos_aluno.png')
     f.click('#btn-ac'); pg.wait_for_timeout(1500)
     l=api({'acao':'financiamentos.listar','token':tok()}); r=l['regs'][0]

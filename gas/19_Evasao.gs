@@ -50,6 +50,20 @@ function evLerBase_(base) {
   try { const l = JSON.parse(raw); return Array.isArray(l) ? l : ((l && l.dados) || []); } catch (e) { return []; }
 }
 
+/** Situação atual de cada matrícula na base líquida (Ímpar, Par e Técnico).
+ *  Usada pelos sistemas com arquivo próprio (Estágio do BI, NPS), para a tela filtrar quem já saiu. */
+function situacoesBase_() {
+  const mapa = {};
+  BASES_ENGAJAMENTO.forEach(b => {
+    evLerBase_(b).forEach(r => {
+      const mat = normMatEv_(r && (r.COD_MATRICULA || r.MATRICULA));
+      const s = String((r && (r.NOM_SITUACAO_ALUNO || r.SITUACAO_ALUNO)) || '').trim();
+      if (mat && s && !mapa[mat]) mapa[mat] = s;
+    });
+  });
+  return mapa;
+}
+
 function evNumero_(v) {
   const n = parseFloat(String(v == null ? '' : v).replace(/[^\d,.-]/g, '').replace(/\.(?=\d{3}(\D|$))/g, '').replace(',', '.'));
   return isNaN(n) ? 0 : n;

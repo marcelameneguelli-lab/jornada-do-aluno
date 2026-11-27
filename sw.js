@@ -1,8 +1,8 @@
 /* Jornada do Aluno · service worker
    Guarda só a "casca" do app. Dados de alunos nunca passam por aqui:
    as chamadas ao Apps Script vão direto para a rede. */
-const VERSAO = 'jornada-1.8.3';
-const CASCA = ['./', './index.html', './manifest.webmanifest', './nucleo/estilo.css', './nucleo/config.js', './nucleo/api.js', './nucleo/app.js'];
+const VERSAO = 'jornada-1.9.0';
+const CASCA = ['./', './index.html', './manifest.webmanifest', './nucleo/estilo.css', './nucleo/config.js', './nucleo/api.js', './nucleo/app.js', './nucleo/situacao.js'];
 
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(VERSAO).then(c => c.addAll(CASCA)).then(() => self.skipWaiting()));

@@ -57,6 +57,7 @@
 
 <script src="../../nucleo/config.js?v=1.7.0"></script>
 <script src="../../nucleo/api.js?v=1.2.3"></script>
+<script src="../../nucleo/situacao.js?v=1.9.0"></script>
 <script>window.App = (window.parent && window.parent !== window) ? window.parent.App : null;</script>
 <script>
 (function () {
@@ -67,8 +68,9 @@
   const aviso = (msg, tipo) => { if (window.App && window.App.aviso) return window.App.aviso(msg, tipo); alert(msg); };
   const dataBR = (ts) => ts ? new Date(ts).toLocaleDateString('pt-BR') : '';
   const dias = (ts) => ts ? Math.floor((Date.now() - ts) / 864e5) : null;
-  const E = { periodo: 'impar', d: {}, fAreas: '', fSinal: '', busca: '', fCurso: '', fContato: '', fForm: false, me: {} };
+  const E = { periodo: 'impar', d: {}, fAreas: '', fSinal: '', busca: '', fCurso: '', fContato: '', fForm: false, fSit: 'ativos', me: {} };
   const D = () => E.d[E.periodo] || { alunos: [], sinais: {} };
+  const LS = () => D().alunos.filter((a) => Situacao.passa(a.situacao, E.fSit));
 
   async function carregar(base) {
     try {
@@ -84,7 +86,7 @@
 
   function filtrar() {
     const b = E.busca.trim().toLowerCase();
-    return D().alunos.filter((a) => {
+    return LS().filter((a) => {
       if (E.fAreas === '3' && a.areas < 3) return false;
       if (E.fAreas === '2' && a.areas !== 2) return false;
       if (E.fAreas === '1' && a.areas !== 1) return false;
@@ -100,7 +102,7 @@
 
   function desenhar() {
     document.querySelectorAll('#periodos button').forEach((x) => x.classList.toggle('ativo', x.dataset.p === E.periodo));
-    const L = D().alunos, F = filtrar();
+    const L = LS(), F = filtrar();
     const n = (f) => L.filter(f).length;
     const porSinal = {}; L.forEach((a) => a.sinais.forEach((x) => { porSinal[x.id] = (porSinal[x.id] || 0) + 1; }));
     const cursos = Array.from(new Set(L.map((a) => a.curso))).filter(Boolean).sort();
@@ -119,14 +121,15 @@
       <div class="filtros">
         <input type="search" id="busca" placeholder="Nome ou matrícula" value="${esc(E.busca)}">
         <select id="f-curso"><option value="">Todos os cursos</option>${cursos.map((c) => `<option ${E.fCurso === c ? 'selected' : ''}>${esc(c)}</option>`).join('')}</select>
+        ${Situacao.select('f-sit', D().alunos.map((a) => a.situacao), E.fSit)}
         <select id="f-contato"><option value="">Qualquer contato</option><option value="nunca" ${E.fContato === 'nunca' ? 'selected' : ''}>Nunca contatado</option><option value="15" ${E.fContato === '15' ? 'selected' : ''}>Sem contato há 15 dias ou mais</option></select>
         <label style="display:flex;gap:6px;align-items:center;margin:0;font-size:13px"><input type="checkbox" id="f-form" ${E.fForm ? 'checked' : ''} style="width:auto;margin:0"> Só formandos</label>
         <button class="btn" id="limpar">Limpar</button><button class="btn" id="exportar">📥 Exportar</button>
-        <span class="total">${F.length} aluno(s)</span>
+        <span class="total">${F.length} aluno(s)</span> ${Situacao.ocultos(D().alunos, (a) => a.situacao, E.fSit)}
       </div>
       <div class="painel"><table class="tabela"><thead><tr><th>Aluno</th><th>Curso</th><th>Áreas</th><th>Sinais</th><th>Último contato na Jornada</th></tr></thead>
       <tbody>${F.slice(0, 400).map((a) => `<tr class="clicavel" data-mat="${esc(a.mat)}">
-        <td class="nome"><b>${esc(a.nome || a.mat)}${a.formando ? '<span class="tag-formando">🎓 Formando</span>' : ''}</b><small>${esc(a.mat)}</small></td><td>${esc(a.curso)}</td>
+        <td class="nome"><b>${esc(a.nome || a.mat)}${a.formando ? '<span class="tag-formando">🎓 Formando</span>' : ''}${Situacao.selo(a.situacao)}</b><small>${esc(a.mat)}</small></td><td>${esc(a.curso)}</td>
         <td class="areas">${a.areas}</td><td>${a.sinais.map(chip).join('')}</td>
         <td><small>${a.contato ? `${esc(a.contato.quem)} · ${esc(a.contato.onde)}<br>${dataBR(a.contato.ts)} (${dias(a.contato.ts)} dia(s))` : '<span class="sem-contato">nunca</span>'}</small></td></tr>`).join('') || '<tr><td colspan="5" class="vazio">Nenhum aluno com esses filtros.</td></tr>'}</tbody></table>
       ${F.length > 400 ? '<p class="dica" style="padding:8px 12px">Mostrando os 400 primeiros. Use os filtros ou exporte a lista completa.</p>' : ''}</div>
@@ -136,9 +139,10 @@
     document.querySelectorAll('[data-sinal]').forEach((c) => { c.onclick = () => { E.fSinal = E.fSinal === c.dataset.sinal ? '' : c.dataset.sinal; desenhar(); }; });
     const busca = $('#busca'); busca.oninput = () => { E.busca = busca.value; const pos = busca.selectionStart; desenhar(); const x = $('#busca'); x.focus(); x.setSelectionRange(pos, pos); };
     $('#f-curso').onchange = (e) => { E.fCurso = e.target.value; desenhar(); };
+    $('#f-sit').onchange = (e) => { E.fSit = e.target.value; desenhar(); };
     $('#f-contato').onchange = (e) => { E.fContato = e.target.value; desenhar(); };
     $('#f-form').onchange = (e) => { E.fForm = e.target.checked; desenhar(); };
-    $('#limpar').onclick = () => { Object.assign(E, { fAreas: '', fSinal: '', busca: '', fCurso: '', fContato: '', fForm: false }); desenhar(); };
+    $('#limpar').onclick = () => { Object.assign(E, { fAreas: '', fSinal: '', busca: '', fCurso: '', fContato: '', fForm: false, fSit: 'ativos' }); desenhar(); };
     $('#exportar').onclick = () => exportar(F);
     document.querySelectorAll('tr[data-mat]').forEach((tr) => { tr.onclick = () => abrir(tr.dataset.mat); });
   }
@@ -166,8 +170,8 @@
 
   function exportar(F) {
     const cel = (v) => { const t = String(v == null ? '' : v); return /[;"\n]/.test(t) ? '"' + t.replace(/"/g, '""') + '"' : t; };
-    const linhas = [['Matrícula', 'Aluno', 'Curso', 'Formando', 'Celular', 'E-mail', 'Áreas', 'Sinais', 'Último contato', 'Por', 'Onde']].concat(F.map((a) => [a.mat, a.nome, a.curso, a.formando ? 'Sim' : '', a.cel, a.email, a.areas,
-      a.sinais.map((x) => rot(x.id) + (x.det ? ' (' + x.det + ')' : '')).join(' | '), a.contato ? dataBR(a.contato.ts) : '', a.contato ? a.contato.quem : '', a.contato ? a.contato.onde : '']));
+    const linhas = [['Matrícula', 'Aluno', 'Curso', 'Formando', 'Celular', 'E-mail', 'Áreas', 'Sinais', 'Último contato', 'Por', 'Onde', 'Situação na base']].concat(F.map((a) => [a.mat, a.nome, a.curso, a.formando ? 'Sim' : '', a.cel, a.email, a.areas,
+      a.sinais.map((x) => rot(x.id) + (x.det ? ' (' + x.det + ')' : '')).join(' | '), a.contato ? dataBR(a.contato.ts) : '', a.contato ? a.contato.quem : '', a.contato ? a.contato.onde : '', a.situacao || '']));
     const csv = '﻿' + linhas.map((l) => l.map(cel).join(';')).join('\r\n');
     const el = document.createElement('a'); el.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
     el.download = 'alunos_em_risco_' + E.periodo + '_' + new Date().toISOString().slice(0, 10) + '.csv'; document.body.appendChild(el); el.click(); el.remove();

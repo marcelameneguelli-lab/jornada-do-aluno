@@ -15,7 +15,7 @@
 
   const E = {
     base: 'impar', alunos: [], todos: 0, regs: {}, fichas: {}, desde: 0,
-    aba: 'alunos', pagina: 1, filtro: { busca: '', curso: '', mod: '', situacao: '', extra: '', programa: '', tipo: '', canal: '', atend: '', de: '', ate: '' },
+    aba: 'alunos', pagina: 1, filtro: { sitAluno: 'ativos', busca: '', curso: '', mod: '', situacao: '', extra: '', programa: '', tipo: '', canal: '', atend: '', de: '', ate: '' },
     hist: {}, // acionamentos do Engajamento (todas as bases), por matrícula: entram no "último acionamento"
     fuQuem: 'meus', periodo: '7', apoio: {}, motivo: '', comEngajamento: true,
     extra: {}, sel: new Set(), // dados próprios do sistema (TCE do estágio, observação das provas) e alunos marcados para o disparo em lote
@@ -83,6 +83,7 @@
   const nomeBase = () => (CFG && CFG.fonte) ? CFG.nomeFonte : 'base ' + NOMES_BASE[E.base];
   const daBase = (x) => !!(CFG && CFG.fonte) || !x.base || x.base === E.base; // sistemas com arquivo próprio (NPS, Estágio) não separam por base
   const regsDoAluno = (m) => Object.values(E.regs).filter((x) => x.matricula === m && daBase(x)).sort((a, b) => b.criado - a.criado);
+  const sitDe = (r) => r.NOM_SITUACAO_ALUNO || r.SITUACAO_ALUNO || '';
   const fichaDe = (m) => (E.fichas[m] && E.fichas[m].dados) || {};
 
   async function carregarBase() {
@@ -127,6 +128,7 @@
     return E.alunos.filter((r) => {
       const m = mat(r);
       if (!aplicaSeletor(r, c)) return false;
+      if (!Situacao.passa(sitDe(r), f.sitAluno)) return false;
       if (CFG.filtroData && (f.de || f.ate)) { const d = CFG.filtroData.v(r, c); if (!d || (f.de && d < f.de) || (f.ate && d > f.ate)) return false; }
       if (f.canal || f.atend) { if (!acionamentos(m).some((a) => (!f.canal || a.canal === f.canal) && (!f.atend || a.atend === f.atend))) return false; }
       if (busca && (String(r.NOM_ALUNO || '').toLowerCase().indexOf(busca) < 0) && m.indexOf(busca) < 0 && String(matVis(r)).indexOf(busca) < 0) return false;
@@ -162,7 +164,8 @@
     const opc = (arr, sel, rotulo) => `<option value="">${rotulo}</option>` + arr.map((x) => `<option ${x === sel ? 'selected' : ''}>${esc(x)}</option>`).join('');
     const cols = CFG.colunas || [];
     const c = ctx();
-    const doTipo = E.alunos.filter((r) => aplicaSeletor(r, c));
+    const doTipo = E.alunos.filter((r) => aplicaSeletor(r, c) && Situacao.passa(sitDe(r), f.sitAluno));
+    const temSit = E.alunos.some((r) => sitDe(r));
     // cartões clicáveis (como no sistema antigo): cada um aplica um filtro
     const cards = (CFG.filtros || []).filter((x) => x.card);
     const canais = new Set(), atends = new Set();
@@ -175,6 +178,7 @@
       <div class="filtros">
         ${CFG.seletor ? `<label class="rot">${esc(CFG.seletor.rotulo)}<select id="f-tipo">${CFG.seletor.opcoes.map(([v, t]) => `<option value="${v}" ${v === c.tipo ? 'selected' : ''}>${esc(t)}</option>`).join('')}</select></label>` : ''}
         <input type="search" id="f-busca" placeholder="Buscar por nome ou matrícula" value="${esc(f.busca)}">
+        ${temSit ? Situacao.select('f-sit-aluno', E.alunos.map(sitDe), f.sitAluno) : ''}
         <select id="f-curso">${opc(unicos(E.alunos, (r) => r.NOM_CURSO), f.curso, 'Todos os cursos')}</select>
         <select id="f-mod">${opc(unicos(E.alunos, (r) => r.MODALIDADE_PP_PC || r.MODALIDADE), f.mod, 'Todas as modalidades')}</select>
         ${CFG.filtroPrograma ? `<select id="f-programa">${opc(unicos(E.alunos, CFG.filtroPrograma), f.programa, CFG.filtroProgramaRotulo || 'Todos os programas')}</select>` : ''}
@@ -189,7 +193,7 @@
         <select id="f-atend">${opc(Array.from(atends).sort(), f.atend, 'Todos os atendentes')}</select>` : ''}
         ${CFG.filtroData ? `<label class="rot">${esc(CFG.filtroData.t)} de<input type="date" id="f-de" value="${esc(f.de)}"></label><label class="rot">até<input type="date" id="f-ate" value="${esc(f.ate)}"></label>` : ''}
         <button class="btn mini" id="f-exportar">Exportar CSV</button>
-        <span class="total">${lista.length.toLocaleString('pt-BR')} de ${E.alunos.length.toLocaleString('pt-BR')} ${unidade()}</span>
+        <span class="total">${lista.length.toLocaleString('pt-BR')} de ${E.alunos.length.toLocaleString('pt-BR')} ${unidade()}</span> ${temSit ? Situacao.ocultos(E.alunos.filter((r) => aplicaSeletor(r, c)), sitDe, f.sitAluno) : ''}
       </div>
       ${CFG.lote ? `<div class="barra-lote" id="barra-lote" ${E.sel.size ? '' : 'hidden'}>
         <b id="lote-qtd">${E.sel.size} selecionado(s)</b>
@@ -205,7 +209,7 @@
         const fu = rs.filter((x) => x.fu_status === 'pendente').map((x) => x.fu_data).sort()[0];
         return `<tr class="clicavel" data-mat="${esc(m)}">
           ${CFG.lote ? `<td class="col-sel"><input type="checkbox" class="sel-aluno" value="${esc(m)}" ${E.sel.has(m) ? 'checked' : ''}></td>` : ''}
-          <td class="nome"><b>${esc(r.NOM_ALUNO)}${Apoio.selo(E.apoio[Apoio.norm(matVis(r))])}</b><small>${esc(matVis(r))}</small></td>
+          <td class="nome"><b>${esc(r.NOM_ALUNO)}${Apoio.selo(E.apoio[Apoio.norm(matVis(r))])}${Situacao.selo(sitDe(r))}</b><small>${esc(matVis(r))}</small></td>
           <td>${esc(r.NOM_CURSO)}</td><td>${esc(r.MODALIDADE_PP_PC || r.MODALIDADE || '')}</td>
           ${cols.map((k) => { let v = ''; try { v = k.v(r, c); } catch (e) {} const al = k.alerta && k.alerta(r, c); return `<td class="${al ? 'alerta' : ''}">${k.html ? v : esc(v)}${al ? ' ⚠️' : ''}</td>`; }).join('')}
           <td>${!ult ? '<span class="selo cinza">Sem contato</span>' : CFG.historicoEngajamento
@@ -216,7 +220,7 @@
       <div class="paginas"><button class="btn mini" id="p-ant" ${E.pagina <= 1 ? 'disabled' : ''}>Anterior</button> Página ${E.pagina} de ${paginas} <button class="btn mini" id="p-prox" ${E.pagina >= paginas ? 'disabled' : ''}>Próxima</button></div>`;
     const reaplicar = (campo, el) => { E.filtro[campo] = el.value; E.pagina = 1; telaAlunos(); };
     let t; $('#f-busca').oninput = (ev) => { clearTimeout(t); t = setTimeout(() => { reaplicar('busca', ev.target); const i = $('#f-busca'); i.focus(); i.setSelectionRange(i.value.length, i.value.length); }, 250); };
-    [['#f-curso', 'curso'], ['#f-mod', 'mod'], ['#f-extra', 'extra'], ['#f-situacao', 'situacao'], ['#f-programa', 'programa'], ['#f-tipo', 'tipo'], ['#f-canal', 'canal'], ['#f-atend', 'atend'], ['#f-de', 'de'], ['#f-ate', 'ate']].forEach(([s, k]) => { const el = $(s); if (el) el.onchange = () => reaplicar(k, el); });
+    [['#f-sit-aluno', 'sitAluno'], ['#f-curso', 'curso'], ['#f-mod', 'mod'], ['#f-extra', 'extra'], ['#f-situacao', 'situacao'], ['#f-programa', 'programa'], ['#f-tipo', 'tipo'], ['#f-canal', 'canal'], ['#f-atend', 'atend'], ['#f-de', 'de'], ['#f-ate', 'ate']].forEach(([s, k]) => { const el = $(s); if (el) el.onchange = () => reaplicar(k, el); });
     document.querySelectorAll('[data-card]').forEach((b) => { b.onclick = () => { E.filtro.extra = b.dataset.card; E.pagina = 1; telaAlunos(); }; });
     $('#p-ant').onclick = () => { E.pagina--; telaAlunos(); };
     $('#p-prox').onclick = () => { E.pagina++; telaAlunos(); };
@@ -279,12 +283,12 @@
   function exportar(lista) {
     const cols = CFG.colunas || [];
     const c = ctx(), semHtml = (v) => String(v == null ? '' : v).replace(/<[^>]*>/g, '');
-    const cab = ['Matrícula', 'Nome', 'Curso', 'Modalidade', 'Telefone', 'E-mail'].concat(cols.map((k) => k.t), ['Último acionamento', 'Canal', 'Resultado', 'Atendente', 'Follow-up']);
+    const cab = ['Matrícula', 'Nome', 'Curso', 'Modalidade', 'Telefone', 'E-mail'].concat(cols.map((k) => k.t), ['Último acionamento', 'Canal', 'Resultado', 'Atendente', 'Follow-up', 'Situação na base']);
     const linhas = lista.map((r) => {
       const m = mat(r), ult = ultimoAc(m), fu = regsDoAluno(m).filter((x) => x.fu_status === 'pendente').map((x) => x.fu_data).sort()[0];
       return [matVis(r), r.NOM_ALUNO, r.NOM_CURSO, r.MODALIDADE_PP_PC || r.MODALIDADE, r.NUM_TELEF_CELULAR || r.NUM_TELEFONE, r.END_EMAIL]
         .concat(cols.map((k) => { try { return semHtml(k.v(r, c)); } catch (e) { return ''; } }),
-          [ult ? dataAA(ult.ms) : '', ult ? ult.canal : '', ult ? ult.resultado : '', ult ? ult.atend : '', fu ? dataBR(fu) : '']);
+          [ult ? dataAA(ult.ms) : '', ult ? ult.canal : '', ult ? ult.resultado : '', ult ? ult.atend : '', fu ? dataBR(fu) : '', sitDe(r)]);
     });
     const csv = [cab].concat(linhas).map((l) => l.map((c) => '"' + String(c == null ? '' : c).replace(/"/g, '""') + '"').join(';')).join('\r\n');
     const a = document.createElement('a');
@@ -585,6 +589,6 @@
     sincronizar().then(carregarBase);
     setInterval(sincronizar, 45000);
   }
-  window.Motor = { estado: E, abrirAluno, sincronizar };
+  window.Motor = { estado: E, abrirAluno, sincronizar, desenhar };
   document.addEventListener('DOMContentLoaded', iniciar);
 })();

@@ -597,6 +597,7 @@ input[type=checkbox].row-cb,input[type=checkbox]#cb-all{width:15px;height:15px;c
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
   <script src="../../nucleo/config.js"></script>
   <script src="../../nucleo/api.js"></script>
+  <script src="../../nucleo/situacao.js?v=1.9.0"></script>
   <script>
   /* Jornada do Aluno: login, avisos e sessão ficam na tela base */
   window.App = (window.parent && window.parent !== window) ? window.parent.App : null;
@@ -3199,8 +3200,7 @@ function populateSemFilter() {
     const curSit = selSit.value;
     // CT usa SITUACAO_ALUNO; ímpar/par usa NOM_SITUACAO_ALUNO
     const sitVals = [...new Set(DB.map(r => r.NOM_SITUACAO_ALUNO || r.SITUACAO_ALUNO || '').filter(Boolean))].sort();
-    selSit.innerHTML = '<option value="">Todas</option>' +
-      sitVals.map(s => '<option value="' + s + '"' + (s === curSit ? ' selected' : '') + '>' + s + '</option>').join('');
+    selSit.outerHTML = Situacao.select('f-sit', sitVals, curSit || 'ativos').replace('<select ', '<select onchange="applyFilters()" ');
   }
 
   // Cursos — dinâmico por base, ordenado alfabeticamente
@@ -3240,7 +3240,7 @@ function applyFilters() {
     if (prop && r.PROPENSAO_EVASAO !== prop) return false;
     if (curso && (r.NOM_CURSO || '') !== curso) return false;
     const rSit = r.NOM_SITUACAO_ALUNO || r.SITUACAO_ALUNO || '';
-    if (sit && rSit !== sit) return false;
+    if (!Situacao.passa(rSit, sit || 'ativos')) return false;
     // Filtro acionamento: considera apenas acionamentos da base ativa (semestre atual)
     var _histBase = (HISTORY[r.COD_MATRICULA] || []).filter(function(a){ return (a.base||'impar') === ACTIVE_BASE; });
     if (acion === 'pendente' && _histBase.length > 0) return false;

@@ -31,6 +31,8 @@ function npsRespostas_() {
   if (n) sh.getRange(2, 1, n, 2).getValues().forEach(l => {
     try { const o = JSON.parse(l[1]); o.id = String(l[0]); dados.push(o); } catch (e) { /* linha corrompida */ }
   });
+  const sit = situacoesBase_();
+  dados.forEach(o => { const s = sit[normMatEv_(o.matricula)]; if (s) o.NOM_SITUACAO_ALUNO = s; });
   return { ok: true, dados: dados };
 }
 

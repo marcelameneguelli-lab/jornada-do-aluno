@@ -15,7 +15,9 @@ const ORDEM_TCE_BI = { nao_iniciado: 0, indeferido: 1, andamento: 2, deferido: 3
 function estagioBiDados_(d) {
   const o = cobLerJson_('EstagioBI', null);
   if (!o) return { ok: true, dados: [], ts: 0 };
-  return { ok: true, dados: o.alunos || [], ts: o.ts || 0, quem: o.quem || '', arquivo: o.arquivo || '' };
+  const sit = situacoesBase_(), dados = o.alunos || [];
+  dados.forEach(a => { const s = sit[normMatEv_(a.COD_MATRICULA)]; if (s) a.NOM_SITUACAO_ALUNO = s; });
+  return { ok: true, dados: dados, ts: o.ts || 0, quem: o.quem || '', arquivo: o.arquivo || '' };
 }
 
 /** Nome e contatos pela base líquida (Ímpar, Par e Técnico). */

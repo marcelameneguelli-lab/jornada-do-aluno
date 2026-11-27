@@ -2,7 +2,7 @@
 window.JORNADA = {
   nome: 'Jornada do Aluno',
   subtitulo: 'Secretaria Acadêmica VR',
-  versao: '1.8.3',
+  versao: '1.9.0',
   // URL da implantação do Apps Script (termina em /exec). Preencher depois de publicar o backend.
   gasUrl: 'https://script.google.com/macros/s/AKfycby-J1CZXGCFVRALueDrP_GS2cVaSN-KuZB5y5RI3llchFtcsPaiZcrE5yMxjEBCzdt1/exec',
   sistemas: [
