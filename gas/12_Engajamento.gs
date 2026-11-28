@@ -331,6 +331,7 @@ function Engajamento_() {
             var existIds = {};
             hist[mat].forEach(function(a){ existIds[a.id||(a.datetime+a.atend)] = true; });
             primario[mat].forEach(function(a) {
+              if (a && a.base && a.base !== base) return; // acionamento de outra base (gravado por engano) não aparece aqui
               var k = a.id||(a.datetime+a.atend);
               if (!existIds[k]) hist[mat].push(a);
             });
@@ -348,6 +349,7 @@ function Engajamento_() {
           hdrs.forEach(function(h,j){ obj[h] = rows[i][j]; });
           var mat = String(obj['matricula'] || obj['COD_MATRICULA'] || '');
           if (!mat) continue;
+          if (String(obj['base'] || 'impar') !== base) continue; // só a base pedida
           if (!hist[mat]) hist[mat] = [];
           hist[mat].push({
             id:       obj['id'] || String(obj['datetime']||'') + '_' + mat,
@@ -468,19 +470,27 @@ function Engajamento_() {
     function saveHistoryFull(data) {
       if (!data.history) return { ok: false, error: 'history obrigatório' };
       var base = data.base || 'impar';
-      storeSet('HistoryJSON_' + base, JSON.stringify(data.history));
-      // Reconstruir planilha
+      // só os acionamentos desta base (nunca grava os de outra base no histórico desta)
+      var hist = {};
+      Object.keys(data.history).forEach(function(mat) {
+        var arr = (data.history[mat] || []).filter(function(a) { return a && (!a.base || a.base === base); });
+        if (arr.length) hist[mat] = arr;
+      });
+      storeSet('HistoryJSON_' + base, JSON.stringify(hist));
+      // Reconstruir a planilha só nas linhas desta base (as das outras bases ficam como estão), de uma vez
       var sh = getOrCreate('Acionamentos',
         ['datetime','matricula','atendente','canal','motivo','obs','base','nps','id']);
       var lastRow = sh.getLastRow();
-      if (lastRow > 1) sh.deleteRows(2, lastRow - 1);
-      Object.entries(data.history).forEach(function(entry) {
-        var mat = entry[0], arr = entry[1];
-        arr.forEach(function(a) {
-          sh.appendRow([a.datetime||'', mat, a.atend||'', a.canal||'',
-                        a.motivo||'', a.obs||'', a.base||base, a.nps||'', a.id||'']);
+      var outras = lastRow > 1 ? sh.getRange(2, 1, lastRow - 1, 9).getValues().filter(function(r) { return String(r[6] || 'impar') !== base; }) : [];
+      var novas = [];
+      Object.keys(hist).forEach(function(mat) {
+        hist[mat].forEach(function(a) {
+          novas.push([a.datetime||'', mat, a.atend||'', a.canal||'', a.motivo||'', a.obs||'', base, a.nps||'', a.id||'']);
         });
       });
+      var todas = outras.concat(novas);
+      if (lastRow > 1) sh.getRange(2, 1, lastRow - 1, 9).clearContent();
+      if (todas.length) sh.getRange(2, 1, todas.length, 9).setValues(todas);
       return { ok: true };
     }
 

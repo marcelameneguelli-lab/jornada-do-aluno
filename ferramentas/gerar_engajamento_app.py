@@ -242,6 +242,44 @@ s=troca(s,'<script src="../../nucleo/api.js"></script>','<script src="../../nucl
 s=troca(s,"""    selSit.innerHTML = '<option value="">Todas</option>' +
       sitVals.map(s => '<option value="' + s + '"' + (s === curSit ? ' selected' : '') + '>' + s + '</option>').join('');""","""    selSit.outerHTML = Situacao.select('f-sit', sitVals, curSit || 'ativos').replace('<select ', '<select onchange="applyFilters()" ');""")
 s=troca(s,"    if (sit && rSit !== sit) return false;","    if (!Situacao.passa(rSit, sit || 'ativos')) return false;")
+# 4c. troca de base no meio de uma sincronização (Ímpar ↔ Par): a resposta de uma base não pode cair na outra.
+#     Antes, a base baixada no início (Ímpar) chegava depois da troca para Par e era gravada e publicada como Par.
+s=troca(s,"""      _carregarBaseGAS(ACTIVE_BASE).then(function(dados) {
+        if (dados && dados.length > 0) {
+          DB = dados; FILTERED = [...DB];
+          saveDB(DB).catch(function(){});
+          // Salva timestamp local da versão recebida
+          try { localStorage.setItem('crm_base_ts_' + ACTIVE_BASE, String(Date.now())); } catch(e) {}
+          updateTopCount(); applyFilters(); renderDashboard();""","""      var _baseIni = ACTIVE_BASE;
+      _carregarBaseGAS(_baseIni).then(function(dados) {
+        if (dados && dados.length > 0) {
+          // grava na base que foi pedida, mesmo que a pessoa já tenha trocado de base
+          saveDB(dados, BASE_CONFIG[_baseIni].storageDB).catch(function(){});
+          try { localStorage.setItem('crm_base_ts_' + _baseIni, String(Date.now())); } catch(e) {}
+          if (ACTIVE_BASE !== _baseIni) return;
+          DB = dados; FILTERED = [...DB];
+          updateTopCount(); applyFilters(); renderDashboard();""")
+s=troca(s,"""async function syncFromRemote() {""","""var _syncRodando = false;
+async function syncFromRemote() {
+  // não sincroniza com a aba escondida nem duas vezes ao mesmo tempo (alivia o servidor)
+  if (_syncRodando || (document.hidden && syncFromRemote._ja)) return;
+  syncFromRemote._ja = true; _syncRodando = true;
+  try { return await _syncFromRemote(); } finally { _syncRodando = false; }
+}
+async function _syncFromRemote() {
+  const _baseSync = ACTIVE_BASE;
+  const _trocouBase = () => ACTIVE_BASE !== _baseSync;""")
+s=troca(s,"""    if (hr && hr.ok && hr.data) {""","""    // a pessoa trocou de base enquanto esperava o servidor: descarta esta resposta
+    if (_trocouBase()) { if (dot) dot.className = 'sync-dot'; return; }
+    if (hr && hr.ok && hr.data) {""",1)
+s=troca(s,"""        entries.forEach(a => {
+          const k = a.id || ((a.datetime||'') + '|' + (a.atend||''));
+          if (!gasIds.has(k)) {""","""        entries.forEach(a => {
+          const k = a.id || ((a.datetime||'') + '|' + (a.atend||''));
+          if (a.base && a.base !== _baseSync) return; // acionamento de outra base não entra aqui
+          if (!gasIds.has(k)) {""")
+s=troca(s,"""    const frSync = await gasCall('getFollowups', { base: ACTIVE_BASE });""","""    const frSync = _trocouBase() ? null : await gasCall('getFollowups', { base: _baseSync });
+    if (_trocouBase()) { if (dot) dot.className = 'sync-dot'; return; }""")
 # 5. service worker é o da Jornada
 s=troca(s,"if ('serviceWorker' in navigator && location.protocol === 'https:') {","if (false) { // Jornada: service worker único na tela base")
 os.makedirs(os.path.join(RAIZ,'app/modulos/engajamento'),exist_ok=True)

@@ -436,7 +436,7 @@
   async function enviarBase(base, dados) {
     if (envioEmAndamento) await envioEmAndamento.catch(() => {});
     const nome = NOMES_BASE_ENG[base] || base;
-    const CHUNK = 400, partes = Math.ceil(dados.length / CHUNK);
+    const CHUNK = 250, partes = Math.ceil(dados.length / CHUNK);
     const avisoSaida = (ev) => { ev.preventDefault(); ev.returnValue = ''; };
     window.addEventListener('beforeunload', avisoSaida);
     envioEmAndamento = (async () => {
@@ -445,7 +445,9 @@
         for (let p = 0; p < partes; p++) {
           barraEnvio(`☁️ Enviando a base <b>${nome}</b> para o servidor: parte ${p + 1} de ${partes} (${dados.length.toLocaleString('pt-BR')} alunos). Não feche a Jornada.`);
           let r = null, erro = '';
-          for (let tent = 0; tent < 3 && !(r && r.ok); tent++) {
+          for (let tent = 0; tent < 5 && !(r && r.ok); tent++) {
+            // servidor ocupado ou sem resposta: espera um pouco mais a cada tentativa antes de reenviar a mesma parte
+            if (tent) { barraEnvio(`☁️ Servidor ocupado. Tentando de novo a parte ${p + 1} de ${partes} da base <b>${nome}</b> (tentativa ${tent + 1} de 5)... Não feche a Jornada.`); await new Promise((ok) => setTimeout(ok, [0, 5000, 15000, 30000, 60000][tent])); }
             try { r = await Api.chamar('engajamento.salvarBase', { base, dados: dados.slice(p * CHUNK, (p + 1) * CHUNK), parte: p, total: partes }, { timeout: 180000 }); }
             catch (e) { if (e.auth) throw e; erro = e.message; r = null; }
             if (r && !r.ok) erro = r.msg || r.erro || 'erro no servidor';
