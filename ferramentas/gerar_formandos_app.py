@@ -105,6 +105,67 @@ _i=s.rfind('</body>'); s=s[:_i]+'''<style>
 })();
 </script>
 '''+s[_i:]
+# 4b. celular e e-mail de cada aluno vêm da base líquida (cruzados pela matrícula, sempre atualizados)
+s=troca(s,"""      <td class="td-mat">${esc(s.mat||'')}</td>""","""      <td class="td-mat">${esc(s.mat||'')}${contatoBaseHtml(s)}</td>""",2)
+s=troca(s,"""  document.getElementById('dr-meta').textContent = [s.mat, s.curso, s.turno, s.ingresso].filter(Boolean).join(', ');""","""  document.getElementById('dr-meta').textContent = [s.mat, s.curso, s.turno, s.ingresso].filter(Boolean).join(', ');
+  contatoBaseDrawer(s);""")
+s=troca(s,"""  const headers=['Nome','Matrícula','Curso','Nome Fantasia',""","""  const headers=['Nome','Matrícula','Celular','E-mail','Curso','Nome Fantasia',""")
+s=troca(s,"""      cc(s.nome), cc(s.mat), cc(s.curso), cc(s.fantasia),""","""      cc(s.nome), cc(s.mat), cc((contatoBase(s)||{}).tel||''), cc((contatoBase(s)||{}).email||''), cc(s.curso), cc(s.fantasia),""")
+s=troca(s,"""  const headers=['Nome','Matrícula','Curso','Turno','Confirmação Cerimônia','Observações'];""","""  const headers=['Nome','Matrícula','Celular','E-mail','Curso','Turno','Confirmação Cerimônia','Observações'];""")
+s=troca(s,"""      cc(s.nome), cc(s.mat), cc(s.curso), cc(s.turno),""","""      cc(s.nome), cc(s.mat), cc((contatoBase(s)||{}).tel||''), cc((contatoBase(s)||{}).email||''), cc(s.curso), cc(s.turno),""")
+s=troca(s,"</body>","""<style>
+  .ct-base{display:flex;flex-direction:column;gap:1px;margin-top:3px;font-size:11.5px;white-space:nowrap}
+  .ct-base a{color:var(--muted,#6b6459);text-decoration:none;max-width:210px;overflow:hidden;text-overflow:ellipsis}
+  .ct-base a:hover{color:inherit;text-decoration:underline}
+  #dr-contato{display:flex;gap:14px;flex-wrap:wrap;margin-top:6px;font-size:13px}
+  #dr-contato a{text-decoration:none;color:inherit;opacity:.92;font-weight:600}
+  #dr-contato a:hover{text-decoration:underline;opacity:1}
+  #dr-contato{color:inherit}
+</style>
+<script>
+/* Jornada: celular e e-mail de cada aluno, cruzados pela matrícula com a base líquida (Ímpar, Par e Técnico) */
+window.CONTATOS_BASE = {};
+function _normMatCt(m) { return String(m == null ? '' : m).replace(/\\.0$/, '').replace(/\\D/g, ''); }
+function contatoBase(s) { return (s && (CONTATOS_BASE[_normMatCt(s.mat)] || CONTATOS_BASE[_normMatCt(s.id)])) || null; }
+function _foneWa(t) { let d = String(t || '').replace(/\\D/g, ''); if (!d) return ''; if (d.length <= 11) d = '55' + d; return d; }
+function _fmtFone(t) { const d = String(t || '').replace(/\\D/g, '').replace(/^55(?=\\d{10,11}$)/, ''); return d.length === 11 ? `(${d.slice(0, 2)}) ${d.slice(2, 7)}-${d.slice(7)}` : d.length === 10 ? `(${d.slice(0, 2)}) ${d.slice(2, 6)}-${d.slice(6)}` : String(t || ''); }
+function _ctLinks(c) {
+  return (c.tel ? `<a href="https://wa.me/${_foneWa(c.tel)}" target="_blank" rel="noopener" title="Abrir conversa no WhatsApp" onclick="event.stopPropagation()">📱 ${esc(_fmtFone(c.tel))}</a>` : '')
+    + (c.email ? `<a href="mailto:${esc(c.email)}" title="${esc(c.email)}" onclick="event.stopPropagation()">✉️ ${esc(c.email)}</a>` : '');
+}
+function contatoBaseHtml(s) { const c = contatoBase(s); return c && (c.tel || c.email) ? `<div class="ct-base">${_ctLinks(c)}</div>` : ''; }
+function contatoBaseDrawer(s) {
+  const meta = document.getElementById('dr-meta'); if (!meta) return;
+  let el = document.getElementById('dr-contato');
+  if (!el) { el = document.createElement('div'); el.id = 'dr-contato'; meta.insertAdjacentElement('afterend', el); }
+  const c = contatoBase(s);
+  el.innerHTML = c && (c.tel || c.email) ? _ctLinks(c) : '<span style="color:var(--faint,#999)">Sem celular ou e-mail na base líquida</span>';
+}
+(function () {
+  if (!window.Api) return;
+  let ultimo = '', rodando = false, carregadoEm = 0;
+  async function carregar() {
+    if (rodando) return;
+    const mats = [];
+    try { students.forEach((s) => mats.push(s.mat || s.id)); formados.forEach((s) => mats.push(s.mat || s.id)); } catch (e) { return; }
+    if (!mats.length) return;
+    const chave = mats.length + ':' + mats.slice(0, 3).join(',');
+    if (chave === ultimo && Date.now() - carregadoEm < 30 * 60000) return;
+    rodando = true;
+    try {
+      const r = await Api.chamar('formandos.contatos', { mats: mats }, { timeout: 90000 });
+      if (r && r.ok && r.contatos) {
+        window.CONTATOS_BASE = r.contatos; ultimo = chave; carregadoEm = Date.now();
+        try { renderTable(); } catch (e) {}
+        try { if (typeof renderFormados === 'function') renderFormados(); } catch (e) {}
+        try { if (drawerId) refreshDrawer(true); } catch (e) {}
+      }
+    } catch (e) { /* tenta de novo no próximo ciclo */ } finally { rodando = false; }
+  }
+  setInterval(carregar, 5000); setTimeout(carregar, 1500);
+})();
+</script>
+</body>""")
 # 5. o service worker é o da Jornada (não registra outro)
 s=troca(s,"if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {","if (false) { // Jornada: service worker único na tela base")
 os.makedirs('/home/claude/jornada/app/modulos/formandos',exist_ok=True)

@@ -1,0 +1,15 @@
+const { criar } = require('./mock_gas'); const assert=require('assert'); const fs=require('fs');
+const D='/home/claude/jornada/gas/';
+const g = criar(fs.readdirSync(D).filter(f=>f.endsWith('.gs')).sort().map(f=>D+f));
+const post=o=>JSON.parse(g.doPost({postData:{contents:JSON.stringify(o)}}).t);
+let ok=0; const t=(n,f)=>{ try{ f(); ok++; console.log('ok  '+n);}catch(e){ console.log('FALHOU '+n+': '+e.stack.split('\n').slice(0,2).join(' ')); process.exitCode=1; } };
+g.configurar(); const sh=g._ss.getSheetByName('usuarios');
+sh.appendRow(['Marcela','marques.marcela@estacio.br','admin','todos','sim']); sh.appendRow(['Felipe','felipe@estacio.br','atendente','formandos','sim']); sh.appendRow(['Alice','alice@estacio.br','atendente','provas','sim']); g.gerarSenhas();
+const login=(email,l,nova)=>{ const p=sh.d[l-1][6]; const e=post({acao:'nucleo.entrar',email,senha:p}); return post({acao:'nucleo.trocar_senha',token:e.token,atual:p,nova}).token; };
+const tM=login('marques.marcela@estacio.br',2,'Senha2026a'), tF=login('felipe@estacio.br',3,'Senha2026b'), tA=login('alice@estacio.br',4,'Senha2026c');
+post({acao:'engajamento.salvarBase',token:tM,base:'impar',dados:[{COD_MATRICULA:'202201000001',NOM_ALUNO:'Ana',NUM_TELEF_CELULAR:'24999990001.0',END_EMAIL:'ana@x.br'}]});
+post({acao:'engajamento.salvarBase',token:tM,base:'par',dados:[{COD_MATRICULA:'202202000002',NOM_ALUNO:'Beto',NUM_TELEF_CELULAR:'24988880002',END_EMAIL:''}]});
+t('cruza celular e e-mail pela matrícula nas bases Ímpar e Par', ()=>{ const r=post({acao:'formandos.contatos',token:tF,mats:['202201000001','2022.02000002','999']}); assert(r.ok,JSON.stringify(r));
+  assert.deepEqual(r.contatos['202201000001'],{tel:'24999990001',email:'ana@x.br',base:'impar'}); assert.equal(r.contatos['202202000002'].tel,'24988880002'); assert(!r.contatos['999']); });
+t('quem não tem o sistema Formandos não consulta', ()=>{ assert.equal(post({acao:'formandos.contatos',token:tA,mats:['202201000001']}).permissao,false); });
+console.log(ok+' testes de contatos dos formandos passaram');

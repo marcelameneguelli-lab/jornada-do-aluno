@@ -2466,7 +2466,7 @@ function renderTable() {
     const lcCls = !lc ? 'never' : (d>7 && s.apt!=='apto') ? 'late' : '';
     return `<tr>
       <td class="td-nome"><button class="name-btn" onclick="openDrawer('${esc(id)}')" title="Abrir ficha de ${esc(s.nome||'')}"><span class="lvl-dot lvl-${lvl}"></span><span class="nb-txt">${esc(s.nome||'')}</span></button>${colacaoChip(s)}${movChip(s)}</td>
-      <td class="td-mat">${esc(s.mat||'')}</td>
+      <td class="td-mat">${esc(s.mat||'')}${contatoBaseHtml(s)}</td>
       <td class="td-next" title="${esc(na.text)}"><span>${esc(na.text)}</span></td>
       <td class="td-curso" title="${esc(s.curso||'')}">${esc(s.curso||'')}</td>
       <td class="td-fantasia" title="${esc(s.fantasia||'')}">${esc(s.fantasia||'') || dash}</td>
@@ -3240,7 +3240,7 @@ async function exportCSV() {
   const rows=viewStudents().sort((a,b)=>(a.nome||'').localeCompare(b.nome||'','pt-BR'));
   if (rows.length===0) { showToast('Nenhum dado para exportar'); return; }
 
-  const headers=['Nome','Matrícula','Curso','Nome Fantasia','Modalidade','Turno','Forma de Ingresso','Etapa Digitaliza','Documentação','AAC','Saldo de horas AAC','Consep','ENADE 2025','ENADE 2026','Situação no livro','Base','Grupo','Aptidão','Biblioteca','Responsável','Último contato','Próximo passo','Prazo','Próxima ação','Último registro','Observações'];
+  const headers=['Nome','Matrícula','Celular','E-mail','Curso','Nome Fantasia','Modalidade','Turno','Forma de Ingresso','Etapa Digitaliza','Documentação','AAC','Saldo de horas AAC','Consep','ENADE 2025','ENADE 2026','Situação no livro','Base','Grupo','Aptidão','Biblioteca','Responsável','Último contato','Próximo passo','Prazo','Próxima ação','Último registro','Observações'];
   const docMap={pendente:'Pendente',entregue:'Entregue',regularizado:'Regularizado'};
   const aacMap={pendente:'Pendente',regularizado:'Regularizado',dispensado:'Dispensado'};
   const aptMap={em_analise:'Em análise',apto:'Apto',nao_apto:'Não apto'};
@@ -3250,7 +3250,7 @@ async function exportCSV() {
   const csv = [
     '﻿' + headers.join(';'),
     ...rows.map(s=>[
-      cc(s.nome), cc(s.mat), cc(s.curso), cc(s.fantasia), cc(modalidadeDe(s)), cc(s.turno), cc(s.ingresso),
+      cc(s.nome), cc(s.mat), cc((contatoBase(s)||{}).tel||''), cc((contatoBase(s)||{}).email||''), cc(s.curso), cc(s.fantasia), cc(modalidadeDe(s)), cc(s.turno), cc(s.ingresso),
       cc(ETAPA_LBL[s.etapa||'']||''),
       cc(docMap[s.doc]||s.doc||''),
       cc(aacMap[s.aac]||s.aac||''),
@@ -3281,13 +3281,13 @@ async function exportCSVFormados() {
   const rows=[...formados.values()].sort((a,b)=>(a.nome||'').localeCompare(b.nome||'','pt-BR'));
   if (rows.length===0) { showToast('Nenhum dado para exportar'); return; }
 
-  const headers=['Nome','Matrícula','Curso','Turno','Confirmação Cerimônia','Observações'];
+  const headers=['Nome','Matrícula','Celular','E-mail','Curso','Turno','Confirmação Cerimônia','Observações'];
   const cerMap={pendente:'Aguardando',confirmado:'Confirmado',nao_participa:'Não participa'};
   const sem = document.getElementById('sem-badge').textContent || '2026.2';
   const csv = [
     '﻿' + headers.join(';'),
     ...rows.map(s=>[
-      cc(s.nome), cc(s.mat), cc(s.curso), cc(s.turno),
+      cc(s.nome), cc(s.mat), cc((contatoBase(s)||{}).tel||''), cc((contatoBase(s)||{}).email||''), cc(s.curso), cc(s.turno),
       cc(cerMap[s.cerCon]||s.cerCon||''),
       cc(s.obs||''),
     ].join(';'))
@@ -3617,7 +3617,7 @@ function renderFormados() {
     const id = s.id;
     return `<tr>
       <td class="td-nome" title="${esc(s.nome||'')}">${esc(s.nome||'')}${movChip(s)}</td>
-      <td class="td-mat">${esc(s.mat||'')}</td>
+      <td class="td-mat">${esc(s.mat||'')}${contatoBaseHtml(s)}</td>
       <td class="td-curso" title="${esc(s.curso||'')}">${esc(s.curso||'')}</td>
       <td class="td-turno">${esc(s.turno||'')||'<span style="color:var(--faint)">—</span>'}</td>
       <td class="td-turno">${esc(livroTxt(s))||'<span style="color:var(--faint)">—</span>'}</td>
@@ -4233,6 +4233,7 @@ function refreshDrawer(force){
   if (!s) { closeDrawer(); return; }
   document.getElementById('dr-name').textContent = s.nome || s.mat;
   document.getElementById('dr-meta').textContent = [s.mat, s.curso, s.turno, s.ingresso].filter(Boolean).join(', ');
+  contatoBaseDrawer(s);
 
   const live = document.getElementById('dr-live');
   const typing = live.contains(document.activeElement) && /INPUT|TEXTAREA/.test(document.activeElement.tagName);
@@ -4461,6 +4462,58 @@ function copyTxt(btn, text){
     var copiar = function () { var b = document.getElementById('sem-badge'), d = document.getElementById('jm-sem'); if (b && d) d.textContent = b.textContent; };
     copiar(); setInterval(copiar, 1500);
   }
+})();
+</script>
+<style>
+  .ct-base{display:flex;flex-direction:column;gap:1px;margin-top:3px;font-size:11.5px;white-space:nowrap}
+  .ct-base a{color:var(--muted,#6b6459);text-decoration:none;max-width:210px;overflow:hidden;text-overflow:ellipsis}
+  .ct-base a:hover{color:inherit;text-decoration:underline}
+  #dr-contato{display:flex;gap:14px;flex-wrap:wrap;margin-top:6px;font-size:13px}
+  #dr-contato a{text-decoration:none;color:inherit;opacity:.92;font-weight:600}
+  #dr-contato a:hover{text-decoration:underline;opacity:1}
+  #dr-contato{color:inherit}
+</style>
+<script>
+/* Jornada: celular e e-mail de cada aluno, cruzados pela matrícula com a base líquida (Ímpar, Par e Técnico) */
+window.CONTATOS_BASE = {};
+function _normMatCt(m) { return String(m == null ? '' : m).replace(/\.0$/, '').replace(/\D/g, ''); }
+function contatoBase(s) { return (s && (CONTATOS_BASE[_normMatCt(s.mat)] || CONTATOS_BASE[_normMatCt(s.id)])) || null; }
+function _foneWa(t) { let d = String(t || '').replace(/\D/g, ''); if (!d) return ''; if (d.length <= 11) d = '55' + d; return d; }
+function _fmtFone(t) { const d = String(t || '').replace(/\D/g, '').replace(/^55(?=\d{10,11}$)/, ''); return d.length === 11 ? `(${d.slice(0, 2)}) ${d.slice(2, 7)}-${d.slice(7)}` : d.length === 10 ? `(${d.slice(0, 2)}) ${d.slice(2, 6)}-${d.slice(6)}` : String(t || ''); }
+function _ctLinks(c) {
+  return (c.tel ? `<a href="https://wa.me/${_foneWa(c.tel)}" target="_blank" rel="noopener" title="Abrir conversa no WhatsApp" onclick="event.stopPropagation()">📱 ${esc(_fmtFone(c.tel))}</a>` : '')
+    + (c.email ? `<a href="mailto:${esc(c.email)}" title="${esc(c.email)}" onclick="event.stopPropagation()">✉️ ${esc(c.email)}</a>` : '');
+}
+function contatoBaseHtml(s) { const c = contatoBase(s); return c && (c.tel || c.email) ? `<div class="ct-base">${_ctLinks(c)}</div>` : ''; }
+function contatoBaseDrawer(s) {
+  const meta = document.getElementById('dr-meta'); if (!meta) return;
+  let el = document.getElementById('dr-contato');
+  if (!el) { el = document.createElement('div'); el.id = 'dr-contato'; meta.insertAdjacentElement('afterend', el); }
+  const c = contatoBase(s);
+  el.innerHTML = c && (c.tel || c.email) ? _ctLinks(c) : '<span style="color:var(--faint,#999)">Sem celular ou e-mail na base líquida</span>';
+}
+(function () {
+  if (!window.Api) return;
+  let ultimo = '', rodando = false, carregadoEm = 0;
+  async function carregar() {
+    if (rodando) return;
+    const mats = [];
+    try { students.forEach((s) => mats.push(s.mat || s.id)); formados.forEach((s) => mats.push(s.mat || s.id)); } catch (e) { return; }
+    if (!mats.length) return;
+    const chave = mats.length + ':' + mats.slice(0, 3).join(',');
+    if (chave === ultimo && Date.now() - carregadoEm < 30 * 60000) return;
+    rodando = true;
+    try {
+      const r = await Api.chamar('formandos.contatos', { mats: mats }, { timeout: 90000 });
+      if (r && r.ok && r.contatos) {
+        window.CONTATOS_BASE = r.contatos; ultimo = chave; carregadoEm = Date.now();
+        try { renderTable(); } catch (e) {}
+        try { if (typeof renderFormados === 'function') renderFormados(); } catch (e) {}
+        try { if (drawerId) refreshDrawer(true); } catch (e) {}
+      }
+    } catch (e) { /* tenta de novo no próximo ciclo */ } finally { rodando = false; }
+  }
+  setInterval(carregar, 5000); setTimeout(carregar, 1500);
 })();
 </script>
 </body>

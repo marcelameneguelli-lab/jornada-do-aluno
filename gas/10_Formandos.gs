@@ -307,6 +307,20 @@ function Modulo_formandos() {
         if (col === 'config' && id !== 'sem' && formandosEu_(eu).perfil !== 'admin') return { ok: false, error: 'sem_permissao' };
         return comMe(eu, F.getDoc_(col, id));
       },
+      // celular e e-mail dos alunos, cruzados pela matrícula com a base líquida (Ímpar, Par e Técnico)
+      contatos: (d, eu) => {
+        const quer = {};
+        (Array.isArray(d.mats) ? d.mats : []).slice(0, 20000).forEach(m => { const k = normMatEv_(m); if (k) quer[k] = true; });
+        const res = {};
+        BASES_ENGAJAMENTO.forEach(b => evLerBase_(b).forEach(r => {
+          const mat = normMatEv_(r && (r.COD_MATRICULA || r.MATRICULA));
+          if (!mat || !quer[mat] || res[mat]) return;
+          const tel = String(r.NUM_TELEF_CELULAR || r.NUM_CELULAR || r.NUM_TELEFONE || r.TELEFONE || '').replace(/\.0$/, '').trim();
+          const email = String(r.END_EMAIL || r.EMAIL || '').trim();
+          if (tel || email) res[mat] = { tel: tel, email: email, base: b };
+        }));
+        return { ok: true, contatos: res, total: Object.keys(res).length };
+      },
       ops: (d, eu) => {
         const ops = Array.isArray(d.ops) ? d.ops : [];
         if (!ops.length) return comMe(eu, { ok: true, v: F.ultima_(), n: 0 });
